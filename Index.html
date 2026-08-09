@@ -740,7 +740,8 @@
         <input type="date" id="laporanEnd" class="border rounded-lg p-2 text-sm">
       </div>
       <button onclick="renderLaporan()" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700"><i class="fas fa-sync-alt mr-1"></i>Perbarui</button>
-      <button onclick="exportLaporanCSV()" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"><i class="fas fa-file-csv mr-1"></i>Export</button>
+      <button onclick="exportLaporanCSV()" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"><i class="fas fa-file-csv mr-1"></i>CSV</button>
+      <button onclick="exportLaporanPDF()" class="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"><i class="fas fa-file-pdf mr-1"></i>PDF</button>
     </div>
   </div>
   <p class="text-xs text-gray-400 mb-5" id="laporanPeriodeLabel"></p>
@@ -2379,6 +2380,246 @@ function generateAnalisis(masuk,keluar,net,savingRate,catKeluar,anggaran,range) 
     </div>`;
   });
 }
+function exportLaporanPDF() {
+  const range = getLaporanRange();
+  const trx = appData.Transaksi.filter(t=>t.Tanggal>=range.start&&t.Tanggal<=range.end);
+  let totalMasuk=0, totalKeluar=0;
+  const catKeluar={}, catMasuk={}, byMonth={};
+  trx.forEach(t=>{
+    const nom=parseFloat(t.Nominal)||0, ym=t.Tanggal.substring(0,7);
+    if(!byMonth[ym]) byMonth[ym]={in:0,out:0};
+    if(t.Jenis==='Pemasukan'){totalMasuk+=nom; catMasuk[t.Kategori]=(catMasuk[t.Kategori]||0)+nom; byMonth[ym].in+=nom;}
+    if(t.Jenis==='Pengeluaran'){totalKeluar+=nom; catKeluar[t.Kategori]=(catKeluar[t.Kategori]||0)+nom; byMonth[ym].out+=nom;}
+  });
+  const net=totalMasuk-totalKeluar;
+  const savingRate=totalMasuk>0?Math.round((net/totalMasuk)*100):0;
+  const ym=range.start.substring(0,7);
+  const anggaran=appData.Anggaran.filter(a=>a.BulanTahun===ym);
+  const email=document.getElementById('userEmail').innerText||'';
+  const now=new Date().toLocaleString('id-ID',{dateStyle:'long',timeStyle:'short'});
+
+  // ── Baris arus kas bulanan ──
+  const months=Object.keys(byMonth).sort();
+  const monthRows=months.map(m=>`
+    <tr>
+      <td>${m}</td>
+      <td style="color:#16a34a">Rp ${fmt(byMonth[m].in)}</td>
+      <td style="color:#dc2626">Rp ${fmt(byMonth[m].out)}</td>
+      <td style="color:${byMonth[m].in-byMonth[m].out>=0?'#1d4ed8':'#dc2626'};font-weight:600">
+        ${byMonth[m].in-byMonth[m].out>=0?'':'-'}Rp ${fmt(Math.abs(byMonth[m].in-byMonth[m].out))}
+      </td>
+    </tr>`).join('');
+
+  // ── Baris pengeluaran per kategori ──
+  const expRows=Object.entries(catKeluar).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{
+    const pct=totalKeluar>0?((v/totalKeluar)*100).toFixed(1):0;
+    const ang=anggaran.find(a=>a.Kategori===k);
+    const angNom=ang?parseFloat(ang.Nominal):null;
+    const status=angNom!=null?(v>angNom?'<span style="color:#dc2626">⚠ Melebihi</span>':'<span style="color:#16a34a">✓ Aman</span>'):'–';
+    return `<tr>
+      <td>${k}</td>
+      <td style="text-align:right">Rp ${fmt(v)}</td>
+      <td style="text-align:right">${pct}%</td>
+      <td style="text-align:right">${angNom!=null?'Rp '+fmt(angNom):'–'}</td>
+      <td style="text-align:center">${status}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Baris pemasukan per kategori ──
+  const incRows=Object.entries(catMasuk).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+    <tr><td>${k}</td><td style="text-align:right;color:#16a34a">Rp ${fmt(v)}</td>
+    <td style="text-align:right">${totalMasuk>0?((v/totalMasuk)*100).toFixed(1):0}%</td></tr>`).join('');
+
+  // ── Baris dompet ──
+  const dompetRows=appData.Dompet.map(d=>{
+    const isCC=d.IsCC==='true'||d.Kategori==='Kartu Kredit';
+    const saldo=parseFloat(d.SaldoSaatIni)||0;
+    return `<tr>
+      <td>${d.Nama}</td><td>${d.Kategori}</td>
+      <td style="text-align:right;font-weight:600;color:${isCC?'#dc2626':saldo<0?'#dc2626':'#1e293b'}">
+        ${isCC?'(Tagihan) ':''}Rp ${fmt(saldo)}
+      </td>
+    </tr>`;
+  }).join('');
+
+  // ── Hutang piutang aktif ──
+  const hpAktif=appData.HutangPiutang.filter(h=>h.Status!=='Lunas');
+  const hpRows=hpAktif.map(h=>`<tr>
+    <td>${h.Nama}</td>
+    <td style="color:${h.Jenis==='Hutang'?'#dc2626':'#16a34a'}">${h.Jenis}</td>
+    <td style="text-align:right">Rp ${fmt(h.Nominal)}</td>
+    <td>${h.JatuhTempo||'–'}</td>
+  </tr>`).join('');
+
+  // ── Analisis teks ──
+  const analysisItems=[];
+  if(savingRate>=20) analysisItems.push({icon:'✅',text:`Tingkat tabungan ${savingRate}% — sehat (≥20%). Pertahankan kebiasaan ini.`});
+  else if(net>=0) analysisItems.push({icon:'⚠️',text:`Tingkat tabungan ${savingRate}% — di bawah rekomendasi 20%. Coba kurangi pengeluaran tidak esensial.`});
+  else analysisItems.push({icon:'🔴',text:`Defisit Rp ${fmt(Math.abs(net))}. Pengeluaran melebihi pemasukan pada periode ini.`});
+  const topCat=Object.entries(catKeluar).sort((a,b)=>b[1]-a[1])[0];
+  if(topCat&&totalKeluar>0) analysisItems.push({icon:'📊',text:`Pengeluaran terbesar: "${topCat[0]}" sebesar Rp ${fmt(topCat[1])} (${((topCat[1]/totalKeluar)*100).toFixed(1)}% dari total pengeluaran).`});
+  const violations=anggaran.filter(a=>(catKeluar[a.Kategori]||0)>parseFloat(a.Nominal));
+  if(violations.length) violations.forEach(a=>analysisItems.push({icon:'❌',text:`Anggaran "${a.Kategori}" terlampaui: realisasi Rp ${fmt(catKeluar[a.Kategori]||0)} dari batas Rp ${fmt(a.Nominal)}.`}));
+  else if(anggaran.length) analysisItems.push({icon:'✅',text:'Semua kategori anggaran terkendali pada periode ini.'});
+  if(totalMasuk>0) {
+    const ratio=Math.round((totalKeluar/totalMasuk)*100);
+    if(ratio>90) analysisItems.push({icon:'🚨',text:`Rasio pengeluaran ${ratio}% — sangat tinggi. Hanya tersisa ${100-ratio}% dari pemasukan.`});
+  }
+  const analysisHTML=analysisItems.map(i=>`
+    <div style="display:flex;gap:10px;padding:10px 12px;margin-bottom:8px;background:#f8fafc;border-left:3px solid #3b82f6;border-radius:0 6px 6px 0">
+      <span style="font-size:16px;flex-shrink:0">${i.icon}</span>
+      <span style="font-size:12px;color:#374151;line-height:1.5">${i.text}</span>
+    </div>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Laporan Keuangan – ${range.label}</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',Arial,sans-serif; font-size:13px; color:#1e293b; background:#fff; padding:32px 40px; }
+  /* ── HEADER ── */
+  .rpt-header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #1d4ed8; padding-bottom:16px; margin-bottom:24px; }
+  .rpt-brand { display:flex; align-items:center; gap:12px; }
+  .rpt-icon { font-size:36px; }
+  .rpt-brand-name { font-size:22px; font-weight:800; color:#1e3a8a; line-height:1; }
+  .rpt-brand-sub { font-size:11px; color:#64748b; margin-top:3px; }
+  .rpt-meta { text-align:right; }
+  .rpt-doc-title { font-size:15px; font-weight:700; color:#1e3a8a; }
+  .rpt-period { font-size:11px; color:#475569; margin-top:4px; }
+  .rpt-generated { font-size:10px; color:#94a3b8; margin-top:2px; }
+  /* ── SECTION ── */
+  .section { margin-bottom:24px; page-break-inside:avoid; }
+  .section-title { font-size:13px; font-weight:700; color:#1e3a8a; background:#eff6ff; padding:7px 12px; border-left:4px solid #1d4ed8; border-radius:0 4px 4px 0; margin-bottom:12px; }
+  /* ── SUMMARY GRID ── */
+  .summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:4px; }
+  .sum-card { border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px; }
+  .sum-label { font-size:10px; color:#64748b; margin-bottom:4px; font-weight:500; }
+  .sum-value { font-size:16px; font-weight:700; }
+  .sum-green { color:#16a34a; border-top:3px solid #22c55e; }
+  .sum-red { color:#dc2626; border-top:3px solid #ef4444; }
+  .sum-blue { color:#1d4ed8; border-top:3px solid #3b82f6; }
+  .sum-purple { color:#7c3aed; border-top:3px solid #8b5cf6; }
+  /* ── TABLE ── */
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { background:#eff6ff; color:#1e40af; font-weight:600; padding:8px 10px; text-align:left; border:1px solid #bfdbfe; }
+  td { padding:7px 10px; border:1px solid #e2e8f0; }
+  tr:nth-child(even) td { background:#f8fafc; }
+  tfoot td { background:#f1f5f9; font-weight:700; border-top:2px solid #cbd5e1; }
+  /* ── ANALISIS ── */
+  .analysis-wrap { background:#f8fafc; border-radius:8px; padding:4px; }
+  /* ── FOOTER ── */
+  .rpt-footer { text-align:center; font-size:10px; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:12px; margin-top:28px; }
+  /* ── PRINT ── */
+  @media print {
+    body { padding:16px 24px; }
+    .section { page-break-inside:avoid; }
+    @page { margin:15mm 12mm; size:A4 portrait; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="rpt-header">
+  <div class="rpt-brand">
+    <div class="rpt-icon">💰</div>
+    <div>
+      <div class="rpt-brand-name">KeuanganKu</div>
+      <div class="rpt-brand-sub">Aplikasi Keuangan Pribadi</div>
+    </div>
+  </div>
+  <div class="rpt-meta">
+    <div class="rpt-doc-title">LAPORAN KEUANGAN PRIBADI</div>
+    <div class="rpt-period">📅 ${range.label}</div>
+    <div class="rpt-generated">Digenerate: ${now} &nbsp;|&nbsp; ${email}</div>
+  </div>
+</div>
+
+<!-- I. RINGKASAN -->
+<div class="section">
+  <div class="section-title">I. RINGKASAN KEUANGAN</div>
+  <div class="summary-grid">
+    <div class="sum-card sum-green"><div class="sum-label">Total Pemasukan</div><div class="sum-value">Rp ${fmt(totalMasuk)}</div></div>
+    <div class="sum-card sum-red"><div class="sum-label">Total Pengeluaran</div><div class="sum-value">Rp ${fmt(totalKeluar)}</div></div>
+    <div class="sum-card sum-blue"><div class="sum-label">Net / Selisih</div><div class="sum-value" style="color:${net>=0?'#1d4ed8':'#dc2626'}">${net>=0?'':'-'}Rp ${fmt(Math.abs(net))}</div></div>
+    <div class="sum-card sum-purple"><div class="sum-label">Tingkat Tabungan</div><div class="sum-value">${savingRate}%</div></div>
+  </div>
+</div>
+
+<!-- II. ARUS KAS BULANAN -->
+${months.length?`<div class="section">
+  <div class="section-title">II. ARUS KAS BULANAN</div>
+  <table>
+    <thead><tr><th>Bulan</th><th>Pemasukan</th><th>Pengeluaran</th><th>Net</th></tr></thead>
+    <tbody>${monthRows}</tbody>
+    <tfoot><tr><td>TOTAL</td><td style="color:#16a34a">Rp ${fmt(totalMasuk)}</td><td style="color:#dc2626">Rp ${fmt(totalKeluar)}</td>
+      <td style="color:${net>=0?'#1d4ed8':'#dc2626'}">${net>=0?'':'-'}Rp ${fmt(Math.abs(net))}</td></tr></tfoot>
+  </table>
+</div>`:''}
+
+<!-- III. PENGELUARAN PER KATEGORI -->
+${expRows?`<div class="section">
+  <div class="section-title">III. PENGELUARAN PER KATEGORI</div>
+  <table>
+    <thead><tr><th>Kategori</th><th style="text-align:right">Total</th><th style="text-align:right">% Pengeluaran</th><th style="text-align:right">Anggaran</th><th style="text-align:center">Status</th></tr></thead>
+    <tbody>${expRows}</tbody>
+    <tfoot><tr><td colspan="1">TOTAL</td><td style="text-align:right;color:#dc2626">Rp ${fmt(totalKeluar)}</td><td style="text-align:right">100%</td><td colspan="2"></td></tr></tfoot>
+  </table>
+</div>`:''}
+
+<!-- IV. PEMASUKAN PER KATEGORI -->
+${incRows?`<div class="section">
+  <div class="section-title">IV. PEMASUKAN PER KATEGORI</div>
+  <table>
+    <thead><tr><th>Kategori</th><th style="text-align:right">Total</th><th style="text-align:right">%</th></tr></thead>
+    <tbody>${incRows}</tbody>
+    <tfoot><tr><td>TOTAL</td><td style="text-align:right;color:#16a34a">Rp ${fmt(totalMasuk)}</td><td style="text-align:right">100%</td></tr></tfoot>
+  </table>
+</div>`:''}
+
+<!-- V. POSISI DOMPET -->
+${appData.Dompet.length?`<div class="section">
+  <div class="section-title">V. POSISI SALDO DOMPET</div>
+  <table>
+    <thead><tr><th>Nama Dompet</th><th>Tipe</th><th style="text-align:right">Saldo / Tagihan</th></tr></thead>
+    <tbody>${dompetRows}</tbody>
+    <tfoot><tr><td colspan="2">Total Saldo Bersih (Non-CC)</td>
+      <td style="text-align:right">Rp ${fmt(appData.Dompet.filter(d=>d.IsCC!=='true'&&d.Kategori!=='Kartu Kredit').reduce((s,d)=>s+(parseFloat(d.SaldoSaatIni)||0),0))}</td></tr></tfoot>
+  </table>
+</div>`:''}
+
+<!-- VI. HUTANG PIUTANG -->
+${hpAktif.length?`<div class="section">
+  <div class="section-title">VI. HUTANG & PIUTANG AKTIF</div>
+  <table>
+    <thead><tr><th>Nama</th><th>Jenis</th><th style="text-align:right">Nominal</th><th>Jatuh Tempo</th></tr></thead>
+    <tbody>${hpRows}</tbody>
+  </table>
+</div>`:''}
+
+<!-- VII. ANALISIS -->
+<div class="section">
+  <div class="section-title">VII. ANALISIS KEUANGAN</div>
+  <div class="analysis-wrap">${analysisHTML}</div>
+</div>
+
+<!-- FOOTER -->
+<div class="rpt-footer">
+  <p>Laporan ini digenerate secara otomatis oleh <strong>KeuanganKu App</strong> &nbsp;|&nbsp; ${email} &nbsp;|&nbsp; ${now}</p>
+  <p style="margin-top:4px;color:#cbd5e1">Data bersumber dari Google Sheets pribadi Anda. Dokumen ini bersifat rahasia.</p>
+</div>
+
+<script>window.onload = () => { setTimeout(() => window.print(), 400); }<\/script>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if (!w) { showAlert('Popup diblokir browser. Izinkan popup untuk halaman ini lalu coba lagi.','error'); return; }
+  w.document.write(html);
+  w.document.close();
+}
+
 function exportLaporanCSV() {
   const range=getLaporanRange();
   const trx=appData.Transaksi.filter(t=>t.Tanggal>=range.start&&t.Tanggal<=range.end);
