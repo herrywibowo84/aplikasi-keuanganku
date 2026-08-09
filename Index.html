@@ -171,8 +171,16 @@
       <a href="#" onclick="switchPage('hutang')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-handshake w-5 mr-2"></i><span data-i18n="nav_hutang">Hutang & Piutang</span></a>
       <a href="#" onclick="switchPage('investasi')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-chart-line w-5 mr-2"></i><span data-i18n="nav_investasi">Investasi</span></a>
       <a href="#" onclick="switchPage('laporan')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-file-invoice-dollar w-5 mr-2"></i><span data-i18n="nav_laporan">Laporan</span></a>
+      <a href="#" onclick="switchPage('recurring')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-redo w-5 mr-2"></i><span>Transaksi Berulang</span></a>
       <a href="#" onclick="switchPage('pengaturan')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-cog w-5 mr-2"></i><span data-i18n="nav_pengaturan">Pengaturan</span></a>
     </nav>
+    <!-- Search Global -->
+    <div class="px-3 pb-2">
+      <div class="relative">
+        <input id="globalSearchInput" type="text" placeholder="🔍 Cari transaksi..." oninput="onGlobalSearch(this.value)"
+          class="w-full text-xs px-3 py-2 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-300" style="color:var(--text-main);background:var(--bg-input);border-color:var(--border-in)">
+      </div>
+    </div>
   </div>
   <div class="p-4 border-t space-y-2">
     <button onclick="doLogout()" class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition">
@@ -196,7 +204,13 @@
   <a href="#" onclick="switchPage('hutang');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-handshake mr-2"></i><span data-i18n="nav_hutang">Hutang & Piutang</span></a>
   <a href="#" onclick="switchPage('investasi');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-chart-line mr-2"></i><span data-i18n="nav_investasi">Investasi</span></a>
   <a href="#" onclick="switchPage('laporan');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-file-invoice-dollar mr-2"></i><span data-i18n="nav_laporan">Laporan</span></a>
+  <a href="#" onclick="switchPage('recurring');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-redo mr-2"></i>Transaksi Berulang</a>
   <a href="#" onclick="switchPage('pengaturan');closeMobileMenu()" class="block px-4 py-3 text-gray-700"><i class="fas fa-cog mr-2"></i><span data-i18n="nav_pengaturan">Pengaturan</span></a>
+  <!-- Search di mobile menu -->
+  <div class="px-4 py-3 border-t">
+    <input id="globalSearchMobile" type="text" placeholder="🔍 Cari transaksi..." oninput="onGlobalSearch(this.value);closeMobileMenu()"
+      class="w-full text-sm px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+  </div>
 </div>
 
 <!-- MAIN CONTENT -->
@@ -1046,6 +1060,83 @@
   </div>
 </div>
 
+<!-- 10. TRANSAKSI BERULANG -->
+<div id="recurringPage" class="page-content hidden fade-in">
+  <div class="flex items-center justify-between mb-5">
+    <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-redo mr-2 text-blue-500"></i>Transaksi Berulang</h2>
+    <button onclick="toggleForm('recurringForm')" class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center gap-2">
+      <i class="fas fa-plus"></i> Tambah
+    </button>
+  </div>
+  <!-- Info box -->
+  <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 text-sm text-blue-800">
+    <i class="fas fa-info-circle mr-2"></i>
+    Transaksi berulang akan otomatis dicatat setiap hari pukul 07:00 WIB. Pastikan fitur trigger sudah diaktifkan oleh admin app.
+  </div>
+  <!-- Form tambah -->
+  <div id="recurringForm" class="hidden bg-white rounded-xl shadow p-5 mb-5">
+    <h3 class="font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-redo mr-2 text-blue-500"></i>Tambah Transaksi Berulang</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Nama / Label</label>
+        <input id="recNama" type="text" placeholder="cth: Bayar listrik bulanan" class="w-full text-sm px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Jenis</label>
+        <select id="recJenis" onchange="updateRecKategori()" class="w-full text-sm px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+          <option value="Pengeluaran">Pengeluaran</option>
+          <option value="Pemasukan">Pemasukan</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Kategori</label>
+        <select id="recKategori" class="w-full text-sm px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"></select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Nominal (Rp)</label>
+        <input id="recNominal" type="number" min="0" placeholder="0" class="w-full text-sm px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Dompet Sumber</label>
+        <select id="recDompet" class="w-full text-sm px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"></select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Frekuensi</label>
+        <select id="recFrekuensi" class="w-full text-sm px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+          <option value="harian">Harian</option>
+          <option value="mingguan">Mingguan</option>
+          <option value="bulanan" selected>Bulanan</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Tanggal Mulai</label>
+        <input id="recTanggalMulai" type="date" class="w-full text-sm px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="submitRecurring()" class="px-5 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">Simpan</button>
+      <button onclick="toggleForm('recurringForm')" class="px-4 py-2 text-gray-600 border rounded-lg hover:bg-gray-50 text-sm">Batal</button>
+    </div>
+  </div>
+  <!-- List -->
+  <div id="recurringList" class="space-y-3">
+    <p class="text-gray-400 text-sm text-center py-8">Belum ada transaksi berulang.</p>
+  </div>
+</div>
+
+<!-- SEARCH RESULTS MODAL -->
+<div id="searchModal" class="hidden fixed inset-0 z-50 flex items-start justify-center pt-16 px-4" style="background:rgba(0,0,0,0.5)" onclick="if(event.target===this)closeSearch()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[75vh] flex flex-col" style="background:var(--bg-card)">
+    <div class="flex items-center gap-3 p-4 border-b" style="border-color:var(--border)">
+      <i class="fas fa-search text-blue-500"></i>
+      <input id="searchModalInput" type="text" placeholder="Cari kategori, keterangan, dompet, nominal..." oninput="runSearch(this.value)"
+        class="flex-1 text-sm focus:outline-none" style="background:transparent;color:var(--text-main)">
+      <button onclick="closeSearch()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="searchResults" class="overflow-y-auto flex-1 p-2"></div>
+  </div>
+</div>
+
 </div><!-- end mainContainer -->
 </main>
 <script>
@@ -1162,7 +1253,7 @@ function updatePeriodPreview() {
 // ============================================================
 // STATE
 // ============================================================
-let appData = { Dompet:[], Kategori:[], Anggaran:[], Transaksi:[], Transfer:[], HutangPiutang:[], Investasi:[] };
+let appData = { Dompet:[], Kategori:[], Anggaran:[], Transaksi:[], Transfer:[], HutangPiutang:[], Investasi:[], Recurring:[] };
 let filteredRiwayat = [];
 let importedDataTemp = [];
 let cfChartInstance = null;
@@ -1382,6 +1473,7 @@ function switchPage(pageId) {
   if (pageId==='hutang') renderHutangPage();
   if (pageId==='investasi') updateLiveEmas();
   if (pageId==='laporan') renderLaporan();
+  if (pageId==='recurring') renderRecurringPage();
   if (pageId==='pengaturan') { renderPengaturan(); updatePeriodPreview(); }
 }
 function closeMobileMenu() { document.getElementById('mobileMenu').classList.add('hidden'); }
@@ -2765,6 +2857,170 @@ function triggerPWAInstall() {
   } else {
     showAlert('Instalasi otomatis tidak didukung di browser ini. Silakan tambahkan ke Home Screen secara manual dari menu browser.', 'info');
   }
+}
+
+// ============================================================
+// TRANSAKSI BERULANG
+// ============================================================
+function renderRecurringPage() {
+  updateRecKategori();
+  // populate dompet
+  const dompetSel = document.getElementById('recDompet');
+  dompetSel.innerHTML = appData.Dompet.map(d=>`<option value="${d.Nama}">${d.Nama}</option>`).join('');
+  // set default date
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('recTanggalMulai').value = today;
+
+  const list = document.getElementById('recurringList');
+  const items = appData.Recurring || [];
+  if (!items.length) {
+    list.innerHTML = '<p class="text-gray-400 text-sm text-center py-8"><i class="fas fa-redo mr-2"></i>Belum ada transaksi berulang.<br>Klik <b>Tambah</b> untuk mulai.</p>';
+    return;
+  }
+  const frekIcon = { harian:'fas fa-calendar-day', mingguan:'fas fa-calendar-week', bulanan:'fas fa-calendar-alt' };
+  list.innerHTML = items.map(r => {
+    const aktif = r.Aktif === true || r.Aktif === 'true' || r.Aktif === 'TRUE';
+    return `
+    <div class="bg-white rounded-xl shadow p-4 flex items-center gap-4" style="background:var(--bg-card)">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${r.Jenis==='Pemasukan'?'bg-green-100 text-green-600':'bg-red-100 text-red-500'}">
+        <i class="${frekIcon[r.Frekuensi]||'fas fa-redo'} text-sm"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="font-semibold text-sm truncate" style="color:var(--text-main)">${r.Nama}</p>
+        <p class="text-xs mt-0.5" style="color:var(--text-sec)">${r.Kategori} · ${r.DompetAsal} · <span class="capitalize">${r.Frekuensi}</span></p>
+        ${r.TerakhirDijalankan ? `<p class="text-xs text-gray-400">Terakhir: ${r.TerakhirDijalankan}</p>` : ''}
+      </div>
+      <div class="flex-shrink-0 text-right">
+        <p class="font-bold text-sm ${r.Jenis==='Pemasukan'?'text-green-600':'text-red-500'}">Rp ${fmt(r.Nominal)}</p>
+        <div class="flex items-center gap-2 mt-1 justify-end">
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" ${aktif?'checked':''} onchange="toggleRecurring('${r.ID}', this.checked)" class="sr-only peer">
+            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+          <button onclick="deleteRecurring('${r.ID}')" class="text-red-400 hover:text-red-600 text-xs"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateRecKategori() {
+  const jenis = document.getElementById('recJenis')?.value || 'Pengeluaran';
+  const sel = document.getElementById('recKategori');
+  if (!sel) return;
+  sel.innerHTML = appData.Kategori.filter(k=>k.Jenis===jenis).map(k=>`<option value="${k.Nama}">${k.Nama}</option>`).join('');
+}
+
+function submitRecurring() {
+  const nama = document.getElementById('recNama').value.trim();
+  const nominal = parseFloat(document.getElementById('recNominal').value)||0;
+  if (!nama) { showAlert('Nama tidak boleh kosong','error'); return; }
+  if (!nominal) { showAlert('Nominal tidak valid','error'); return; }
+  const obj = {
+    ID: '', Nama: nama,
+    Jenis: document.getElementById('recJenis').value,
+    Kategori: document.getElementById('recKategori').value,
+    Nominal: nominal,
+    DompetAsal: document.getElementById('recDompet').value,
+    Frekuensi: document.getElementById('recFrekuensi').value,
+    TanggalMulai: document.getElementById('recTanggalMulai').value,
+    Aktif: true,
+    TerakhirDijalankan: ''
+  };
+  showLoading('Menyimpan...');
+  google.script.run
+    .withSuccessHandler(() => { hideLoading(); showAlert('Transaksi berulang disimpan!','success'); loadAllData(); document.getElementById('recNama').value=''; toggleForm('recurringForm'); })
+    .withFailureHandler(e => { hideLoading(); showAlert('Gagal: '+e.message,'error'); })
+    .saveRecord('Recurring', obj);
+}
+
+function toggleRecurring(id, aktif) {
+  const rec = (appData.Recurring||[]).find(r=>r.ID===id);
+  if (!rec) return;
+  const updated = {...rec, Aktif: aktif};
+  google.script.run
+    .withSuccessHandler(() => { showAlert(aktif?'Diaktifkan':'Dinonaktifkan','success'); loadAllData(); })
+    .withFailureHandler(e => showAlert('Gagal: '+e.message,'error'))
+    .saveRecord('Recurring', updated);
+}
+
+function deleteRecurring(id) {
+  if (!confirm('Hapus transaksi berulang ini?')) return;
+  showLoading('Menghapus...');
+  google.script.run
+    .withSuccessHandler(() => { hideLoading(); showAlert('Dihapus!','success'); loadAllData(); })
+    .withFailureHandler(e => { hideLoading(); showAlert('Gagal: '+e.message,'error'); })
+    .deleteRecord('Recurring', id);
+}
+
+// ============================================================
+// SEARCH GLOBAL
+// ============================================================
+function onGlobalSearch(val) {
+  if (!val.trim()) return;
+  document.getElementById('searchModal').classList.remove('hidden');
+  document.getElementById('searchModalInput').value = val;
+  runSearch(val);
+}
+
+function closeSearch() {
+  document.getElementById('searchModal').classList.add('hidden');
+  document.getElementById('globalSearchInput').value = '';
+  const mob = document.getElementById('globalSearchMobile');
+  if (mob) mob.value = '';
+}
+
+function runSearch(q) {
+  q = (q||'').toLowerCase().trim();
+  const el = document.getElementById('searchResults');
+  if (!q) { el.innerHTML = '<p class="text-center text-gray-400 text-sm py-6">Ketik untuk mulai mencari...</p>'; return; }
+
+  const results = [];
+  // Search Transaksi
+  (appData.Transaksi||[]).forEach(t => {
+    const hay = [t.Tanggal,t.Jenis,t.Kategori,t.Keterangan,t.DompetAsal,String(t.Nominal)].join(' ').toLowerCase();
+    if (hay.includes(q)) results.push({type:'transaksi', data:t});
+  });
+  // Search Transfer
+  (appData.Transfer||[]).forEach(t => {
+    const hay = [t.Tanggal,t.DariDompet,t.KeDompet,t.Catatan,String(t.Jumlah)].join(' ').toLowerCase();
+    if (hay.includes(q)) results.push({type:'transfer', data:t});
+  });
+
+  if (!results.length) {
+    el.innerHTML = '<p class="text-center text-gray-400 text-sm py-6"><i class="fas fa-search mr-2"></i>Tidak ditemukan untuk "<b>'+q+'</b>"</p>';
+    return;
+  }
+
+  el.innerHTML = `<p class="text-xs text-gray-400 px-3 py-2">${results.length} hasil ditemukan</p>` +
+    results.slice(0,50).map(r => {
+      if (r.type === 'transaksi') {
+        const t = r.data;
+        const isIn = t.Jenis === 'Pemasukan';
+        return `<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 cursor-pointer" style="background:var(--bg-hover) none" onclick="closeSearch();switchPage('riwayat')">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isIn?'bg-green-100 text-green-600':'bg-red-100 text-red-500'}">
+            <i class="fas ${isIn?'fa-arrow-down':'fa-arrow-up'} text-xs"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium truncate" style="color:var(--text-main)">${t.Kategori||t.Keterangan||'-'}</p>
+            <p class="text-xs" style="color:var(--text-sec)">${t.Tanggal} · ${t.DompetAsal||''}</p>
+          </div>
+          <p class="text-sm font-bold flex-shrink-0 ${isIn?'text-green-600':'text-red-500'}">Rp ${fmt(t.Nominal)}</p>
+        </div>`;
+      } else {
+        const t = r.data;
+        return `<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-50 cursor-pointer" onclick="closeSearch();switchPage('riwayat')">
+          <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-exchange-alt text-xs"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium" style="color:var(--text-main)">${t.DariDompet} → ${t.KeDompet}</p>
+            <p class="text-xs" style="color:var(--text-sec)">${t.Tanggal}${t.Catatan?' · '+t.Catatan:''}</p>
+          </div>
+          <p class="text-sm font-bold text-blue-600 flex-shrink-0">Rp ${fmt(t.Jumlah)}</p>
+        </div>`;
+      }
+    }).join('');
 }
 
 function showLoading(msg) { document.getElementById('loadingMsg').innerText=msg||'Memuat...'; document.getElementById('loadingOverlay').style.display='flex'; }

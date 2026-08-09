@@ -13,7 +13,8 @@ const SCHEMAS = {
   'Transaksi':     ['ID', 'Tanggal', 'Waktu', 'Jenis', 'Kategori', 'Nominal', 'Biaya', 'KategoriBiaya', 'Keterangan', 'DompetAsal'],
   'Transfer':      ['ID', 'Tanggal', 'DariDompet', 'KeDompet', 'Jumlah', 'Biaya', 'Catatan'],
   'HutangPiutang': ['ID', 'Jenis', 'Nama', 'Nominal', 'Tanggal', 'JatuhTempo', 'Status', 'Keterangan'],
-  'Investasi':     ['ID', 'NamaInvestasi', 'JenisInvestasi', 'BeratGram', 'HargaBeliGram', 'TotalModal', 'NilaiSaatIni', 'ReturnRate', 'Tanggal']
+  'Investasi':     ['ID', 'NamaInvestasi', 'JenisInvestasi', 'BeratGram', 'HargaBeliGram', 'TotalModal', 'NilaiSaatIni', 'ReturnRate', 'Tanggal'],
+  'Recurring':     ['ID', 'Nama', 'Jenis', 'Kategori', 'Nominal', 'DompetAsal', 'Frekuensi', 'TanggalMulai', 'Aktif', 'TerakhirDijalankan']
 };
 
 // ==================== ENTRY POINT ====================
@@ -132,7 +133,7 @@ function resetAndSetupDB() {
 
 function getAppData() {
   const ss = getDB();
-  const empty = { Dompet: [], Kategori: [], Anggaran: [], Transaksi: [], Transfer: [], HutangPiutang: [], Investasi: [] };
+  const empty = { Dompet: [], Kategori: [], Anggaran: [], Transaksi: [], Transfer: [], HutangPiutang: [], Investasi: [], Recurring: [] };
   if (!ss) return empty;
 
   const result = {};
@@ -313,6 +314,97 @@ function seedBiayaKategori_(ss) {
   ];
   const lastRow = sheet.getLastRow();
   sheet.getRange(lastRow + 1, 1, biayaRows.length, 4).setValues(biayaRows);
+}
+
+// ==================== RECURRING TRANSACTIONS ====================
+
+/**
+ * Run all active recurring transactions that are due today.
+ * Called by a daily time-driven trigger (set up via setupDailyTrigger).
+ */
+function runRecurringTransactions() {
+  const ss = getDB();
+  if (!ss) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const recSheet = ss.getSheetByName('Recurring');
+  if (!recSheet || recSheet.getLastRow() <= 1) return;
+
+  const recData = recSheet.getDataRange().getValues();
+  const recHeaders = recData[0];
+  const idIdx        = recHeaders.indexOf('ID');
+  const aktifIdx     = recHeaders.indexOf('Aktif');
+  const frekIdx      = recHeaders.indexOf('Frekuensi');
+  const mulaiIdx     = recHeaders.indexOf('TanggalMulai');
+  const terakhirIdx  = recHeaders.indexOf('TerakhirDijalankan');
+  const jenisIdx     = recHeaders.indexOf('Jenis');
+  const katIdx       = recHeaders.indexOf('Kategori');
+  const nomIdx       = recHeaders.indexOf('Nominal');
+  const dompetIdx    = recHeaders.indexOf('DompetAsal');
+  const namaIdx      = recHeaders.indexOf('Nama');
+
+  for (let i = 1; i < recData.length; i++) {
+    const row = recData[i];
+    if (!row[aktifIdx] || row[aktifIdx] === 'false' || row[aktifIdx] === false) continue;
+
+    const frekuensi   = String(row[frekIdx]).toLowerCase();
+    const tanggalMulai = row[mulaiIdx] ? new Date(row[mulaiIdx]) : null;
+    const terakhir    = row[terakhirIdx] ? new Date(row[terakhirIdx]) : null;
+
+    if (!tanggalMulai) continue;
+
+    let isDue = false;
+    if (frekuensi === 'harian') {
+      isDue = !terakhir || daysBetween(terakhir, today) >= 1;
+    } else if (frekuensi === 'mingguan') {
+      isDue = !terakhir || daysBetween(terakhir, today) >= 7;
+    } else if (frekuensi === 'bulanan') {
+      isDue = !terakhir || (today.getDate() === tanggalMulai.getDate() &&
+              (today.getFullYear() > terakhir.getFullYear() || today.getMonth() > terakhir.getMonth()));
+    }
+
+    if (!isDue) continue;
+
+    // Create transaction
+    const txObj = {
+      ID: '', Tanggal: Utilities.formatDate(today, 'Asia/Jakarta', 'yyyy-MM-dd'),
+      Waktu: '', Jenis: row[jenisIdx], Kategori: row[katIdx],
+      Nominal: parseFloat(row[nomIdx]) || 0, Biaya: 0, KodeUnik: '',
+      Keterangan: '[Auto] ' + String(row[namaIdx]),
+      DompetAsal: row[dompetIdx]
+    };
+    saveRecord('Transaksi', txObj);
+
+    // Update TerakhirDijalankan
+    recSheet.getRange(i + 1, terakhirIdx + 1).setValue(
+      Utilities.formatDate(today, 'Asia/Jakarta', 'yyyy-MM-dd')
+    );
+    console.log('Recurring run: ' + row[namaIdx]);
+  }
+}
+
+function daysBetween(d1, d2) {
+  const ms = Math.abs(d2.getTime() - d1.getTime());
+  return Math.floor(ms / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Create a daily trigger for runRecurringTransactions.
+ * Run once manually from GAS editor (select setupDailyTrigger → Run).
+ */
+function setupDailyTrigger() {
+  // Remove existing triggers for this function first
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'runRecurringTransactions') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  // Create new daily trigger at 7am Jakarta time
+  ScriptApp.newTrigger('runRecurringTransactions')
+    .timeBased().everyDays(1).atHour(7).inTimezone('Asia/Jakarta').create();
+  console.log('Daily trigger set for runRecurringTransactions at 07:00 WIB');
 }
 
 // ==================== MIGRATION ====================
