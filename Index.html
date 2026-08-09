@@ -160,6 +160,7 @@
       <a href="#" onclick="switchPage('anggaran')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-bullseye w-5 mr-2"></i><span data-i18n="nav_anggaran">Anggaran</span></a>
       <a href="#" onclick="switchPage('hutang')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-handshake w-5 mr-2"></i><span data-i18n="nav_hutang">Hutang & Piutang</span></a>
       <a href="#" onclick="switchPage('investasi')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-chart-line w-5 mr-2"></i><span data-i18n="nav_investasi">Investasi</span></a>
+      <a href="#" onclick="switchPage('laporan')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-file-invoice-dollar w-5 mr-2"></i><span data-i18n="nav_laporan">Laporan</span></a>
       <a href="#" onclick="switchPage('pengaturan')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-cog w-5 mr-2"></i><span data-i18n="nav_pengaturan">Pengaturan</span></a>
     </nav>
   </div>
@@ -184,6 +185,7 @@
   <a href="#" onclick="switchPage('anggaran');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-bullseye mr-2"></i><span data-i18n="nav_anggaran">Anggaran</span></a>
   <a href="#" onclick="switchPage('hutang');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-handshake mr-2"></i><span data-i18n="nav_hutang">Hutang & Piutang</span></a>
   <a href="#" onclick="switchPage('investasi');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-chart-line mr-2"></i><span data-i18n="nav_investasi">Investasi</span></a>
+  <a href="#" onclick="switchPage('laporan');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-file-invoice-dollar mr-2"></i><span data-i18n="nav_laporan">Laporan</span></a>
   <a href="#" onclick="switchPage('pengaturan');closeMobileMenu()" class="block px-4 py-3 text-gray-700"><i class="fas fa-cog mr-2"></i><span data-i18n="nav_pengaturan">Pengaturan</span></a>
 </div>
 
@@ -237,11 +239,12 @@
 <div id="catatPage" class="page-content hidden fade-in max-w-2xl mx-auto">
   <h2 class="text-2xl font-bold text-gray-800 mb-5 text-center" data-i18n="pg_catat">Catat Transaksi</h2>
   <div class="bg-white rounded-xl shadow overflow-hidden">
-    <div class="flex border-b">
-      <button onclick="setCatatTab('pengeluaran')" id="tabPengeluaran" class="flex-1 py-3 text-center text-sm text-red-600 hover:bg-red-50 transition"><i class="fas fa-arrow-up mr-1"></i>Pengeluaran</button>
-      <button onclick="setCatatTab('pemasukan')" id="tabPemasukan" class="flex-1 py-3 text-center text-sm text-green-600 hover:bg-green-50 transition"><i class="fas fa-arrow-down mr-1"></i>Pemasukan</button>
-      <button onclick="setCatatTab('transfer')" id="tabTransfer" class="flex-1 py-3 text-center text-sm text-blue-600 hover:bg-blue-50 transition"><i class="fas fa-exchange-alt mr-1"></i>Transfer</button>
-      <button onclick="setCatatTab('import')" id="tabImport" class="flex-1 py-3 text-center text-sm text-purple-600 hover:bg-purple-50 transition"><i class="fas fa-file-import mr-1"></i>Import CSV</button>
+    <div class="flex border-b flex-wrap">
+      <button onclick="setCatatTab('pengeluaran')" id="tabPengeluaran" class="flex-1 py-3 text-center text-sm text-red-600 hover:bg-red-50 transition min-w-fit"><i class="fas fa-arrow-up mr-1"></i>Pengeluaran</button>
+      <button onclick="setCatatTab('pemasukan')" id="tabPemasukan" class="flex-1 py-3 text-center text-sm text-green-600 hover:bg-green-50 transition min-w-fit"><i class="fas fa-arrow-down mr-1"></i>Pemasukan</button>
+      <button onclick="setCatatTab('transfer')" id="tabTransfer" class="flex-1 py-3 text-center text-sm text-blue-600 hover:bg-blue-50 transition min-w-fit"><i class="fas fa-exchange-alt mr-1"></i>Transfer</button>
+      <button onclick="setCatatTab('batch')" id="tabBatch" class="flex-1 py-3 text-center text-sm text-orange-600 hover:bg-orange-50 transition min-w-fit"><i class="fas fa-layer-group mr-1"></i>Batch</button>
+      <button onclick="setCatatTab('import')" id="tabImport" class="flex-1 py-3 text-center text-sm text-purple-600 hover:bg-purple-50 transition min-w-fit"><i class="fas fa-file-import mr-1"></i>Import CSV</button>
     </div>
     <div class="p-6">
       <form id="formCatat" onsubmit="submitTransaksi(event)" class="space-y-4">
@@ -250,8 +253,14 @@
         <div class="grid grid-cols-2 gap-4">
           <div><label class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
             <input type="date" id="transaksiTanggal" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm"></div>
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">Waktu</label>
+            <input type="time" id="transaksiWaktu" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
           <div><label class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
             <input type="number" id="transaksiNominal" required min="1" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm"></div>
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">Biaya Admin (Rp)</label>
+            <input type="number" id="transaksiBiaya" value="0" min="0" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm"></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div><label class="block text-sm font-medium text-gray-700 mb-1">Dompet</label>
@@ -259,13 +268,47 @@
           <div><label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
             <select id="transaksiKategori" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm"></select></div>
         </div>
-        <div><label class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
-          <input type="text" id="transaksiKeterangan" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm" placeholder="Misal: Makan siang di warung"></div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">Kode Unik / Ref</label>
+            <input type="text" id="transaksiKodeUnik" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm" placeholder="No. referensi / kode unik"></div>
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
+            <input type="text" id="transaksiKeterangan" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm" placeholder="Misal: Makan siang"></div>
+        </div>
         <div class="flex gap-2 pt-1">
           <button type="button" onclick="cancelEdit('Transaksi')" id="btnCancelTransaksi" class="hidden px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">Batal Edit</button>
           <button type="submit" class="flex-1 px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 text-sm"><i class="fas fa-save mr-1"></i>Simpan Transaksi</button>
         </div>
       </form>
+
+      <!-- BATCH INPUT -->
+      <div id="formBatch" class="hidden">
+        <div class="bg-orange-50 border border-orange-200 text-orange-800 text-xs p-3 rounded-lg mb-4">
+          <i class="fas fa-info-circle mr-1"></i>Input beberapa transaksi sekaligus. Isi baris yang dibutuhkan, baris kosong akan dilewati.
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-xs" id="batchTable">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="py-2 px-2 text-left font-medium text-gray-600">Tanggal</th>
+                <th class="py-2 px-2 text-left font-medium text-gray-600">Waktu</th>
+                <th class="py-2 px-2 text-left font-medium text-gray-600">Jenis</th>
+                <th class="py-2 px-2 text-left font-medium text-gray-600">Dompet</th>
+                <th class="py-2 px-2 text-left font-medium text-gray-600">Kategori</th>
+                <th class="py-2 px-2 text-left font-medium text-gray-600">Nominal</th>
+                <th class="py-2 px-2 text-left font-medium text-gray-600">Biaya</th>
+                <th class="py-2 px-2 text-left font-medium text-gray-600">Keterangan</th>
+                <th class="py-2 px-2"></th>
+              </tr>
+            </thead>
+            <tbody id="batchBody"></tbody>
+          </table>
+        </div>
+        <div class="flex gap-2 mt-3">
+          <button onclick="addBatchRow()" class="px-3 py-2 bg-orange-100 text-orange-700 rounded-lg text-xs hover:bg-orange-200"><i class="fas fa-plus mr-1"></i>Tambah Baris</button>
+          <button onclick="submitBatch()" class="flex-1 py-2 bg-orange-600 text-white font-medium rounded-lg hover:bg-orange-700 text-sm"><i class="fas fa-save mr-1"></i>Simpan Semua Transaksi</button>
+        </div>
+        <div id="batchProgress" class="hidden mt-3 p-3 bg-blue-50 rounded-lg text-xs text-blue-700"></div>
+      </div>
       <form id="formTransfer" onsubmit="submitTransfer(event)" class="space-y-4 hidden">
         <input type="hidden" id="tfID">
         <div><label class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
@@ -517,6 +560,12 @@
           <button onclick="renderAnggaranList()" class="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"><i class="fas fa-search"></i></button>
         </div>
       </div>
+      <div class="mt-3 pt-3 border-t">
+        <button onclick="copyAnggaranBulanLalu()" class="w-full py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-medium hover:bg-indigo-100 transition">
+          <i class="fas fa-copy mr-1"></i>Salin dari Bulan Lalu
+        </button>
+        <p class="text-xs text-gray-400 mt-1 text-center">Salin & sesuaikan anggaran bulan lalu ke bulan yang dipilih</p>
+      </div>
     </div>
     <div class="lg:col-span-2 bg-white rounded-xl shadow p-5">
       <h3 class="text-base font-bold text-gray-800 mb-4" id="anggaranBulanTitle">Anggaran Bulan Ini</h3>
@@ -673,7 +722,122 @@
   </div>
 </div>
 
-<!-- 8. PENGATURAN (UPDATED) -->
+<!-- 8. LAPORAN KEUANGAN -->
+<div id="laporanPage" class="page-content hidden fade-in">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
+    <h2 class="text-2xl font-bold text-gray-800"><i class="fas fa-file-invoice-dollar mr-2 text-indigo-600"></i>Laporan Keuangan</h2>
+    <div class="flex flex-wrap gap-2 items-center">
+      <select id="laporanPeriode" onchange="onLaporanPeriodeChange()" class="border rounded-lg p-2 text-sm">
+        <option value="bulanIni">Bulan Ini</option>
+        <option value="bulanLalu">Bulan Lalu</option>
+        <option value="3bulan">3 Bulan Terakhir</option>
+        <option value="tahunIni">Tahun Ini</option>
+        <option value="custom">Custom</option>
+      </select>
+      <div id="laporanCustomRange" class="hidden flex gap-2">
+        <input type="date" id="laporanStart" class="border rounded-lg p-2 text-sm">
+        <span class="self-center text-gray-400">–</span>
+        <input type="date" id="laporanEnd" class="border rounded-lg p-2 text-sm">
+      </div>
+      <button onclick="renderLaporan()" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700"><i class="fas fa-sync-alt mr-1"></i>Perbarui</button>
+      <button onclick="exportLaporanCSV()" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"><i class="fas fa-file-csv mr-1"></i>Export</button>
+    </div>
+  </div>
+  <p class="text-xs text-gray-400 mb-5" id="laporanPeriodeLabel"></p>
+
+  <!-- Kartu Ringkasan -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow p-4 border-l-4 border-green-500">
+      <p class="text-xs text-gray-500 mb-1">Total Pemasukan</p>
+      <h3 class="text-lg font-bold text-green-600" id="lapPemasukan">Rp 0</h3>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 border-l-4 border-red-500">
+      <p class="text-xs text-gray-500 mb-1">Total Pengeluaran</p>
+      <h3 class="text-lg font-bold text-red-600" id="lapPengeluaran">Rp 0</h3>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 border-l-4 border-blue-500">
+      <p class="text-xs text-gray-500 mb-1">Net (Selisih)</p>
+      <h3 class="text-lg font-bold" id="lapNet">Rp 0</h3>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 border-l-4 border-purple-500">
+      <p class="text-xs text-gray-500 mb-1">Tingkat Tabungan</p>
+      <h3 class="text-lg font-bold text-purple-600" id="lapSavingRate">0%</h3>
+    </div>
+  </div>
+
+  <!-- Chart Row -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <div class="bg-white rounded-xl shadow p-5 lg:col-span-2">
+      <h3 class="font-bold text-gray-800 mb-3 text-sm">Arus Kas Bulanan</h3>
+      <div class="relative h-56"><canvas id="lapCashflowChart"></canvas></div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-5">
+      <h3 class="font-bold text-gray-800 mb-3 text-sm">Komposisi Pengeluaran</h3>
+      <div class="relative h-56"><canvas id="lapExpenseChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Tabel & Anggaran -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white rounded-xl shadow p-5">
+      <h3 class="font-bold text-gray-800 mb-3 text-sm"><i class="fas fa-list mr-1 text-red-500"></i>Pengeluaran per Kategori</h3>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead><tr class="border-b text-xs text-gray-500">
+            <th class="pb-2 text-left">Kategori</th>
+            <th class="pb-2 text-right">Total</th>
+            <th class="pb-2 text-right">% dari Pengeluaran</th>
+          </tr></thead>
+          <tbody id="lapKategoriBody" class="divide-y text-sm"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-5">
+      <h3 class="font-bold text-gray-800 mb-3 text-sm"><i class="fas fa-bullseye mr-1 text-blue-500"></i>Realisasi vs Anggaran</h3>
+      <div id="lapAnggaranBody" class="space-y-3"></div>
+    </div>
+  </div>
+
+  <!-- Saldo Dompet -->
+  <div class="bg-white rounded-xl shadow p-5 mb-6">
+    <h3 class="font-bold text-gray-800 mb-3 text-sm"><i class="fas fa-wallet mr-1 text-teal-500"></i>Posisi Saldo Dompet</h3>
+    <div id="lapDompetBody" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+  </div>
+
+  <!-- Analisis AI -->
+  <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl p-5">
+    <h3 class="font-bold text-indigo-800 mb-4 text-sm"><i class="fas fa-brain mr-2"></i>Analisis Keuangan Otomatis</h3>
+    <div id="lapAnalisis" class="space-y-3 text-sm text-gray-700"></div>
+  </div>
+</div>
+
+<!-- Modal: Salin Anggaran Bulan Lalu -->
+<div id="modalSalinAnggaran" class="fixed inset-0 z-50 hidden bg-black bg-opacity-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-screen overflow-y-auto">
+    <div class="p-5 border-b flex justify-between items-center">
+      <h3 class="font-bold text-gray-800"><i class="fas fa-copy mr-2 text-indigo-600"></i>Salin Anggaran dari Bulan Lalu</h3>
+      <button onclick="document.getElementById('modalSalinAnggaran').classList.add('hidden')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="p-5">
+      <p class="text-sm text-gray-600 mb-4" id="salinAnggaranInfo"></p>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm mb-4">
+          <thead><tr class="border-b text-xs text-gray-500">
+            <th class="pb-2 text-left">Kategori</th>
+            <th class="pb-2 text-right">Anggaran Baru (Rp)</th>
+          </tr></thead>
+          <tbody id="salinAnggaranBody" class="divide-y"></tbody>
+        </table>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="document.getElementById('modalSalinAnggaran').classList.add('hidden')" class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">Batal</button>
+        <button onclick="simpanSalinanAnggaran()" class="flex-1 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 text-sm"><i class="fas fa-save mr-1"></i>Simpan Anggaran</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 9. PENGATURAN (UPDATED) -->
 <div id="pengaturanPage" class="page-content hidden fade-in">
   <h2 class="text-2xl font-bold text-gray-800 mb-5" data-i18n="pg_pengaturan">Pengaturan</h2>
   <!-- Tampilan section -->
@@ -794,10 +958,10 @@ const LANG = {
   id: {
     nav_dashboard:'Dashboard', nav_catat:'Catat Transaksi', nav_riwayat:'Riwayat',
     nav_dompet:'Dompet', nav_anggaran:'Anggaran', nav_hutang:'Hutang & Piutang',
-    nav_investasi:'Investasi', nav_pengaturan:'Pengaturan',
+    nav_investasi:'Investasi', nav_laporan:'Laporan', nav_pengaturan:'Pengaturan',
     pg_dashboard:'Ringkasan Keuangan', pg_catat:'Catat Transaksi', pg_riwayat:'Buku Besar Transaksi',
     pg_dompet:'Dompet & Rekening', pg_anggaran:'Anggaran Bulanan', pg_hutang:'Hutang & Piutang',
-    pg_investasi:'Portofolio Investasi', pg_pengaturan:'Pengaturan',
+    pg_investasi:'Portofolio Investasi', pg_laporan:'Laporan Keuangan', pg_pengaturan:'Pengaturan',
     dash_total_saldo:'Total Saldo (Kas/Bank)', dash_pemasukan:'Pemasukan Periode Ini',
     dash_pengeluaran:'Pengeluaran Periode Ini', dash_cashflow:'Arus Kas',
     dash_expense_cat:'Pengeluaran per Kategori', dash_latest:'5 Transaksi Terakhir',
@@ -808,10 +972,10 @@ const LANG = {
   en: {
     nav_dashboard:'Dashboard', nav_catat:'Record Transaction', nav_riwayat:'History',
     nav_dompet:'Wallets', nav_anggaran:'Budget', nav_hutang:'Debt & Receivables',
-    nav_investasi:'Investment', nav_pengaturan:'Settings',
+    nav_investasi:'Investment', nav_laporan:'Reports', nav_pengaturan:'Settings',
     pg_dashboard:'Financial Summary', pg_catat:'Record Transaction', pg_riwayat:'Transaction Ledger',
     pg_dompet:'Wallets & Accounts', pg_anggaran:'Monthly Budget', pg_hutang:'Debt & Receivables',
-    pg_investasi:'Investment Portfolio', pg_pengaturan:'Settings',
+    pg_investasi:'Investment Portfolio', pg_laporan:'Financial Report', pg_pengaturan:'Settings',
     dash_total_saldo:'Total Balance (Cash/Bank)', dash_pemasukan:'Income This Period',
     dash_pengeluaran:'Expenses This Period', dash_cashflow:'Cash Flow',
     dash_expense_cat:'Expenses by Category', dash_latest:'5 Latest Transactions',
@@ -1053,6 +1217,7 @@ function switchPage(pageId) {
   if (pageId==='anggaran') { renderAnggaranKategoriSelect(); renderAnggaranList(); }
   if (pageId==='hutang') renderHutangPage();
   if (pageId==='investasi') updateLiveEmas();
+  if (pageId==='laporan') renderLaporan();
   if (pageId==='pengaturan') { renderPengaturan(); updatePeriodPreview(); }
 }
 function closeMobileMenu() { document.getElementById('mobileMenu').classList.add('hidden'); }
@@ -1086,16 +1251,20 @@ function populateKategoriDropdown() {
 // CATAT TABS
 // ============================================================
 function setCatatTab(tab) {
-  ['pengeluaran','pemasukan','transfer','import'].forEach(t => {
+  ['pengeluaran','pemasukan','transfer','batch','import'].forEach(t => {
     const el = document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1));
     if (el) el.classList.remove('tab-active');
   });
-  document.getElementById('formCatat').classList.add('hidden');
-  document.getElementById('formTransfer').classList.add('hidden');
-  document.getElementById('formImport').classList.add('hidden');
+  ['formCatat','formTransfer','formBatch','formImport'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.classList.add('hidden');
+  });
   if (tab==='transfer') {
     document.getElementById('formTransfer').classList.remove('hidden');
     document.getElementById('tabTransfer').classList.add('tab-active');
+  } else if (tab==='batch') {
+    document.getElementById('formBatch').classList.remove('hidden');
+    document.getElementById('tabBatch').classList.add('tab-active');
+    initBatchTable();
   } else if (tab==='import') {
     document.getElementById('formImport').classList.remove('hidden');
     document.getElementById('tabImport').classList.add('tab-active');
@@ -1114,11 +1283,15 @@ function submitTransaksi(e) {
   e.preventDefault();
   const id = document.getElementById('transaksiID').value;
   const obj = {
-    ID:id||'', Tanggal:document.getElementById('transaksiTanggal').value,
+    ID:id||'',
+    Tanggal:document.getElementById('transaksiTanggal').value,
+    Waktu:document.getElementById('transaksiWaktu').value||'',
     Jenis:document.getElementById('transaksiJenis').value,
     Kategori:document.getElementById('transaksiKategori').value,
     Nominal:parseFloat(document.getElementById('transaksiNominal').value),
-    Biaya:0, Keterangan:document.getElementById('transaksiKeterangan').value,
+    Biaya:parseFloat(document.getElementById('transaksiBiaya').value)||0,
+    KodeUnik:document.getElementById('transaksiKodeUnik').value||'',
+    Keterangan:document.getElementById('transaksiKeterangan').value,
     DompetAsal:document.getElementById('transaksiDompet').value
   };
   gasRun('saveRecord',['Transaksi',obj], () => { cancelEdit('Transaksi'); renderRiwayatPage(); });
@@ -1233,6 +1406,9 @@ function cancelEdit(tipe) {
     document.getElementById('transaksiID').value='';
     document.getElementById('btnCancelTransaksi').classList.add('hidden');
     document.getElementById('transaksiTanggal').value=today;
+    document.getElementById('transaksiBiaya').value=0;
+    document.getElementById('transaksiKodeUnik').value='';
+    document.getElementById('transaksiWaktu').value='';
   } else if (tipe==='Transfer') {
     document.getElementById('formTransfer').reset();
     document.getElementById('tfID').value='';
@@ -1943,6 +2119,278 @@ async function saveImportedData() {
 // ============================================================
 // UTILITIES
 // ============================================================
+// ============================================================
+// BATCH INPUT
+// ============================================================
+let batchRowCount = 0;
+function initBatchTable() {
+  const tbody = document.getElementById('batchBody');
+  if (!tbody || tbody.children.length > 0) return;
+  for (let i=0; i<3; i++) addBatchRow();
+}
+function addBatchRow() {
+  batchRowCount++;
+  const id = batchRowCount;
+  const today = new Date().toISOString().split('T')[0];
+  const dompetOpts = appData.Dompet.map(d=>`<option value="${d.Nama}">${d.Nama}</option>`).join('');
+  const katOpts = appData.Kategori.filter(k=>k.Jenis==='Pengeluaran').map(k=>`<option value="${k.Nama}">${k.Nama}</option>`).join('');
+  const katInOpts = appData.Kategori.filter(k=>k.Jenis==='Pemasukan').map(k=>`<option value="${k.Nama}">${k.Nama}</option>`).join('');
+  const tbody = document.getElementById('batchBody');
+  const tr = document.createElement('tr');
+  tr.id = `batchRow_${id}`;
+  tr.className = 'border-b hover:bg-gray-50';
+  tr.innerHTML = `
+    <td class="py-1 px-1"><input type="date" value="${today}" id="br_tgl_${id}" class="border rounded p-1 text-xs w-28"></td>
+    <td class="py-1 px-1"><input type="time" id="br_wkt_${id}" class="border rounded p-1 text-xs w-24"></td>
+    <td class="py-1 px-1">
+      <select id="br_jenis_${id}" onchange="updateBatchKat(${id})" class="border rounded p-1 text-xs w-24">
+        <option value="Pengeluaran">Keluar</option>
+        <option value="Pemasukan">Masuk</option>
+      </select>
+    </td>
+    <td class="py-1 px-1"><select id="br_dompet_${id}" class="border rounded p-1 text-xs w-24">${dompetOpts}</select></td>
+    <td class="py-1 px-1"><select id="br_kat_${id}" class="border rounded p-1 text-xs w-28">${katOpts}</select></td>
+    <td class="py-1 px-1"><input type="number" id="br_nom_${id}" min="0" placeholder="0" class="border rounded p-1 text-xs w-24"></td>
+    <td class="py-1 px-1"><input type="number" id="br_biaya_${id}" value="0" min="0" class="border rounded p-1 text-xs w-16"></td>
+    <td class="py-1 px-1"><input type="text" id="br_ket_${id}" placeholder="Keterangan" class="border rounded p-1 text-xs w-28"></td>
+    <td class="py-1 px-1"><button onclick="removeBatchRow(${id})" class="text-red-400 hover:text-red-600 text-xs"><i class="fas fa-times"></i></button></td>`;
+  tbody.appendChild(tr);
+}
+function updateBatchKat(id) {
+  const jenis = document.getElementById(`br_jenis_${id}`).value;
+  const opts = appData.Kategori.filter(k=>k.Jenis===jenis).map(k=>`<option value="${k.Nama}">${k.Nama}</option>`).join('');
+  document.getElementById(`br_kat_${id}`).innerHTML = opts;
+}
+function removeBatchRow(id) { document.getElementById(`batchRow_${id}`)?.remove(); }
+async function submitBatch() {
+  const rows = document.querySelectorAll('#batchBody tr');
+  const batch = [];
+  rows.forEach(tr => {
+    const id = tr.id.replace('batchRow_','');
+    const nom = parseFloat(document.getElementById(`br_nom_${id}`)?.value)||0;
+    if (!nom) return;
+    batch.push({
+      ID:'', Tanggal:document.getElementById(`br_tgl_${id}`).value,
+      Waktu:document.getElementById(`br_wkt_${id}`).value||'',
+      Jenis:document.getElementById(`br_jenis_${id}`).value,
+      Kategori:document.getElementById(`br_kat_${id}`).value,
+      Nominal:nom, Biaya:parseFloat(document.getElementById(`br_biaya_${id}`).value)||0,
+      KodeUnik:'', Keterangan:document.getElementById(`br_ket_${id}`).value,
+      DompetAsal:document.getElementById(`br_dompet_${id}`).value
+    });
+  });
+  if (!batch.length) { showAlert('Tidak ada baris yang terisi nominal.','error'); return; }
+  const prog = document.getElementById('batchProgress');
+  prog.classList.remove('hidden');
+  let saved=0;
+  const saveNext = (i) => {
+    if (i>=batch.length) {
+      prog.textContent=`✅ Berhasil menyimpan ${saved} transaksi!`;
+      showAlert(`${saved} transaksi berhasil disimpan!`,'success');
+      loadAllData();
+      document.getElementById('batchBody').innerHTML='';
+      batchRowCount=0;
+      for(let j=0;j<3;j++) addBatchRow();
+      return;
+    }
+    prog.textContent=`Menyimpan ${i+1} dari ${batch.length}...`;
+    google.script.run
+      .withSuccessHandler(()=>{saved++;saveNext(i+1);})
+      .withFailureHandler(()=>saveNext(i+1))
+      .saveRecord('Transaksi',batch[i]);
+  };
+  saveNext(0);
+}
+
+// ============================================================
+// ANGGARAN — SALIN DARI BULAN LALU
+// ============================================================
+function copyAnggaranBulanLalu() {
+  const targetBulan = document.getElementById('anggaranBulanFilter').value || new Date().toISOString().substring(0,7);
+  const [ty,tm] = targetBulan.split('-').map(Number);
+  const prevDate = new Date(ty, tm-2, 1);
+  const prevBulan = prevDate.toISOString().substring(0,7);
+  const prevData = appData.Anggaran.filter(a=>a.BulanTahun===prevBulan);
+  if (!prevData.length) { showAlert(`Tidak ada anggaran di bulan ${prevBulan}.`,'error'); return; }
+  const existingCats = new Set(appData.Anggaran.filter(a=>a.BulanTahun===targetBulan).map(a=>a.Kategori));
+  const toAdd = prevData.filter(a=>!existingCats.has(a.Kategori));
+  document.getElementById('salinAnggaranInfo').textContent = `Menyalin ${toAdd.length} kategori dari ${prevBulan} ke ${targetBulan}. Sesuaikan nominal jika perlu.`;
+  const tbody = document.getElementById('salinAnggaranBody'); tbody.innerHTML='';
+  if (!toAdd.length) { tbody.innerHTML='<tr><td colspan="2" class="py-4 text-center text-gray-400 text-sm">Semua kategori sudah ada di bulan target.</td></tr>'; }
+  toAdd.forEach(a => {
+    tbody.innerHTML += `<tr class="border-b">
+      <td class="py-2 text-sm font-medium">${a.Kategori}</td>
+      <td class="py-2"><input type="number" value="${a.Nominal}" id="salin_${a.Kategori.replace(/\s/g,'_')}" class="w-full border rounded p-1 text-sm text-right" data-kat="${a.Kategori}" data-bulan="${targetBulan}"></td>
+    </tr>`;
+  });
+  document.getElementById('modalSalinAnggaran').classList.remove('hidden');
+}
+async function simpanSalinanAnggaran() {
+  const inputs = document.querySelectorAll('#salinAnggaranBody input[data-kat]');
+  const batch = Array.from(inputs).map(inp=>({
+    ID:'', BulanTahun:inp.dataset.bulan, Kategori:inp.dataset.kat, Nominal:parseFloat(inp.value)||0
+  })).filter(a=>a.Nominal>0);
+  if (!batch.length) { showAlert('Tidak ada nominal yang valid.','error'); return; }
+  document.getElementById('modalSalinAnggaran').classList.add('hidden');
+  showLoading(`Menyimpan ${batch.length} anggaran...`);
+  let saved=0;
+  const saveNext=(i)=>{
+    if (i>=batch.length){ hideLoading(); showAlert(`${saved} anggaran berhasil disalin!`,'success'); loadAllData(renderAnggaranList); return; }
+    google.script.run.withSuccessHandler(()=>{saved++;saveNext(i+1);}).withFailureHandler(()=>saveNext(i+1)).saveRecord('Anggaran',batch[i]);
+  };
+  saveNext(0);
+}
+
+// ============================================================
+// LAPORAN KEUANGAN
+// ============================================================
+let lapCFChart=null, lapExpChart=null;
+function getLaporanRange() {
+  const mode = document.getElementById('laporanPeriode').value;
+  const now = new Date();
+  let s, e;
+  if (mode==='bulanIni') {
+    s=new Date(now.getFullYear(),now.getMonth(),1); e=new Date(now.getFullYear(),now.getMonth()+1,0);
+  } else if (mode==='bulanLalu') {
+    s=new Date(now.getFullYear(),now.getMonth()-1,1); e=new Date(now.getFullYear(),now.getMonth(),0);
+  } else if (mode==='3bulan') {
+    s=new Date(now.getFullYear(),now.getMonth()-2,1); e=new Date(now.getFullYear(),now.getMonth()+1,0);
+  } else if (mode==='tahunIni') {
+    s=new Date(now.getFullYear(),0,1); e=new Date(now.getFullYear(),11,31);
+  } else {
+    s=new Date(document.getElementById('laporanStart').value||now);
+    e=new Date(document.getElementById('laporanEnd').value||now);
+  }
+  return { start:s.toISOString().split('T')[0], end:e.toISOString().split('T')[0],
+    label:s.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})+' – '+e.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}) };
+}
+function onLaporanPeriodeChange() {
+  const custom = document.getElementById('laporanPeriode').value==='custom';
+  document.getElementById('laporanCustomRange').classList.toggle('hidden',!custom);
+  if (!custom) renderLaporan();
+}
+function renderLaporan() {
+  const range = getLaporanRange();
+  document.getElementById('laporanPeriodeLabel').textContent='Periode: '+range.label;
+  const trx = appData.Transaksi.filter(t=>t.Tanggal>=range.start&&t.Tanggal<=range.end);
+  let totalMasuk=0, totalKeluar=0;
+  const catKeluar={}, catMasuk={};
+  const byMonth={};
+  trx.forEach(t=>{
+    const nom=parseFloat(t.Nominal)||0;
+    const ym=t.Tanggal.substring(0,7);
+    if (!byMonth[ym]) byMonth[ym]={in:0,out:0};
+    if (t.Jenis==='Pemasukan'){totalMasuk+=nom; catMasuk[t.Kategori]=(catMasuk[t.Kategori]||0)+nom; byMonth[ym].in+=nom;}
+    if (t.Jenis==='Pengeluaran'){totalKeluar+=nom; catKeluar[t.Kategori]=(catKeluar[t.Kategori]||0)+nom; byMonth[ym].out+=nom;}
+  });
+  const net=totalMasuk-totalKeluar;
+  const savingRate=totalMasuk>0?Math.round((net/totalMasuk)*100):0;
+  document.getElementById('lapPemasukan').textContent='Rp '+fmt(totalMasuk);
+  document.getElementById('lapPengeluaran').textContent='Rp '+fmt(totalKeluar);
+  const netEl=document.getElementById('lapNet');
+  netEl.textContent=(net>=0?'':'−')+'Rp '+fmt(Math.abs(net));
+  netEl.className='text-lg font-bold '+(net>=0?'text-blue-600':'text-red-600');
+  document.getElementById('lapSavingRate').textContent=savingRate+'%';
+  // Cashflow chart
+  const months=Object.keys(byMonth).sort();
+  if (lapCFChart) lapCFChart.destroy();
+  lapCFChart=new Chart(document.getElementById('lapCashflowChart'),{type:'bar',
+    data:{labels:months,datasets:[
+      {label:'Pemasukan',data:months.map(m=>byMonth[m].in),backgroundColor:'rgba(34,197,94,.7)'},
+      {label:'Pengeluaran',data:months.map(m=>byMonth[m].out),backgroundColor:'rgba(239,68,68,.7)'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{ticks:{callback:v=>'Rp'+fmt(v)}}}}
+  });
+  // Expense pie
+  if (lapExpChart) lapExpChart.destroy();
+  const expLabels=Object.keys(catKeluar).sort((a,b)=>catKeluar[b]-catKeluar[a]);
+  lapExpChart=new Chart(document.getElementById('lapExpenseChart'),{type:'doughnut',
+    data:{labels:expLabels.length?expLabels:['Tidak ada'],datasets:[{data:expLabels.length?expLabels.map(k=>catKeluar[k]):[1],
+      backgroundColor:expLabels.length?['#ef4444','#f97316','#f59e0b','#22c55e','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#6366f1','#84cc16']:['#e5e7eb']}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}}}
+  });
+  // Kategori tabel
+  const tbody=document.getElementById('lapKategoriBody'); tbody.innerHTML='';
+  expLabels.forEach(k=>{
+    const pct=totalKeluar>0?Math.round((catKeluar[k]/totalKeluar)*100):0;
+    tbody.innerHTML+=`<tr class="border-b"><td class="py-2">${k}</td><td class="py-2 text-right font-medium">Rp ${fmt(catKeluar[k])}</td><td class="py-2 text-right text-gray-500">${pct}%</td></tr>`;
+  });
+  if (!expLabels.length) tbody.innerHTML='<tr><td colspan="3" class="py-4 text-center text-gray-400 text-sm">Tidak ada pengeluaran di periode ini.</td></tr>';
+  // Anggaran vs realisasi
+  const angDiv=document.getElementById('lapAnggaranBody'); angDiv.innerHTML='';
+  const ym=range.start.substring(0,7);
+  const angBulan=appData.Anggaran.filter(a=>a.BulanTahun===ym);
+  if (!angBulan.length) { angDiv.innerHTML='<p class="text-gray-400 text-sm">Tidak ada anggaran untuk bulan '+ym+'.</p>'; }
+  angBulan.forEach(a=>{
+    const spent=catKeluar[a.Kategori]||0; const limit=parseFloat(a.Nominal)||0;
+    const pct=limit?Math.min(Math.round((spent/limit)*100),100):0;
+    const over=spent>limit;
+    angDiv.innerHTML+=`<div><div class="flex justify-between text-xs mb-1"><span>${a.Kategori}</span><span class="${over?'text-red-600 font-bold':'text-gray-600'}">${fmt(spent)} / ${fmt(limit)}</span></div>
+      <div class="progress-bar"><div class="progress-fill ${over?'bg-red-500':pct>80?'bg-yellow-500':'bg-blue-500'}" style="width:${pct}%"></div></div></div>`;
+  });
+  // Saldo dompet
+  const domDiv=document.getElementById('lapDompetBody'); domDiv.innerHTML='';
+  appData.Dompet.forEach(d=>{
+    const isCC=d.IsCC==='true'||d.Kategori==='Kartu Kredit';
+    const saldo=parseFloat(d.SaldoSaatIni)||0;
+    const color=isCC?'text-red-600':saldo<0?'text-red-600':'text-gray-800';
+    domDiv.innerHTML+=`<div class="bg-gray-50 rounded-lg p-3 text-center"><p class="text-xs text-gray-500 mb-1">${d.Nama}</p>
+      <p class="font-bold text-sm ${color}">Rp ${fmt(saldo)}</p>
+      <span class="text-xs text-gray-400">${d.Kategori}</span></div>`;
+  });
+  // Analisis
+  generateAnalisis(totalMasuk,totalKeluar,net,savingRate,catKeluar,angBulan,range);
+}
+function generateAnalisis(masuk,keluar,net,savingRate,catKeluar,anggaran,range) {
+  const div=document.getElementById('lapAnalisis'); div.innerHTML='';
+  const insights=[];
+  // Kesehatan keuangan
+  if (savingRate>=20) insights.push({icon:'✅',cls:'text-green-700 bg-green-50 border-green-200',title:'Tingkat Tabungan Sehat',body:`Tingkat tabungan Anda ${savingRate}% — di atas ambang 20%. Pertahankan kebiasaan baik ini.`});
+  else if (savingRate>0) insights.push({icon:'⚠️',cls:'text-yellow-700 bg-yellow-50 border-yellow-200',title:'Tingkat Tabungan Perlu Ditingkatkan',body:`Tingkat tabungan Anda ${savingRate}% — di bawah rekomendasi 20%. Coba kurangi pengeluaran tidak esensial.`});
+  else if (net<0) insights.push({icon:'🔴',cls:'text-red-700 bg-red-50 border-red-200',title:'Pengeluaran Melebihi Pemasukan',body:`Defisit sebesar Rp ${fmt(Math.abs(net))}. Tinjau ulang pengeluaran terbesar Anda segera.`});
+  // Kategori terbesar
+  const topCat=Object.entries(catKeluar).sort((a,b)=>b[1]-a[1])[0];
+  if (topCat && keluar>0) {
+    const pct=Math.round((topCat[1]/keluar)*100);
+    const warn=pct>40;
+    insights.push({icon:warn?'⚠️':'📊',cls:warn?'text-orange-700 bg-orange-50 border-orange-200':'text-blue-700 bg-blue-50 border-blue-200',
+      title:`Pengeluaran Terbesar: ${topCat[0]}`,body:`Kategori "${topCat[0]}" menyumbang ${pct}% dari total pengeluaran (Rp ${fmt(topCat[1])}).${warn?' Pertimbangkan untuk membatasi pengeluaran ini.':''}`});
+  }
+  // Pelanggaran anggaran
+  const violations=anggaran.filter(a=>(catKeluar[a.Kategori]||0)>parseFloat(a.Nominal));
+  if (violations.length) {
+    violations.forEach(a=>{
+      const over=(catKeluar[a.Kategori]||0)-parseFloat(a.Nominal);
+      insights.push({icon:'❌',cls:'text-red-700 bg-red-50 border-red-200',title:`Anggaran "${a.Kategori}" Terlampaui`,body:`Melebihi batas sebesar Rp ${fmt(over)}. Anggaran: Rp ${fmt(a.Nominal)}, Realisasi: Rp ${fmt(catKeluar[a.Kategori]||0)}.`});
+    });
+  } else if (anggaran.length) {
+    insights.push({icon:'✅',cls:'text-green-700 bg-green-50 border-green-200',title:'Semua Anggaran Terkendali',body:'Tidak ada kategori yang melampaui batas anggaran pada periode ini. Bagus!'});
+  }
+  // Rasio pengeluaran
+  if (masuk>0) {
+    const ratio=Math.round((keluar/masuk)*100);
+    if (ratio>90) insights.push({icon:'🚨',cls:'text-red-700 bg-red-50 border-red-200',title:'Rasio Pengeluaran Sangat Tinggi',body:`${ratio}% dari pemasukan Anda digunakan untuk pengeluaran. Sisa hanya ${100-ratio}%.`});
+  }
+  if (!insights.length) insights.push({icon:'📋',cls:'text-gray-700 bg-gray-50 border-gray-200',title:'Belum Ada Data Cukup',body:'Tambahkan transaksi pada periode ini untuk mendapatkan analisis keuangan.'});
+  insights.forEach(i=>{
+    div.innerHTML+=`<div class="flex gap-3 p-3 rounded-lg border ${i.cls}">
+      <span class="text-xl flex-shrink-0">${i.icon}</span>
+      <div><p class="font-semibold text-sm mb-0.5">${i.title}</p><p class="text-xs opacity-80">${i.body}</p></div>
+    </div>`;
+  });
+}
+function exportLaporanCSV() {
+  const range=getLaporanRange();
+  const trx=appData.Transaksi.filter(t=>t.Tanggal>=range.start&&t.Tanggal<=range.end);
+  if (!trx.length){showAlert('Tidak ada transaksi di periode ini.','error');return;}
+  const headers=['ID','Tanggal','Waktu','Jenis','Kategori','Nominal','Biaya','KodeUnik','Keterangan','DompetAsal'];
+  const rows=trx.map(t=>headers.map(h=>`"${(t[h]||'').toString().replace(/"/g,'""')}"`).join(','));
+  const filename=`laporan_${range.start}_sd_${range.end}.csv`;
+  const blob=new Blob(['﻿'+[headers.join(','),...rows].join('\n')],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+  showAlert('Laporan '+filename+' berhasil diunduh!','success');
+}
+
 function fmt(n) { return Number(n||0).toLocaleString('id-ID'); }
 function showLoading(msg) { document.getElementById('loadingMsg').innerText=msg||'Memuat...'; document.getElementById('loadingOverlay').style.display='flex'; }
 function hideLoading() { document.getElementById('loadingOverlay').style.display='none'; }

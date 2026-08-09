@@ -10,7 +10,7 @@ const SCHEMAS = {
   'Dompet':        ['ID', 'Nama', 'Kategori', 'SaldoAwal', 'SaldoSaatIni', 'Limit', 'IsCC'],
   'Kategori':      ['ID', 'Jenis', 'Nama'],
   'Anggaran':      ['ID', 'BulanTahun', 'Kategori', 'Nominal'],
-  'Transaksi':     ['ID', 'Tanggal', 'Jenis', 'Kategori', 'Nominal', 'Biaya', 'Keterangan', 'DompetAsal'],
+  'Transaksi':     ['ID', 'Tanggal', 'Waktu', 'Jenis', 'Kategori', 'Nominal', 'Biaya', 'KodeUnik', 'Keterangan', 'DompetAsal'],
   'Transfer':      ['ID', 'Tanggal', 'DariDompet', 'KeDompet', 'Jumlah', 'Biaya', 'Catatan'],
   'HutangPiutang': ['ID', 'Jenis', 'Nama', 'Nominal', 'Tanggal', 'JatuhTempo', 'Status', 'Keterangan'],
   'Investasi':     ['ID', 'NamaInvestasi', 'JenisInvestasi', 'BeratGram', 'HargaBeliGram', 'TotalModal', 'NilaiSaatIni', 'ReturnRate', 'Tanggal']
