@@ -8,9 +8,9 @@ const APP_NAME = 'DB_KeuanganKu';
 // Schema spreadsheet
 const SCHEMAS = {
   'Dompet':        ['ID', 'Nama', 'Kategori', 'SaldoAwal', 'SaldoSaatIni', 'Limit', 'IsCC'],
-  'Kategori':      ['ID', 'Jenis', 'Nama'],
+  'Kategori':      ['ID', 'Jenis', 'Nama', 'ParentID'],
   'Anggaran':      ['ID', 'BulanTahun', 'Kategori', 'Nominal'],
-  'Transaksi':     ['ID', 'Tanggal', 'Waktu', 'Jenis', 'Kategori', 'Nominal', 'Biaya', 'KodeUnik', 'Keterangan', 'DompetAsal'],
+  'Transaksi':     ['ID', 'Tanggal', 'Waktu', 'Jenis', 'Kategori', 'Nominal', 'Biaya', 'KategoriBiaya', 'Keterangan', 'DompetAsal'],
   'Transfer':      ['ID', 'Tanggal', 'DariDompet', 'KeDompet', 'Jumlah', 'Biaya', 'Catatan'],
   'HutangPiutang': ['ID', 'Jenis', 'Nama', 'Nominal', 'Tanggal', 'JatuhTempo', 'Status', 'Keterangan'],
   'Investasi':     ['ID', 'NamaInvestasi', 'JenisInvestasi', 'BeratGram', 'HargaBeliGram', 'TotalModal', 'NilaiSaatIni', 'ReturnRate', 'Tanggal']
@@ -77,23 +77,25 @@ function setupDB() {
   const katSheet = ss.getSheetByName('Kategori');
   if (katSheet && katSheet.getLastRow() <= 1) {
     const defaults = [
-      [Utilities.getUuid(), 'Pemasukan', 'Gaji / Upah'],
-      [Utilities.getUuid(), 'Pemasukan', 'Bonus / THR'],
-      [Utilities.getUuid(), 'Pemasukan', 'Usaha / Bisnis'],
-      [Utilities.getUuid(), 'Pemasukan', 'Investasi'],
-      [Utilities.getUuid(), 'Pemasukan', 'Lainnya'],
-      [Utilities.getUuid(), 'Pengeluaran', 'Makanan & Minuman'],
-      [Utilities.getUuid(), 'Pengeluaran', 'Belanja Dapur'],
-      [Utilities.getUuid(), 'Pengeluaran', 'Transportasi'],
-      [Utilities.getUuid(), 'Pengeluaran', 'Tagihan & Utilitas'],
-      [Utilities.getUuid(), 'Pengeluaran', 'Kesehatan'],
-      [Utilities.getUuid(), 'Pengeluaran', 'Pendidikan'],
-      [Utilities.getUuid(), 'Pengeluaran', 'Hiburan'],
-      [Utilities.getUuid(), 'Pengeluaran', 'Pakaian & Fashion'],
-      [Utilities.getUuid(), 'Pengeluaran', 'Penyesuaian Saldo'],
-      [Utilities.getUuid(), 'Pengeluaran', 'Lainnya']
+      [Utilities.getUuid(), 'Pemasukan', 'Gaji / Upah', ''],
+      [Utilities.getUuid(), 'Pemasukan', 'Bonus / THR', ''],
+      [Utilities.getUuid(), 'Pemasukan', 'Usaha / Bisnis', ''],
+      [Utilities.getUuid(), 'Pemasukan', 'Investasi', ''],
+      [Utilities.getUuid(), 'Pemasukan', 'Lainnya', ''],
+      [Utilities.getUuid(), 'Pengeluaran', 'Makanan & Minuman', ''],
+      [Utilities.getUuid(), 'Pengeluaran', 'Belanja Dapur', ''],
+      [Utilities.getUuid(), 'Pengeluaran', 'Transportasi', ''],
+      [Utilities.getUuid(), 'Pengeluaran', 'Tagihan & Utilitas', ''],
+      [Utilities.getUuid(), 'Pengeluaran', 'Kesehatan', ''],
+      [Utilities.getUuid(), 'Pengeluaran', 'Pendidikan', ''],
+      [Utilities.getUuid(), 'Pengeluaran', 'Hiburan', ''],
+      [Utilities.getUuid(), 'Pengeluaran', 'Pakaian & Fashion', ''],
+      [Utilities.getUuid(), 'Pengeluaran', 'Penyesuaian Saldo', ''],
+      [Utilities.getUuid(), 'Pengeluaran', 'Lainnya', '']
     ];
-    katSheet.getRange(2, 1, defaults.length, 3).setValues(defaults);
+    katSheet.getRange(2, 1, defaults.length, 4).setValues(defaults);
+    // Seed Biaya categories
+    seedBiayaKategori_(ss);
   }
 
   // Remove default "Sheet1" if it still exists
@@ -151,6 +153,11 @@ function getAppData() {
       });
   }
   return result;
+}
+
+function getDatabaseUrl() {
+  const ss = getDB();
+  return ss ? ss.getUrl() : null;
 }
 
 // ==================== DATA WRITE ====================
@@ -282,5 +289,139 @@ function updateWalletBalance_(ss, walletName, nominal, jenis) {
       sheet.getRange(i + 1, saldoIdx + 1).setValue(saldo);
       break;
     }
+  }
+}
+
+// ==================== HELPERS ====================
+
+function seedBiayaKategori_(ss) {
+  const sheet = ss.getSheetByName('Kategori');
+  if (!sheet) return;
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const namaIdx = headers.indexOf('Nama');
+  const names = data.slice(1).map(r => String(r[namaIdx]).trim());
+  // Check if 'Jenis Biaya' parent already exists
+  if (names.includes('Jenis Biaya')) return;
+  const parentId = Utilities.getUuid();
+  const biayaRows = [
+    [parentId, 'Biaya', 'Jenis Biaya', ''],
+    [Utilities.getUuid(), 'Biaya', 'Biaya Admin', parentId],
+    [Utilities.getUuid(), 'Biaya', 'Biaya Transfer', parentId],
+    [Utilities.getUuid(), 'Biaya', 'Kode Unik', parentId],
+    [Utilities.getUuid(), 'Biaya', 'Lainnya', parentId]
+  ];
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow + 1, 1, biayaRows.length, 4).setValues(biayaRows);
+}
+
+// ==================== MIGRATION ====================
+
+/**
+ * migrateToV2: Run once to:
+ * 1. Rename KodeUnik → KategoriBiaya in Transaksi sheet
+ * 2. Add ParentID column to Kategori sheet
+ * 3. Seed Biaya sub-categories
+ */
+function migrateToV2() {
+  const ss = getDB();
+  if (!ss) { console.log('DB not found'); return; }
+
+  // --- Migrate Transaksi: KodeUnik → KategoriBiaya ---
+  const trxSheet = ss.getSheetByName('Transaksi');
+  if (trxSheet) {
+    const trxData = trxSheet.getDataRange().getValues();
+    const trxHeaders = trxData[0].map(h => String(h).trim());
+    const kuIdx = trxHeaders.indexOf('KodeUnik');
+    if (kuIdx >= 0) {
+      trxSheet.getRange(1, kuIdx + 1).setValue('KategoriBiaya');
+      console.log('Transaksi: KodeUnik → KategoriBiaya pada kolom ' + (kuIdx + 1));
+    } else if (trxHeaders.indexOf('KategoriBiaya') >= 0) {
+      console.log('Transaksi: KategoriBiaya sudah ada, skip.');
+    } else {
+      console.log('Transaksi: kolom KodeUnik tidak ditemukan.');
+    }
+  }
+
+  // --- Migrate Kategori: tambah kolom ParentID ---
+  const katSheet = ss.getSheetByName('Kategori');
+  if (katSheet) {
+    const katData = katSheet.getDataRange().getValues();
+    const katHeaders = katData[0].map(h => String(h).trim());
+    if (!katHeaders.includes('ParentID')) {
+      const newCol = katHeaders.length + 1;
+      katSheet.getRange(1, newCol).setValue('ParentID');
+      // Fill empty string for all existing rows
+      if (katSheet.getLastRow() > 1) {
+        katSheet.getRange(2, newCol, katSheet.getLastRow() - 1, 1).setValue('');
+      }
+      console.log('Kategori: kolom ParentID ditambahkan di kolom ' + newCol);
+    } else {
+      console.log('Kategori: ParentID sudah ada, skip.');
+    }
+    // Seed Biaya categories
+    seedBiayaKategori_(ss);
+    console.log('Kategori Biaya: seed selesai.');
+  }
+
+  console.log('migrateToV2 selesai.');
+}
+
+/**
+ * Migrate Transaksi sheet from old 8-col schema to new 10-col schema.
+ * Old: [ID, Tanggal, Jenis, KategoriNama, Nominal, Biaya, Keterangan, DompetAsal]
+ * New: [ID, Tanggal, Waktu, Jenis, Kategori, Nominal, Biaya, KodeUnik, Keterangan, DompetAsal]
+ * Run once via GAS editor (select migrateTransaksiSchema → Run).
+ */
+function migrateTransaksiSchema() {
+  const ss = getDB();
+  if (!ss) { console.log('DB not found'); return; }
+
+  const sheet = ss.getSheetByName('Transaksi');
+  if (!sheet) { console.log('Sheet Transaksi not found'); return; }
+
+  const data = sheet.getDataRange().getValues();
+  const oldHeaders = data[0].map(h => String(h).trim());
+  const newHeaders = SCHEMAS['Transaksi'];
+
+  console.log('Old headers (' + oldHeaders.length + '):', JSON.stringify(oldHeaders));
+  console.log('New headers (' + newHeaders.length + '):', JSON.stringify(newHeaders));
+
+  if (JSON.stringify(oldHeaders) === JSON.stringify(newHeaders)) {
+    console.log('Headers already match — no migration needed.');
+    return;
+  }
+
+  // Field rename map: old name → new name
+  const fieldMap = { 'KategoriNama': 'Kategori', 'KategoriID': 'Kategori' };
+
+  // Read & migrate all data rows
+  const rows = data.slice(1).filter(r => r.some(c => c !== ''));
+  const migratedRows = rows.map(row => {
+    const obj = {};
+    oldHeaders.forEach((h, i) => {
+      const key = fieldMap[h] || h;
+      obj[key] = row[i];
+    });
+    return obj;
+  });
+
+  // Clear sheet & rewrite with new headers
+  sheet.clearContents();
+  const headerRange = sheet.getRange(1, 1, 1, newHeaders.length);
+  headerRange.setValues([newHeaders]);
+  headerRange.setFontWeight('bold').setBackground('#1e40af').setFontColor('#ffffff');
+  sheet.setFrozenRows(1);
+
+  if (migratedRows.length > 0) {
+    const rowData = migratedRows.map(obj =>
+      newHeaders.map(h => (obj[h] !== undefined && obj[h] !== null ? obj[h] : ''))
+    );
+    sheet.getRange(2, 1, rowData.length, newHeaders.length).setValues(rowData);
+  }
+
+  console.log('Migration done. ' + migratedRows.length + ' rows migrated.');
+  if (migratedRows.length > 0) {
+    console.log('Sample row 1:', JSON.stringify(migratedRows[0]));
   }
 }
