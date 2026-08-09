@@ -1,0 +1,12 @@
+# clasp
+.clasp.json
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Claude
+.claude/

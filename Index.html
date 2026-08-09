@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplikasi Catatan Keuangan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; }
+    .nav-item.active { background-color: #eff6ff; color: #2563eb; border-right: 4px solid #2563eb; }
+    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .tab-btn.active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+  </style>
+</head>
+<body class="flex h-screen overflow-hidden text-gray-800">
+
+  <!-- Sidebar -->
+  <aside class="w-64 bg-white shadow-lg flex flex-col justify-between hidden md:flex z-10 relative">
+    <div>
+      <div class="p-6 border-b">
+        <h1 class="text-2xl font-bold text-blue-600"><i class="fas fa-wallet mr-2"></i>KeuanganKu</h1>
+      </div>
+      <nav class="mt-4">
+        <a href="#" onclick="switchPage('dashboard')" class="nav-item active block px-6 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-chart-pie w-6"></i> Dashboard</a>
+        <a href="#" onclick="switchPage('catat')" class="nav-item block px-6 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-edit w-6"></i> Catat Transaksi</a>
+        <a href="#" onclick="switchPage('riwayat')" class="nav-item block px-6 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-list w-6"></i> Riwayat Transaksi</a>
+        <a href="#" onclick="switchPage('anggaran')" class="nav-item block px-6 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-bullseye w-6"></i> Anggaran</a>
+        <a href="#" onclick="switchPage('investasi')" class="nav-item block px-6 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-chart-line w-6"></i> Investasi</a>
+        <a href="#" onclick="switchPage('pengaturan')" class="nav-item block px-6 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-cog w-6"></i> Pengaturan</a>
+      </nav>
+    </div>
+    <div class="p-6 border-t text-sm text-gray-500">
+      <p id="userEmail" class="truncate"><i class="fas fa-user-circle mr-1"></i> Memuat...</p>
+    </div>
+  </aside>
+
+  <!-- Mobile Header & Nav -->
+  <div class="md:hidden fixed top-0 left-0 right-0 bg-white shadow-md z-20 px-4 py-3 flex justify-between items-center">
+    <h1 class="text-xl font-bold text-blue-600"><i class="fas fa-wallet mr-2"></i>KeuanganKu</h1>
+    <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="text-gray-600 focus:outline-none"><i class="fas fa-bars text-2xl"></i></button>
+  </div>
+  <div id="mobileMenu" class="hidden md:hidden fixed top-[52px] left-0 right-0 bg-white shadow-lg z-20 flex flex-col">
+    <a href="#" onclick="switchPage('dashboard'); document.getElementById('mobileMenu').classList.add('hidden')" class="px-4 py-3 border-b text-gray-700"><i class="fas fa-chart-pie w-6"></i> Dashboard</a>
+    <a href="#" onclick="switchPage('catat'); document.getElementById('mobileMenu').classList.add('hidden')" class="px-4 py-3 border-b text-gray-700"><i class="fas fa-edit w-6"></i> Catat Transaksi</a>
+    <a href="#" onclick="switchPage('riwayat'); document.getElementById('mobileMenu').classList.add('hidden')" class="px-4 py-3 border-b text-gray-700"><i class="fas fa-list w-6"></i> Riwayat Transaksi</a>
+    <a href="#" onclick="switchPage('anggaran'); document.getElementById('mobileMenu').classList.add('hidden')" class="px-4 py-3 border-b text-gray-700"><i class="fas fa-bullseye w-6"></i> Anggaran</a>
+    <a href="#" onclick="switchPage('investasi'); document.getElementById('mobileMenu').classList.add('hidden')" class="px-4 py-3 border-b text-gray-700"><i class="fas fa-chart-line w-6"></i> Investasi</a>
+    <a href="#" onclick="switchPage('pengaturan'); document.getElementById('mobileMenu').classList.add('hidden')" class="px-4 py-3 text-gray-700"><i class="fas fa-cog w-6"></i> Pengaturan</a>
+  </div>
+
+  <!-- Main Content -->
+  <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50 pt-14 md:pt-0">
+    <div class="flex-1 overflow-y-auto p-4 md:p-8" id="mainContainer">
+      <!-- Loading / Alerts -->
+      <div id="alertBox" class="hidden"></div>
+      <div id="loading" class="fixed inset-0 bg-white bg-opacity-80 z-50 flex flex-col justify-center items-center hidden">
+        <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600 mb-2"></i>
+        <p class="text-gray-600 font-medium">Memproses data...</p>
+      </div>
+
+      <!-- PAGES -->
+      <!-- 1. DASHBOARD -->
+      <div id="dashboardPage" class="page-content fade-in">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Ringkasan Keuangan</h2>
+        <!-- 3 Kartu Ringkasan -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="bg-white rounded-xl shadow p-6 border-l-4 border-blue-500">
+            <p class="text-sm text-gray-500 font-medium mb-1">Total Saldo Kas/Bank</p>
+            <h3 class="text-2xl font-bold text-gray-800" id="dashTotalSaldo">Rp 0</h3>
+          </div>
+          <div class="bg-white rounded-xl shadow p-6 border-l-4 border-green-500">
+            <p class="text-sm text-gray-500 font-medium mb-1">Pemasukan Bulan Ini</p>
+            <h3 class="text-2xl font-bold text-green-600" id="dashPemasukan">Rp 0</h3>
+          </div>
+          <div class="bg-white rounded-xl shadow p-6 border-l-4 border-red-500">
+            <p class="text-sm text-gray-500 font-medium mb-1">Pengeluaran Bulan Ini</p>
+            <h3 class="text-2xl font-bold text-red-600" id="dashPengeluaran">Rp 0</h3>
+          </div>
+        </div>
+
+        <!-- Grafik Arus Kas -->
+        <div class="bg-white rounded-xl shadow p-6 mb-8">
+          <h3 class="text-lg font-bold text-gray-800 mb-4">Arus Kas (Pemasukan vs Pengeluaran)</h3>
+          <div class="relative h-64 w-full">
+            <canvas id="cashflowChart"></canvas>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <!-- Grafik Kategori -->
+          <div class="bg-white rounded-xl shadow p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">Pengeluaran per Kategori</h3>
+            <div class="relative h-64 w-full flex justify-center">
+              <canvas id="expenseChart"></canvas>
+            </div>
+          </div>
+          
+          <!-- Transaksi Terakhir -->
+          <div class="bg-white rounded-xl shadow p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 flex justify-between items-center">
+              Transaksi Terakhir
+              <button onclick="switchPage('riwayat')" class="text-sm text-blue-600 font-normal hover:underline">Lihat Semua</button>
+            </h3>
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm">
+                <tbody id="dashLatestTrx">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. CATAT TRANSAKSI -->
+      <div id="catatPage" class="page-content hidden fade-in max-w-2xl mx-auto">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Catat Transaksi</h2>
+        
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+          <div class="flex border-b">
+            <button onclick="setCatatTab('pengeluaran')" id="tabPengeluaran" class="flex-1 py-3 text-center tab-btn active text-red-600 font-medium"><i class="fas fa-arrow-up mr-1"></i> Pengeluaran</button>
+            <button onclick="setCatatTab('pemasukan')" id="tabPemasukan" class="flex-1 py-3 text-center tab-btn text-green-600"><i class="fas fa-arrow-down mr-1"></i> Pemasukan</button>
+            <button onclick="setCatatTab('transfer')" id="tabTransfer" class="flex-1 py-3 text-center tab-btn text-blue-600"><i class="fas fa-exchange-alt mr-1"></i> Transfer</button>
+            <button onclick="setCatatTab('import')" id="tabImport" class="flex-1 py-3 text-center tab-btn text-purple-600"><i class="fas fa-file-import mr-1"></i> Import CSV</button>
+          </div>
+
+          <div class="p-6">
+            <!-- Form Pengeluaran & Pemasukan -->
+            <form id="formCatat" onsubmit="submitForm(event, 'Transaksi')" class="space-y-4">
+              <input type="hidden" id="transaksiID">
+              <input type="hidden" id="transaksiJenis" value="Pengeluaran">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
+                  <input type="date" id="transaksiTanggal" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
+                  <input type="number" id="transaksiNominal" required min="1" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Dompet</label>
+                  <select id="transaksiDompet" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200"></select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                  <select id="transaksiKategori" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200"></select>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Keterangan / Catatan</label>
+                <input type="text" id="transaksiKeterangan" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200" placeholder="Misal: Makan siang">
+              </div>
+              <div class="flex justify-end pt-2 gap-2">
+                <button type="button" onclick="cancelEdit('Transaksi')" id="btnCancelTransaksi" class="hidden px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">Batal Edit</button>
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition w-full sm:w-auto"><i class="fas fa-save mr-1"></i> Simpan Transaksi</button>
+              </div>
+            </form>
+
+            <!-- Form Transfer -->
+            <form id="formTransfer" onsubmit="submitForm(event, 'Transfer')" class="space-y-4 hidden">
+              <input type="hidden" id="tfID">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
+                <input type="date" id="tfTanggal" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Dari Dompet</label>
+                  <select id="tfDari" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200"></select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Ke Dompet</label>
+                  <select id="tfKe" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200"></select>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
+                <input type="number" id="tfJumlah" required min="1" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Biaya Admin (Opsional)</label>
+                <input type="number" id="tfBiaya" value="0" min="0" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                <input type="text" id="tfCatatan" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
+              </div>
+              <div class="flex justify-end pt-2 gap-2">
+                <button type="button" onclick="cancelEdit('Transfer')" id="btnCancelTransfer" class="hidden px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">Batal Edit</button>
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition w-full sm:w-auto"><i class="fas fa-save mr-1"></i> Simpan Transfer</button>
+              </div>
+            </form>
+
+            <!-- Import CSV -->
+            <div id="formImport" class="hidden space-y-4">
+              <div class="bg-blue-50 border border-blue-200 text-blue-800 text-sm p-4 rounded-lg mb-4">
+                <p class="font-bold mb-1"><i class="fas fa-info-circle mr-1"></i> Panduan Import CSV</p>
+                <ul class="list-disc ml-5 space-y-1">
+                  <li>Format file harus <b>.csv</b> (Bisa Export dari Excel/Google Sheets).</li>
+                  <li>Wajib memiliki minimal 3 kolom berurutan: <b>Tanggal</b>, <b>Keterangan</b>, <b>Nominal</b>.</li>
+                  <li>Format tanggal yang disarankan: YYYY-MM-DD (contoh: 2026-07-25).</li>
+                </ul>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Pilih File CSV Rekening Koran</label>
+                <input type="file" id="csvFileInput" accept=".csv" class="w-full border rounded-lg p-2 bg-gray-50">
+              </div>
+              <button type="button" onclick="handleImportCSV()" class="px-6 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition w-full"><i class="fas fa-upload mr-1"></i> Preview Data</button>
+
+              <!-- Preview Table -->
+              <div id="importPreviewContainer" class="hidden mt-6">
+                <h3 class="font-bold text-gray-800 mb-2 border-b pb-2">Review & Revisi Data (Belum Disimpan)</h3>
+                <div class="overflow-x-auto max-h-96">
+                  <table class="min-w-full bg-white text-sm">
+                    <thead class="bg-gray-100 sticky top-0">
+                      <tr>
+                        <th class="py-2 px-3 text-left">Tanggal</th>
+                        <th class="py-2 px-3 text-left">Jenis</th>
+                        <th class="py-2 px-3 text-left">Dompet (Pilih)</th>
+                        <th class="py-2 px-3 text-left">Kategori (Pilih)</th>
+                        <th class="py-2 px-3 text-left">Nominal</th>
+                        <th class="py-2 px-3 text-left">Keterangan</th>
+                        <th class="py-2 px-3 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="importPreviewBody" class="divide-y">
+                      <!-- Diisi via JS -->
+                    </tbody>
+                  </table>
+                </div>
+                <div class="mt-4 flex justify-end gap-2">
+                  <button type="button" onclick="document.getElementById('importPreviewContainer').classList.add('hidden')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Batal</button>
+                  <button type="button" onclick="saveImportedData()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"><i class="fas fa-save mr-1"></i> Simpan Semua Transaksi</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. RIWAYAT TRANSAKSI (BUKU BESAR) -->
+      <div id="riwayatPage" class="page-content hidden fade-in">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Buku Besar Transaksi</h2>
+        
+        <div class="bg-white rounded-xl shadow mb-6">
+          <div class="p-4 border-b bg-gray-50 flex flex-wrap gap-4 items-end">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Dari Tanggal</label>
+              <input type="date" id="filterStartDate" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Sampai Tanggal</label>
+              <input type="date" id="filterEndDate" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Dompet</label>
+              <select id="filterDompet" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
+                <option value="">Semua Dompet</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
+              <select id="filterJenis" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
+                <option value="">Semua Jenis</option>
+                <option value="Pemasukan">Pemasukan</option>
+                <option value="Pengeluaran">Pengeluaran</option>
+                <option value="Transfer">Transfer</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+              <select id="filterKategori" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
+                <option value="">Semua Kategori</option>
+              </select>
+            </div>
+            <!-- Fitur Sort (BARU) -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Urutkan</label>
+              <select id="filterSort" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
+                <option value="dateDesc">Tanggal (Terbaru - Terlama)</option>
+                <option value="dateAsc">Tanggal (Terlama - Terbaru)</option>
+                <option value="nomDesc">Nominal (Tertinggi - Terendah)</option>
+                <option value="nomAsc">Nominal (Terendah - Tertinggi)</option>
+              </select>
+            </div>
+            
+            <div class="flex gap-2 w-full md:w-auto">
+              <button onclick="applyTransaksiFilter()" class="flex-1 md:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><i class="fas fa-search"></i> Cari</button>
+              <button onclick="resetTransaksiFilter()" class="flex-1 md:flex-none px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"><i class="fas fa-sync-alt"></i> Reset</button>
+            </div>
+          </div>
+          <div class="overflow-x-auto p-4">
+            <table class="min-w-full bg-white text-sm">
+              <thead class="bg-gray-100 text-gray-600">
+                <tr>
+                  <th class="py-3 px-4 text-left font-medium">Tanggal</th>
+                  <th class="py-3 px-4 text-left font-medium">Jenis</th>
+                  <th class="py-3 px-4 text-left font-medium">Rincian (Kategori/Dompet)</th>
+                  <th class="py-3 px-4 text-left font-medium">Keterangan</th>
+                  <th class="py-3 px-4 text-right font-medium">Nominal</th>
+                  <th class="py-3 px-4 text-center font-medium">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="riwayatTableBody" class="divide-y divide-gray-200">
+                <!-- Data List from JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. ANGGARAN (Sama seperti sebelumnya) -->
+      <div id="anggaranPage" class="page-content hidden fade-in">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Anggaran Bulanan</h2>
+        <p class="text-gray-600 mb-4">Buat batasan pengeluaran tiap kategori agar keuangan tetap terkontrol.</p>
+        <div class="bg-white rounded-xl shadow p-6 mb-8 text-center text-gray-500 italic">
+          <i class="fas fa-tools text-3xl mb-2"></i><br>Fitur Anggaran sedang dalam pengembangan UI lanjutan.
+        </div>
+      </div>
+
+      <!-- 5. INVESTASI -->
+      <div id="investasiPage" class="page-content hidden fade-in">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Portofolio Investasi</h2>
+        
+        <!-- Live Harga Emas Calculator -->
+        <div class="bg-yellow-50 border border-yellow-300 rounded-xl p-4 mb-6 flex flex-col md:flex-row items-center justify-between shadow-sm">
+          <div class="flex items-center mb-4 md:mb-0">
+            <div class="bg-yellow-400 text-white p-3 rounded-full mr-4 shadow">
+              <i class="fas fa-coins text-xl"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-yellow-800 text-lg">Monitor Emas Terkini</h3>
+              <p class="text-sm text-yellow-700">Masukkan harga emas per-gram hari ini untuk melihat Profit/Loss.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-bold text-gray-700">Rp</span>
+            <input type="number" id="hargaEmasLive" placeholder="Contoh: 1450000" class="border border-yellow-300 rounded-lg p-2 font-bold text-gray-800 focus:ring-yellow-500" onkeyup="updateLiveEmas()">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-1 bg-white rounded-xl shadow p-6 h-fit">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2" id="titleFormInvestasi">Tambah Aset Baru</h3>
+            <form id="formInvestasi" onsubmit="submitForm(event, 'Investasi')" class="space-y-4">
+              <input type="hidden" id="invID">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Aset</label>
+                <input type="text" id="invNama" required class="w-full border rounded-lg p-2" placeholder="Misal: Reksadana Sucor, Emas Antam">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Instrumen</label>
+                <select id="invJenis" required class="w-full border rounded-lg p-2" onchange="toggleInvestasiFields()">
+                  <option value="Reksadana">Reksadana</option>
+                  <option value="Saham">Saham</option>
+                  <option value="Emas Batangan">Emas Batangan</option>
+                  <option value="Tabungan Emas">Tabungan Emas</option>
+                  <option value="Deposito">Deposito</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+              
+              <!-- Field khusus Emas -->
+              <div id="fieldEmas" class="hidden space-y-4 bg-yellow-50 p-3 rounded border border-yellow-200">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Berat (Gram)</label>
+                  <input type="number" id="invGram" step="0.01" class="w-full border rounded-lg p-2" placeholder="Misal: 5.5">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Harga Beli / Gram (Rp)</label>
+                  <input type="number" id="invHargaGram" class="w-full border rounded-lg p-2" placeholder="Misal: 1100000" onkeyup="calcTotalEmas()">
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Total Modal Beli (Rp)</label>
+                <input type="number" id="invModal" required min="1" class="w-full border rounded-lg p-2 font-bold bg-gray-50">
+              </div>
+
+              <!-- Integrasi Dompet -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Sumber Dana (Potong Saldo Dompet?)</label>
+                <select id="invSumberDana" class="w-full border rounded-lg p-2 text-blue-700 font-medium bg-blue-50">
+                  <option value="">-- Jangan Potong Saldo (Hanya catat aset) --</option>
+                  <!-- Diisi js opsi dompet -->
+                </select>
+              </div>
+
+              <div class="flex gap-2">
+                <button type="button" onclick="cancelEdit('Investasi')" id="btnCancelInv" class="hidden w-1/3 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300">Batal</button>
+                <button type="submit" class="flex-1 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"><i class="fas fa-save mr-1"></i> Simpan Aset</button>
+              </div>
+            </form>
+          </div>
+          <div class="lg:col-span-2 bg-white rounded-xl shadow overflow-hidden">
+            <div class="overflow-x-auto p-4">
+              <table class="min-w-full text-sm">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="py-3 px-4 text-left text-gray-600 font-medium">Aset</th>
+                    <th class="py-3 px-4 text-right text-gray-600 font-medium">Modal</th>
+                    <th class="py-3 px-4 text-right text-gray-600 font-medium">Estimasi Nilai</th>
+                    <th class="py-3 px-4 text-right text-gray-600 font-medium">Profit/Loss</th>
+                    <th class="py-3 px-4 text-center text-gray-600 font-medium">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="invTableBody" class="divide-y">
+                  <!-- Data List from JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. PENGATURAN -->
+      <div id="pengaturanPage" class="page-content hidden fade-in">
+        <h2 class="text-2xl font-bold text-gray-800 mb-6">Pengaturan Master Data</h2>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- Tabel Dompet -->
+          <div class="bg-white rounded-xl shadow overflow-hidden">
+            <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+              <h3 class="font-bold text-gray-800">Daftar Dompet / Rekening</h3>
+              <button onclick="document.getElementById('formDompetContainer').classList.toggle('hidden')" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"><i class="fas fa-plus"></i> Tambah</button>
+            </div>
+            <div id="formDompetContainer" class="p-4 bg-blue-50 border-b hidden">
+              <form id="formDompet" onsubmit="submitForm(event, 'Dompet')" class="space-y-3">
+                <input type="hidden" id="dompetID">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Nama Rekening/Dompet</label>
+                  <input type="text" id="dompetNama" required class="w-full border rounded p-2 text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Tipe</label>
+                  <select id="dompetKategori" required class="w-full border rounded p-2 text-sm" onchange="toggleKartuKredit()">
+                    <option value="Bank">Bank</option>
+                    <option value="E-Wallet">E-Wallet</option>
+                    <option value="Tunai">Tunai</option>
+                    <option value="Kartu Kredit">Kartu Kredit (Hutang)</option>
+                  </select>
+                </div>
+                
+                <!-- Field Saldo Normal -->
+                <div id="fieldSaldoNormal">
+                  <label class="block text-xs font-medium text-gray-700 mb-1" id="labelSaldoAwal">Saldo Awal (Rp)</label>
+                  <input type="number" id="dompetSaldoAwal" value="0" class="w-full border rounded p-2 text-sm">
+                </div>
+                
+                <!-- Field Khusus Edit / Revisi Saldo -->
+                <div id="fieldRevisiSaldo" class="hidden bg-blue-100 p-2 rounded border border-blue-300">
+                   <label class="block text-xs font-bold text-blue-800 mb-1">Revisi Saldo Saat Ini (Rp)</label>
+                   <input type="number" id="dompetSaldoSaatIniEdit" class="w-full border-blue-400 rounded p-2 text-sm font-bold">
+                   <p class="text-[10px] text-blue-600 mt-1">Selisih akan otomatis tercatat di Riwayat Transaksi.</p>
+                </div>
+
+                <!-- Field Kartu Kredit -->
+                <div id="fieldKartuKredit" class="hidden space-y-3 bg-red-50 p-2 rounded border border-red-200">
+                  <div>
+                    <label class="block text-xs font-bold text-red-700 mb-1">Limit Kartu Kredit (Rp)</label>
+                    <input type="number" id="dompetLimitCC" class="w-full border-red-300 rounded p-2 text-sm" placeholder="Misal: 30000000">
+                  </div>
+                  <div id="fieldTagihanCC">
+                    <label class="block text-xs font-bold text-red-700 mb-1">Tagihan Terpakai Saat Ini (Rp)</label>
+                    <input type="number" id="dompetTagihanCC" class="w-full border-red-300 rounded p-2 text-sm" value="0">
+                  </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                  <button type="button" onclick="cancelEdit('Dompet')" id="btnCancelDompet" class="hidden px-3 py-1 bg-gray-200 text-sm rounded">Batal</button>
+                  <button type="submit" class="px-4 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Simpan</button>
+                </div>
+              </form>
+            </div>
+            <div class="overflow-x-auto p-4">
+              <table class="min-w-full text-sm">
+                <thead><tr class="text-left text-gray-500 border-b"><th class="pb-2">Nama</th><th class="pb-2">Tipe</th><th class="pb-2 text-right">Saldo/Tagihan</th><th class="pb-2 text-center">Aksi</th></tr></thead>
+                <tbody id="dompetTableBody" class="divide-y"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tabel Kategori (Sama seperti sebelumnya) -->
+          <div class="bg-white rounded-xl shadow overflow-hidden h-fit">
+            <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+              <h3 class="font-bold text-gray-800">Daftar Kategori</h3>
+              <button onclick="document.getElementById('formKategoriContainer').classList.toggle('hidden')" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"><i class="fas fa-plus"></i> Tambah</button>
+            </div>
+            <div id="formKategoriContainer" class="p-4 bg-blue-50 border-b hidden">
+              <form id="formKategori" onsubmit="submitForm(event, 'Kategori')" class="space-y-3">
+                <input type="hidden" id="kategoriID">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Jenis</label>
+                  <select id="kategoriJenis" required class="w-full border rounded p-2 text-sm">
+                    <option value="Pengeluaran">Pengeluaran</option>
+                    <option value="Pemasukan">Pemasukan</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">Nama Kategori</label>
+                  <input type="text" id="kategoriNama" required class="w-full border rounded p-2 text-sm">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                  <button type="button" onclick="cancelEdit('Kategori')" id="btnCancelKat" class="hidden px-3 py-1 bg-gray-200 text-sm rounded">Batal</button>
+                  <button type="submit" class="px-4 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Simpan</button>
+                </div>
+              </form>
+            </div>
+            <div class="overflow-x-auto p-4">
+              <table class="min-w-full text-sm">
+                <thead><tr class="text-left text-gray-500 border-b"><th class="pb-2">Jenis</th><th class="pb-2">Kategori</th><th class="pb-2 text-center">Aksi</th></tr></thead>
+                <tbody id="kategoriTableBody" class="divide-y"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // === MOCK DATA (Untuk Preview Front-End Saja) ===
+    let appData = {
+      Dompet: [
+        { ID: 'd1', Nama: 'BCA Utama', Kategori: 'Bank', SaldoAwal: 5000000, SaldoSaatIni: 4500000 },
+        { ID: 'd2', Nama: 'Gopay', Kategori: 'E-Wallet', SaldoAwal: 200000, SaldoSaatIni: 150000 },
+        { ID: 'd3', Nama: 'CC Mandiri', Kategori: 'Kartu Kredit', SaldoAwal: 30000000, SaldoSaatIni: 28000000, isCC: true } // Tagihan 2jt
+      ],
+      Kategori: [
+        { ID: 'k1', Jenis: 'Pengeluaran', Nama: 'Makanan & Minuman' },
+        { ID: 'k2', Jenis: 'Pengeluaran', Nama: 'Transportasi' },
+        { ID: 'k3', Jenis: 'Pemasukan', Nama: 'Gaji Bulanan' },
+        { ID: 'k4', Jenis: 'Pengeluaran', Nama: 'Investasi - Beli Emas' },
+        { ID: 'k5', Jenis: 'Pengeluaran', Nama: 'Penyesuaian Saldo' },
+        { ID: 'k6', Jenis: 'Pemasukan', Nama: 'Penyesuaian Saldo' }
+      ],
+      Transaksi: [
+        { ID: 't1', Tanggal: '2026-07-01', Jenis: 'Pemasukan', Kategori: 'Gaji Bulanan', Keterangan: 'Gaji Juli', Nominal: 10000000, DompetAsal: 'BCA Utama' },
+        { ID: 't2', Tanggal: '2026-07-05', Jenis: 'Pengeluaran', Kategori: 'Makanan & Minuman', Keterangan: 'Makan Steak', Nominal: 300000, DompetAsal: 'CC Mandiri' },
+        { ID: 't3', Tanggal: '2026-07-10', Jenis: 'Pengeluaran', Kategori: 'Transportasi', Keterangan: 'Bensin', Nominal: 150000, DompetAsal: 'Gopay' }
+      ],
+      Transfer: [
+        { ID: 'tr1', Tanggal: '2026-07-08', DariDompet: 'BCA Utama', KeDompet: 'Gopay', Jumlah: 200000, Biaya: 0, Catatan: 'Topup' }
+      ],
+      Investasi: [
+        { ID: 'i1', NamaInvestasi: 'Reksadana Pasar Uang', JenisInvestasi: 'Reksadana', TotalModal: 5000000, NilaiSaatIni: 5100000, ReturnRate: 2 },
+        { ID: 'i2', NamaInvestasi: 'Emas Antam', JenisInvestasi: 'Emas Batangan', BeratGram: 5, HargaBeliGram: 1100000, TotalModal: 5500000, NilaiSaatIni: 5500000, ReturnRate: 0 }
+      ]
+    };
+
+    let importedDataTemp = []; // Store temporary CSV data
+    let filteredRiwayat = []; // Store combined transaction history
+
+    // === INITIALIZATION ===
+    window.onload = () => {
+      document.getElementById('transaksiTanggal').valueAsDate = new Date();
+      document.getElementById('tfTanggal').valueAsDate = new Date();
+      
+      // Load saved emas price if any
+      const savedEmas = localStorage.getItem('hargaEmasLive');
+      if(savedEmas) {
+          document.getElementById('hargaEmasLive').value = savedEmas;
+      }
+
+      refreshUI();
+      // Animate dashboard numbers
+      setTimeout(() => renderDashboard(), 100);
+    };
+
+    // === UI NAVIGATION ===
+    function switchPage(pageId) {
+      document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(pageId + 'Page').classList.remove('hidden');
+      
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active', 'bg-blue-50', 'border-r-4', 'border-blue-600'));
+      const activeBtns = document.querySelectorAll(`a[onclick="switchPage('${pageId}')"]`);
+      activeBtns.forEach(btn => btn.classList.add('active', 'bg-blue-50'));
+
+      if(pageId === 'dashboard') renderDashboard();
+      if(pageId === 'catat') setCatatTab('pengeluaran');
+      if(pageId === 'riwayat') renderRiwayatPage();
+      if(pageId === 'investasi') updateLiveEmas(); // trigger kalkulasi emas
+    }
+
+    // === REFRESH ALL DATA & DROPDOWNS ===
+    function refreshUI() {
+      // 1. Populate Dropdowns
+      populateSelect('transaksiDompet', appData.Dompet.map(d => d.Nama));
+      populateSelect('tfDari', appData.Dompet.map(d => d.Nama));
+      populateSelect('tfKe', appData.Dompet.map(d => d.Nama));
+      populateSelect('filterDompet', appData.Dompet.map(d => d.Nama), "Semua Dompet");
+      populateSelect('invSumberDana', appData.Dompet.map(d => d.Nama), "-- Jangan Potong Saldo (Hanya catat aset) --");
+      
+      populateKategori();
+      
+      // Filter Kategori (Gabungan Pemasukan & Pengeluaran)
+      const allKat = appData.Kategori.map(k => k.Nama);
+      const uniqueKat = [...new Set(allKat)];
+      populateSelect('filterKategori', uniqueKat, "Semua Kategori");
+
+      // 2. Render Tables
+      renderPengaturan();
+      renderInvestasi();
+      
+      // Update global transaction state
+      compileRiwayatData();
+    }
+
+    function populateSelect(id, dataArray, defaultOptionText = null) {
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.innerHTML = '';
+      if(defaultOptionText) {
+          el.innerHTML = `<option value="">${defaultOptionText}</option>`;
+      }
+      dataArray.forEach(item => {
+        el.innerHTML += `<option value="${item}">${item}</option>`;
+      });
+    }
+
+    function populateKategori() {
+      const jenis = document.getElementById('transaksiJenis').value;
+      const filtered = appData.Kategori.filter(k => k.Jenis === jenis);
+      populateSelect('transaksiKategori', filtered.map(k => k.Nama));
+    }
+
+    // === TAB CATAT TRANSAKSI ===
+    function setCatatTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(el => {
+        el.classList.remove('active', 'border-blue-600', 'border-red-600', 'border-green-600', 'border-purple-600');
+        el.style.borderBottom = 'none';
+      });
+      document.getElementById('formCatat').classList.add('hidden');
+      document.getElementById('formTransfer').classList.add('hidden');
+      document.getElementById('formImport').classList.add('hidden');
+
+      if (tab === 'transfer') {
+        document.getElementById('formTransfer').classList.remove('hidden');
+        document.getElementById('tabTransfer').style.borderBottom = '2px solid #2563eb';
+      } else if (tab === 'import') {
+        document.getElementById('formImport').classList.remove('hidden');
+        document.getElementById('tabImport').style.borderBottom = '2px solid #9333ea';
+      } else {
+        document.getElementById('formCatat').classList.remove('hidden');
+        document.getElementById('transaksiJenis').value = tab === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran';
+        document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.borderBottom = `2px solid ${tab==='pemasukan'?'#16a34a':'#dc2626'}`;
+        populateKategori();
+      }
+    }
+
+    // === DASHBOARD LOGIC ===
+    let cfChartInstance = null;
+    let expChartInstance = null;
+
+    function renderDashboard() {
+      let totalSaldo = 0;
+      let totalMasuk = 0;
+      let totalKeluar = 0;
+      const currMonth = new Date().getMonth();
+      const currYear = new Date().getFullYear();
+      let catKeluar = {};
+
+      // Hitung Saldo Asli (Kas/Bank/Ewallet). Kartu Kredit (Hutang) TIDAK masuk hitungan kekayaan!
+      appData.Dompet.forEach(d => {
+        if(d.Kategori !== 'Kartu Kredit') {
+            totalSaldo += parseFloat(d.SaldoSaatIni);
+        }
+      });
+
+      appData.Transaksi.forEach(t => {
+        const d = new Date(t.Tanggal);
+        if(d.getMonth() === currMonth && d.getFullYear() === currYear) {
+          if(t.Jenis === 'Pemasukan') totalMasuk += parseFloat(t.Nominal);
+          if(t.Jenis === 'Pengeluaran') {
+            totalKeluar += parseFloat(t.Nominal);
+            catKeluar[t.Kategori] = (catKeluar[t.Kategori] || 0) + parseFloat(t.Nominal);
+          }
+        }
+      });
+
+      document.getElementById('dashTotalSaldo').innerText = 'Rp ' + formatRupiah(totalSaldo);
+      document.getElementById('dashPemasukan').innerText = 'Rp ' + formatRupiah(totalMasuk);
+      document.getElementById('dashPengeluaran').innerText = 'Rp ' + formatRupiah(totalKeluar);
+
+      // Render Charts
+      renderCashFlowChart();
+      
+      const ctxExp = document.getElementById('expenseChart');
+      if(expChartInstance) expChartInstance.destroy();
+      expChartInstance = new Chart(ctxExp, {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(catKeluar).length ? Object.keys(catKeluar) : ['Belum ada data'],
+          datasets: [{
+            data: Object.keys(catKeluar).length ? Object.values(catKeluar) : [1],
+            backgroundColor: Object.keys(catKeluar).length ? ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#3b82f6', '#8b5cf6'] : ['#e5e7eb']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+      });
+
+      // Render 5 Trx terakhir (gabungan transaksi & transfer)
+      let allTrx = compileRiwayatData().slice(0, 5); // get top 5 latest
+      const tbody = document.getElementById('dashLatestTrx');
+      tbody.innerHTML = '';
+      allTrx.forEach(t => {
+        const isKeluar = t.Jenis === 'Pengeluaran' || t.Jenis === 'Transfer';
+        const color = t.Jenis === 'Pemasukan' ? 'text-green-600' : (t.Jenis==='Transfer'? 'text-blue-600' : 'text-red-600');
+        const sign = t.Jenis === 'Pemasukan' ? '+' : '-';
+        const deskripsi = t.Jenis === 'Transfer' ? `${t.DariDompet} ➔ ${t.KeDompet}` : t.Kategori;
+        tbody.innerHTML += `
+          <tr class="border-b border-gray-100">
+            <td class="py-2 text-gray-500">${t.Tanggal}</td>
+            <td class="py-2 font-medium">${deskripsi}</td>
+            <td class="py-2 text-right font-bold ${color}">${sign} Rp ${formatRupiah(t.Nominal || t.Jumlah)}</td>
+          </tr>
+        `;
+      });
+    }
+
+    function renderCashFlowChart() {
+       const ctxCF = document.getElementById('cashflowChart');
+       if(cfChartInstance) cfChartInstance.destroy();
+
+       // Group data by Date
+       let chartData = {};
+       appData.Transaksi.forEach(t => {
+           if(!chartData[t.Tanggal]) chartData[t.Tanggal] = { in: 0, out: 0 };
+           if(t.Jenis === 'Pemasukan') chartData[t.Tanggal].in += parseFloat(t.Nominal);
+           if(t.Jenis === 'Pengeluaran') chartData[t.Tanggal].out += parseFloat(t.Nominal);
+       });
+
+       const sortedDates = Object.keys(chartData).sort((a,b) => new Date(a) - new Date(b));
+       const dataIn = sortedDates.map(d => chartData[d].in);
+       const dataOut = sortedDates.map(d => chartData[d].out);
+
+       cfChartInstance = new Chart(ctxCF, {
+           type: 'line',
+           data: {
+               labels: sortedDates,
+               datasets: [
+                   { label: 'Pemasukan', data: dataIn, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4, fill: true },
+                   { label: 'Pengeluaran', data: dataOut, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', tension: 0.4, fill: true }
+               ]
+           },
+           options: { responsive: true, maintainAspectRatio: false }
+       });
+    }
+
+    // === RIWAYAT (BUKU BESAR) LOGIC ===
+    function compileRiwayatData() {
+        // Menggabungkan Transaksi dan Transfer ke dalam satu array
+        let combined = [];
+        appData.Transaksi.forEach(t => combined.push({...t, isTransfer: false}));
+        appData.Transfer.forEach(tf => {
+            combined.push({
+                ID: tf.ID, Tanggal: tf.Tanggal, Jenis: 'Transfer',
+                DompetAsal: tf.DariDompet, KeDompet: tf.KeDompet, 
+                Nominal: tf.Jumlah, Keterangan: tf.Catatan, isTransfer: true
+            });
+        });
+        // Sort descending by default
+        combined.sort((a, b) => new Date(b.Tanggal) - new Date(a.Tanggal));
+        filteredRiwayat = combined;
+        return combined;
+    }
+
+    function renderRiwayatPage() {
+        compileRiwayatData();
+        applyTransaksiFilter(); 
+    }
+
+    function resetTransaksiFilter() {
+        document.getElementById('filterStartDate').value = '';
+        document.getElementById('filterEndDate').value = '';
+        document.getElementById('filterDompet').value = '';
+        document.getElementById('filterJenis').value = '';
+        document.getElementById('filterKategori').value = '';
+        document.getElementById('filterSort').value = 'dateDesc';
+        compileRiwayatData();
+        renderRiwayatTable();
+    }
+
+    function applyTransaksiFilter() {
+        const start = document.getElementById('filterStartDate').value;
+        const end = document.getElementById('filterEndDate').value;
+        const dompet = document.getElementById('filterDompet').value;
+        const jenis = document.getElementById('filterJenis').value;
+        const kategori = document.getElementById('filterKategori').value;
+        const sortMode = document.getElementById('filterSort').value || 'dateDesc';
+
+        let res = appData.Transaksi.map(t => ({...t, isTransfer: false}));
+        appData.Transfer.forEach(tf => {
+            res.push({
+                ID: tf.ID, Tanggal: tf.Tanggal, Jenis: 'Transfer',
+                DompetAsal: tf.DariDompet, KeDompet: tf.KeDompet, 
+                Nominal: tf.Jumlah, Keterangan: tf.Catatan, isTransfer: true
+            });
+        });
+
+        // Date Filter
+        if(start) res = res.filter(t => t.Tanggal >= start);
+        if(end) res = res.filter(t => t.Tanggal <= end);
+        
+        // Dompet Filter (mencakup Asal dan Tujuan jika Transfer)
+        if(dompet) {
+            res = res.filter(t => t.DompetAsal === dompet || (t.isTransfer && t.KeDompet === dompet));
+        }
+
+        // Jenis & Kategori Filter
+        if(jenis) res = res.filter(t => t.Jenis === jenis);
+        if(kategori) res = res.filter(t => !t.isTransfer && t.Kategori === kategori);
+
+        // Sorting Logic
+        res.sort((a, b) => {
+            if (sortMode === 'dateDesc') return new Date(b.Tanggal) - new Date(a.Tanggal);
+            if (sortMode === 'dateAsc') return new Date(a.Tanggal) - new Date(b.Tanggal);
+            
+            const nomA = parseFloat(a.Nominal || 0);
+            const nomB = parseFloat(b.Nominal || 0);
+            
+            if (sortMode === 'nomDesc') return nomB - nomA;
+            if (sortMode === 'nomAsc') return nomA - nomB;
+            return 0;
+        });
+
+        filteredRiwayat = res;
+        renderRiwayatTable();
+    }
+
+    function renderRiwayatTable() {
+        const tbody = document.getElementById('riwayatTableBody');
+        tbody.innerHTML = '';
+        if(filteredRiwayat.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500">Tidak ada transaksi yang sesuai.</td></tr>';
+            return;
+        }
+
+        filteredRiwayat.forEach(t => {
+            let color, badgeColor, rincian, editFunc;
+            if(t.Jenis === 'Pemasukan') {
+                color = 'text-green-600'; badgeColor = 'bg-green-100 text-green-700';
+                rincian = `${t.Kategori} <br> <span class="text-xs text-gray-500">Masuk ke: ${t.DompetAsal}</span>`;
+                editFunc = `editTransaksi('${t.ID}')`;
+            } else if (t.Jenis === 'Pengeluaran') {
+                color = 'text-red-600'; badgeColor = 'bg-red-100 text-red-700';
+                rincian = `${t.Kategori} <br> <span class="text-xs text-gray-500">Dari: ${t.DompetAsal}</span>`;
+                editFunc = `editTransaksi('${t.ID}')`;
+            } else {
+                color = 'text-blue-600'; badgeColor = 'bg-blue-100 text-blue-700';
+                rincian = `${t.DompetAsal} ➔ ${t.KeDompet}`;
+                editFunc = `editTransfer('${t.ID}')`;
+            }
+
+            tbody.innerHTML += `
+              <tr class="hover:bg-gray-50">
+                <td class="py-3 px-4">${t.Tanggal}</td>
+                <td class="py-3 px-4"><span class="px-2 py-1 text-xs font-bold rounded ${badgeColor}">${t.Jenis}</span></td>
+                <td class="py-3 px-4">${rincian}</td>
+                <td class="py-3 px-4">${t.Keterangan || '-'}</td>
+                <td class="py-3 px-4 text-right font-bold ${color}">Rp ${formatRupiah(t.Nominal)}</td>
+                <td class="py-3 px-4 text-center">
+                  <button onclick="${editFunc}" class="text-blue-500 hover:text-blue-700 mx-1" title="Edit"><i class="fas fa-edit"></i></button>
+                  <button onclick="deleteDataFront('${t.isTransfer ? 'Transfer' : 'Transaksi'}', '${t.ID}')" class="text-red-500 hover:text-red-700 mx-1" title="Hapus"><i class="fas fa-trash"></i></button>
+                </td>
+              </tr>
+            `;
+        });
+    }
+
+    // === EDIT TRANSAKSI / TRANSFER DARI RIWAYAT ===
+    function editTransaksi(id) {
+        const data = appData.Transaksi.find(x => x.ID === id);
+        if(!data) return;
+        switchPage('catat');
+        setCatatTab(data.Jenis.toLowerCase());
+        
+        document.getElementById('transaksiID').value = data.ID;
+        document.getElementById('transaksiTanggal').value = data.Tanggal;
+        document.getElementById('transaksiNominal').value = data.Nominal;
+        document.getElementById('transaksiDompet').value = data.DompetAsal;
+        
+        // force trigger populate to set kategori correctly
+        document.getElementById('transaksiJenis').value = data.Jenis;
+        populateKategori();
+        document.getElementById('transaksiKategori').value = data.Kategori;
+        
+        document.getElementById('transaksiKeterangan').value = data.Keterangan;
+        document.getElementById('btnCancelTransaksi').classList.remove('hidden');
+    }
+
+    function editTransfer(id) {
+        const data = appData.Transfer.find(x => x.ID === id);
+        if(!data) return;
+        switchPage('catat');
+        setCatatTab('transfer');
+        
+        document.getElementById('tfID').value = data.ID;
+        document.getElementById('tfTanggal').value = data.Tanggal;
+        document.getElementById('tfDari').value = data.DariDompet;
+        document.getElementById('tfKe').value = data.KeDompet;
+        document.getElementById('tfJumlah').value = data.Jumlah;
+        document.getElementById('tfBiaya').value = data.Biaya;
+        document.getElementById('tfCatatan').value = data.Catatan;
+        document.getElementById('btnCancelTransfer').classList.remove('hidden');
+    }
+
+    // === INVESTASI LOGIC ===
+    function toggleInvestasiFields() {
+        const val = document.getElementById('invJenis').value;
+        if(val.includes('Emas')) {
+            document.getElementById('fieldEmas').classList.remove('hidden');
+            document.getElementById('invModal').readOnly = true;
+            document.getElementById('invModal').classList.add('bg-gray-100');
+        } else {
+            document.getElementById('fieldEmas').classList.add('hidden');
+            document.getElementById('invModal').readOnly = false;
+            document.getElementById('invModal').classList.remove('bg-gray-100');
+        }
+    }
+
+    function calcTotalEmas() {
+        const gr = parseFloat(document.getElementById('invGram').value || 0);
+        const harga = parseFloat(document.getElementById('invHargaGram').value || 0);
+        document.getElementById('invModal').value = (gr * harga);
+    }
+
+    function updateLiveEmas() {
+        const hrgStr = document.getElementById('hargaEmasLive').value;
+        const hargaSkrg = parseFloat(hrgStr);
+        
+        if(!isNaN(hargaSkrg) && hargaSkrg > 0) {
+            localStorage.setItem('hargaEmasLive', hargaSkrg); // Simpan ke browser
+            // Update appData mockup
+            appData.Investasi.forEach(inv => {
+                if(inv.JenisInvestasi.includes('Emas')) {
+                    inv.NilaiSaatIni = (inv.BeratGram || 0) * hargaSkrg;
+                }
+            });
+        }
+        renderInvestasi();
+    }
+
+    function renderInvestasi() {
+        const tbody = document.getElementById('invTableBody');
+        tbody.innerHTML = '';
+        appData.Investasi.forEach(i => {
+            const isEmas = i.JenisInvestasi.includes('Emas');
+            const estimasi = parseFloat(i.NilaiSaatIni || i.TotalModal);
+            const pl = estimasi - parseFloat(i.TotalModal);
+            const plClass = pl > 0 ? 'text-green-600' : (pl < 0 ? 'text-red-600' : 'text-gray-500');
+            const pct = i.TotalModal > 0 ? ((pl / i.TotalModal) * 100).toFixed(2) : 0;
+            
+            let detailAset = isEmas ? `<br><span class="text-xs text-gray-500">${i.BeratGram} Gram x Rp ${formatRupiah(i.HargaBeliGram)}</span>` : '';
+
+            tbody.innerHTML += `
+              <tr class="hover:bg-gray-50">
+                <td class="py-3 px-4"><b>${i.NamaInvestasi}</b><br><span class="text-xs text-blue-600 bg-blue-50 px-1 rounded">${i.JenisInvestasi}</span>${detailAset}</td>
+                <td class="py-3 px-4 text-right">Rp ${formatRupiah(i.TotalModal)}</td>
+                <td class="py-3 px-4 text-right font-bold text-gray-800">Rp ${formatRupiah(estimasi)}</td>
+                <td class="py-3 px-4 text-right font-bold ${plClass}">${pl > 0 ? '+' : ''}Rp ${formatRupiah(pl)} <br><span class="text-xs">(${pl > 0 ? '+' : ''}${pct}%)</span></td>
+                <td class="py-3 px-4 text-center">
+                    <button onclick="editInvestasi('${i.ID}')" class="text-blue-500 hover:text-blue-700 mx-1" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteDataFront('Investasi', '${i.ID}')" class="text-red-500 hover:text-red-700 mx-1" title="Hapus"><i class="fas fa-trash"></i></button>
+                </td>
+              </tr>
+            `;
+        });
+    }
+
+    function editInvestasi(id) {
+        const data = appData.Investasi.find(x => x.ID === id);
+        if(!data) return;
+        
+        document.getElementById('titleFormInvestasi').innerText = 'Edit Aset';
+        document.getElementById('invID').value = data.ID;
+        document.getElementById('invNama').value = data.NamaInvestasi;
+        document.getElementById('invJenis').value = data.JenisInvestasi;
+        
+        toggleInvestasiFields();
+        if(data.JenisInvestasi.includes('Emas')) {
+            document.getElementById('invGram').value = data.BeratGram;
+            document.getElementById('invHargaGram').value = data.HargaBeliGram;
+        }
+        document.getElementById('invModal').value = data.TotalModal;
+        document.getElementById('btnCancelInv').classList.remove('hidden');
+        
+        // Sembunyikan potong dompet saat edit (karena sudah dipotong saat awal)
+        document.getElementById('invSumberDana').parentElement.classList.add('hidden');
+    }
+
+    // === PENGATURAN (DOMPET & KATEGORI) LOGIC ===
+    function toggleKartuKredit() {
+        const val = document.getElementById('dompetKategori').value;
+        if(val === 'Kartu Kredit') {
+            document.getElementById('fieldKartuKredit').classList.remove('hidden');
+            document.getElementById('fieldSaldoNormal').classList.add('hidden');
+            document.getElementById('dompetSaldoAwal').value = 0; // reset
+        } else {
+            document.getElementById('fieldKartuKredit').classList.add('hidden');
+            document.getElementById('fieldSaldoNormal').classList.remove('hidden');
+        }
+    }
+
+    function renderPengaturan() {
+      // DOMPET
+      const tbodyD = document.getElementById('dompetTableBody');
+      tbodyD.innerHTML = '';
+      appData.Dompet.forEach(d => {
+        let displaySaldo;
+        let fontColor = 'text-gray-800';
+        
+        if (d.Kategori === 'Kartu Kredit' || d.isCC) {
+            const limit = parseFloat(d.Limit || d.SaldoAwal || 0); // Di mock up SaldoAwal jadi Limit
+            const saldoSkrg = parseFloat(d.SaldoSaatIni); 
+            const terpakai = limit - saldoSkrg;
+            
+            fontColor = terpakai > 0 ? 'text-red-600' : 'text-gray-800';
+            displaySaldo = terpakai > 0 ? `(Tagihan) Rp ${formatRupiah(terpakai)}` : `Rp 0`;
+        } else {
+            displaySaldo = `Rp ${formatRupiah(d.SaldoSaatIni)}`;
+        }
+
+        tbodyD.innerHTML += `
+          <tr class="hover:bg-gray-50">
+            <td class="py-2 text-gray-800 font-medium">${d.Nama}</td>
+            <td class="py-2"><span class="px-2 py-1 text-[10px] bg-blue-100 text-blue-800 rounded">${d.Kategori}</span></td>
+            <td class="py-2 text-right font-bold ${fontColor}">${displaySaldo}</td>
+            <td class="py-2 text-center">
+              <button onclick="editDompet('${d.ID}')" class="text-blue-500 hover:text-blue-700 mx-1" title="Revisi/Edit"><i class="fas fa-edit"></i></button>
+              <button onclick="deleteDataFront('Dompet', '${d.ID}')" class="text-red-500 hover:text-red-700 mx-1" title="Hapus"><i class="fas fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      });
+
+      // KATEGORI
+      const tbodyK = document.getElementById('kategoriTableBody');
+      tbodyK.innerHTML = '';
+      appData.Kategori.forEach(k => {
+        const color = k.Jenis === 'Pemasukan' ? 'text-green-600' : 'text-red-600';
+        tbodyK.innerHTML += `
+          <tr class="hover:bg-gray-50">
+            <td class="py-2 font-bold ${color}">${k.Jenis}</td>
+            <td class="py-2 text-gray-700">${k.Nama}</td>
+            <td class="py-2 text-center">
+              <button onclick="editKategori('${k.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>
+              <button onclick="deleteDataFront('Kategori', '${k.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function editDompet(id) {
+      const data = appData.Dompet.find(x => x.ID === id);
+      if(!data) return;
+      document.getElementById('formDompetContainer').classList.remove('hidden');
+      document.getElementById('dompetID').value = data.ID;
+      document.getElementById('dompetNama').value = data.Nama;
+      document.getElementById('dompetKategori').value = data.Kategori;
+      
+      toggleKartuKredit();
+      if(data.Kategori === 'Kartu Kredit' || data.isCC) {
+          document.getElementById('dompetLimitCC').value = data.SaldoAwal;
+          document.getElementById('dompetTagihanCC').value = data.SaldoAwal - data.SaldoSaatIni;
+          // Hide input tagihan during edit to avoid complex reconciliation, just edit limit
+          document.getElementById('fieldTagihanCC').classList.add('hidden'); 
+      } else {
+          document.getElementById('fieldSaldoNormal').classList.add('hidden');
+          document.getElementById('fieldRevisiSaldo').classList.remove('hidden');
+          document.getElementById('dompetSaldoSaatIniEdit').value = data.SaldoSaatIni;
+      }
+      
+      document.getElementById('btnCancelDompet').classList.remove('hidden');
+    }
+
+    function editKategori(id) {
+      const data = appData.Kategori.find(x => x.ID === id);
+      if(!data) return;
+      document.getElementById('formKategoriContainer').classList.remove('hidden');
+      document.getElementById('kategoriID').value = data.ID;
+      document.getElementById('kategoriJenis').value = data.Jenis;
+      document.getElementById('kategoriNama').value = data.Nama;
+      document.getElementById('btnCancelKat').classList.remove('hidden');
+    }
+
+    function cancelEdit(tipe) {
+      if(tipe === 'Transaksi') {
+          document.getElementById('formCatat').reset();
+          document.getElementById('transaksiID').value = '';
+          document.getElementById('btnCancelTransaksi').classList.add('hidden');
+      } else if (tipe === 'Transfer') {
+          document.getElementById('formTransfer').reset();
+          document.getElementById('tfID').value = '';
+          document.getElementById('btnCancelTransfer').classList.add('hidden');
+      } else if (tipe === 'Investasi') {
+          document.getElementById('formInvestasi').reset();
+          document.getElementById('invID').value = '';
+          document.getElementById('titleFormInvestasi').innerText = 'Tambah Aset Baru';
+          document.getElementById('btnCancelInv').classList.add('hidden');
+          document.getElementById('invSumberDana').parentElement.classList.remove('hidden');
+          toggleInvestasiFields();
+      } else if (tipe === 'Dompet') {
+          document.getElementById('formDompet').reset();
+          document.getElementById('dompetID').value = '';
+          document.getElementById('btnCancelDompet').classList.add('hidden');
+          document.getElementById('fieldSaldoNormal').classList.remove('hidden');
+          document.getElementById('fieldRevisiSaldo').classList.add('hidden');
+          document.getElementById('fieldTagihanCC').classList.remove('hidden');
+          toggleKartuKredit();
+      } else if (tipe === 'Kategori') {
+          document.getElementById('formKategori').reset();
+          document.getElementById('kategoriID').value = '';
+          document.getElementById('btnCancelKat').classList.add('hidden');
+      }
+    }
+
+    // === IMPORT CSV LOGIC ===
+    function handleImportCSV() {
+        const fileInput = document.getElementById('csvFileInput');
+        if(!fileInput.files.length) return showAlert('Pilih file CSV terlebih dahulu', 'error');
+        
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = e.target.result;
+            processCSVData(text);
+        };
+        reader.readAsText(file);
+    }
+
+    function processCSVData(csvText) {
+        const lines = csvText.split('\n').filter(l => l.trim() !== '');
+        if(lines.length < 2) return showAlert('CSV Kosong atau format salah', 'error');
+        
+        // Asumsi baris 1 adalah header, mulai dari baris 2 (index 1)
+        importedDataTemp = [];
+        for(let i=1; i<lines.length; i++){
+            // Handle comma inside quotes if any, simple split for now
+            const cols = lines[i].split(','); 
+            if(cols.length >= 3) {
+                // Bersihkan quote
+                const tgl = cols[0].replace(/['"]+/g, '').trim();
+                const ket = cols[1].replace(/['"]+/g, '').trim();
+                let nom = cols[2].replace(/['"]+/g, '').trim();
+                
+                // bersihkan titik/koma ribuan di nominal
+                nom = parseFloat(nom.replace(/[^0-9.-]+/g,""));
+                if(isNaN(nom)) continue;
+
+                let jenis = 'Pengeluaran';
+                if(nom > 0 && ket.toLowerCase().includes('masuk') || ket.toLowerCase().includes('gaji') || ket.toLowerCase().includes('terima')) jenis = 'Pemasukan';
+                
+                importedDataTemp.push({
+                    idx: i,
+                    Tanggal: tgl.length > 8 ? tgl : new Date().toISOString().split('T')[0],
+                    Jenis: jenis,
+                    Keterangan: ket,
+                    Nominal: Math.abs(nom)
+                });
+            }
+        }
+        renderImportPreview();
+    }
+
+    function renderImportPreview() {
+        document.getElementById('importPreviewContainer').classList.remove('hidden');
+        const tbody = document.getElementById('importPreviewBody');
+        tbody.innerHTML = '';
+        
+        const optsDompet = appData.Dompet.map(d => `<option value="${d.Nama}">${d.Nama}</option>`).join('');
+        const katPengeluaran = appData.Kategori.filter(k => k.Jenis === 'Pengeluaran').map(k => `<option value="${k.Nama}">${k.Nama}</option>`).join('');
+        const katPemasukan = appData.Kategori.filter(k => k.Jenis === 'Pemasukan').map(k => `<option value="${k.Nama}">${k.Nama}</option>`).join('');
+
+        importedDataTemp.forEach(row => {
+            const optsKategori = row.Jenis === 'Pemasukan' ? katPemasukan : katPengeluaran;
+            tbody.innerHTML += `
+              <tr id="impRow_${row.idx}">
+                <td class="py-1 px-2"><input type="date" class="border p-1 text-xs w-full" value="${row.Tanggal}" id="impTgl_${row.idx}"></td>
+                <td class="py-1 px-2">
+                    <select class="border p-1 text-xs w-full" id="impJenis_${row.idx}" onchange="changeImportJenis(${row.idx})">
+                        <option value="Pengeluaran" ${row.Jenis==='Pengeluaran'?'selected':''}>Keluar</option>
+                        <option value="Pemasukan" ${row.Jenis==='Pemasukan'?'selected':''}>Masuk</option>
+                    </select>
+                </td>
+                <td class="py-1 px-2"><select class="border p-1 text-xs w-full" id="impDompet_${row.idx}">${optsDompet}</select></td>
+                <td class="py-1 px-2"><select class="border p-1 text-xs w-full" id="impKat_${row.idx}">${optsKategori}</select></td>
+                <td class="py-1 px-2"><input type="number" class="border p-1 text-xs w-full" value="${row.Nominal}" id="impNom_${row.idx}"></td>
+                <td class="py-1 px-2"><input type="text" class="border p-1 text-xs w-full" value="${row.Keterangan}" id="impKet_${row.idx}"></td>
+                <td class="py-1 px-2 text-center"><button class="text-red-500 hover:text-red-700" onclick="removeImportRow(${row.idx})"><i class="fas fa-times"></i></button></td>
+              </tr>
+            `;
+        });
+    }
+
+    function changeImportJenis(idx) {
+        const val = document.getElementById(`impJenis_${idx}`).value;
+        const selKat = document.getElementById(`impKat_${idx}`);
+        const opts = appData.Kategori.filter(k => k.Jenis === val).map(k => `<option value="${k.Nama}">${k.Nama}</option>`).join('');
+        selKat.innerHTML = opts;
+    }
+
+    function removeImportRow(idx) {
+        document.getElementById(`impRow_${idx}`).remove();
+        importedDataTemp = importedDataTemp.filter(r => r.idx !== idx);
+    }
+
+    function saveImportedData() {
+        if(importedDataTemp.length === 0) return showAlert('Tidak ada data untuk disimpan', 'error');
+        document.getElementById('loading').style.display = 'flex';
+        
+        setTimeout(() => {
+            importedDataTemp.forEach(row => {
+                const trElement = document.getElementById(`impRow_${row.idx}`);
+                if(trElement) {
+                    const tgl = document.getElementById(`impTgl_${row.idx}`).value;
+                    const jenis = document.getElementById(`impJenis_${row.idx}`).value;
+                    const dompet = document.getElementById(`impDompet_${row.idx}`).value;
+                    const kat = document.getElementById(`impKat_${row.idx}`).value;
+                    const nom = parseFloat(document.getElementById(`impNom_${row.idx}`).value);
+                    const ket = document.getElementById(`impKet_${row.idx}`).value;
+
+                    // Buat ID unik pseudo
+                    const newId = 't_' + Math.random().toString(36).substr(2, 9);
+                    appData.Transaksi.push({
+                        ID: newId, Tanggal: tgl, Jenis: jenis,
+                        Kategori: kat, Keterangan: ket, Nominal: nom, DompetAsal: dompet
+                    });
+
+                    // Update Saldo
+                    const domObj = appData.Dompet.find(d => d.Nama === dompet);
+                    if(domObj) {
+                        if(jenis === 'Pemasukan') domObj.SaldoSaatIni += nom;
+                        else domObj.SaldoSaatIni -= nom;
+                    }
+                }
+            });
+
+            document.getElementById('importPreviewContainer').classList.add('hidden');
+            document.getElementById('csvFileInput').value = '';
+            importedDataTemp = [];
+            
+            showAlert(`Berhasil mengimport data CSV`, 'success');
+            refreshUI();
+            document.getElementById('loading').style.display = 'none';
+        }, 1000);
+    }
+
+    // === FRONT-END MOCK LOGIC FOR SUBMIT & DELETE ===
+    function submitForm(event, tableName) {
+      event.preventDefault();
+      document.getElementById('loading').style.display = 'flex';
+      
+      setTimeout(() => {
+          let dataObj = {};
+          let isNew = false;
+          
+          if (tableName === 'Transaksi') {
+              const id = document.getElementById('transaksiID').value;
+              dataObj = {
+                  ID: id || 't_' + Math.floor(Math.random()*10000),
+                  Tanggal: document.getElementById('transaksiTanggal').value,
+                  Jenis: document.getElementById('transaksiJenis').value,
+                  Kategori: document.getElementById('transaksiKategori').value,
+                  Keterangan: document.getElementById('transaksiKeterangan').value,
+                  Nominal: parseFloat(document.getElementById('transaksiNominal').value),
+                  DompetAsal: document.getElementById('transaksiDompet').value
+              };
+              isNew = !id;
+              
+              // Potong/Tambah saldo dompet
+              if(isNew) {
+                  const dompet = appData.Dompet.find(d => d.Nama === dataObj.DompetAsal);
+                  if(dompet) {
+                      if(dataObj.Jenis === 'Pemasukan') dompet.SaldoSaatIni += dataObj.Nominal;
+                      else dompet.SaldoSaatIni -= dataObj.Nominal;
+                  }
+              }
+
+          } else if (tableName === 'Transfer') {
+              const id = document.getElementById('tfID').value;
+              dataObj = {
+                  ID: id || 'tr_' + Math.floor(Math.random()*10000),
+                  Tanggal: document.getElementById('tfTanggal').value,
+                  DariDompet: document.getElementById('tfDari').value,
+                  KeDompet: document.getElementById('tfKe').value,
+                  Jumlah: parseFloat(document.getElementById('tfJumlah').value),
+                  Biaya: parseFloat(document.getElementById('tfBiaya').value),
+                  Catatan: document.getElementById('tfCatatan').value
+              };
+              isNew = !id;
+
+              if(isNew) {
+                  const dari = appData.Dompet.find(d => d.Nama === dataObj.DariDompet);
+                  const ke = appData.Dompet.find(d => d.Nama === dataObj.KeDompet);
+                  if(dari) dari.SaldoSaatIni -= dataObj.Jumlah;
+                  if(ke) ke.SaldoSaatIni += dataObj.Jumlah;
+              }
+
+          } else if (tableName === 'Investasi') {
+              const id = document.getElementById('invID').value;
+              const jenis = document.getElementById('invJenis').value;
+              const isEmas = jenis.includes('Emas');
+              
+              dataObj = {
+                  ID: id || 'inv_' + Math.floor(Math.random()*10000),
+                  NamaInvestasi: document.getElementById('invNama').value,
+                  JenisInvestasi: jenis,
+                  TotalModal: parseFloat(document.getElementById('invModal').value),
+                  NilaiSaatIni: parseFloat(document.getElementById('invModal').value),
+                  ReturnRate: 0
+              };
+              if(isEmas) {
+                  dataObj.BeratGram = parseFloat(document.getElementById('invGram').value);
+                  dataObj.HargaBeliGram = parseFloat(document.getElementById('invHargaGram').value);
+              }
+              isNew = !id;
+              
+              // Auto potong dompet jika baru dan dipilih
+              const sumberDana = document.getElementById('invSumberDana').value;
+              if(isNew && sumberDana) {
+                  const dompet = appData.Dompet.find(d => d.Nama === sumberDana);
+                  if(dompet) {
+                      dompet.SaldoSaatIni -= dataObj.TotalModal;
+                      // Buat log transaksi
+                      appData.Transaksi.push({
+                          ID: 't_inv_' + Math.floor(Math.random()*10000), Tanggal: new Date().toISOString().split('T')[0],
+                          Jenis: 'Pengeluaran', Kategori: 'Investasi', Keterangan: `Beli Aset: ${dataObj.NamaInvestasi}`,
+                          Nominal: dataObj.TotalModal, DompetAsal: sumberDana
+                      });
+                  }
+              }
+
+          } else if (tableName === 'Dompet') {
+              const id = document.getElementById('dompetID').value;
+              const kat = document.getElementById('dompetKategori').value;
+              isNew = !id;
+              
+              dataObj = {
+                  ID: id || 'd_' + Math.floor(Math.random()*1000),
+                  Nama: document.getElementById('dompetNama').value,
+                  Kategori: kat,
+              };
+
+              if (kat === 'Kartu Kredit') {
+                  const limit = parseFloat(document.getElementById('dompetLimitCC').value);
+                  const tagihan = parseFloat(document.getElementById('dompetTagihanCC').value) || 0;
+                  dataObj.isCC = true;
+                  dataObj.SaldoAwal = limit; // mockup limit
+                  dataObj.SaldoSaatIni = limit - tagihan;
+              } else {
+                  dataObj.isCC = false;
+                  if(isNew) {
+                      dataObj.SaldoAwal = parseFloat(document.getElementById('dompetSaldoAwal').value);
+                      dataObj.SaldoSaatIni = dataObj.SaldoAwal;
+                  } else {
+                      // Rekonsiliasi Saldo Manual!
+                      const saldoBaru = parseFloat(document.getElementById('dompetSaldoSaatIniEdit').value);
+                      const oldData = appData.Dompet.find(d => d.ID === id);
+                      const selisih = saldoBaru - oldData.SaldoSaatIni;
+                      
+                      if (selisih !== 0) {
+                          const jenisKoreksi = selisih > 0 ? 'Pemasukan' : 'Pengeluaran';
+                          appData.Transaksi.push({
+                              ID: 't_koreksi_' + Math.floor(Math.random()*10000), Tanggal: new Date().toISOString().split('T')[0],
+                              Jenis: jenisKoreksi, Kategori: 'Penyesuaian Saldo', Keterangan: 'Koreksi sistem manual',
+                              Nominal: Math.abs(selisih), DompetAsal: oldData.Nama
+                          });
+                      }
+                      dataObj.SaldoAwal = oldData.SaldoAwal;
+                      dataObj.SaldoSaatIni = saldoBaru;
+                  }
+              }
+
+          } else if (tableName === 'Kategori') {
+              const id = document.getElementById('kategoriID').value;
+              dataObj = {
+                  ID: id || 'k_' + Math.floor(Math.random()*1000),
+                  Jenis: document.getElementById('kategoriJenis').value,
+                  Nama: document.getElementById('kategoriNama').value
+              };
+              isNew = !id;
+          }
+
+          if (isNew) {
+              appData[tableName].push(dataObj);
+          } else {
+             const idx = appData[tableName].findIndex(x => x.ID === dataObj.ID);
+             if (idx > -1) {
+                 // For update, just override object properties
+                 appData[tableName][idx] = {...appData[tableName][idx], ...dataObj};
+             }
+          }
+
+          showAlert(`[Preview] Data disimpan!`, 'success'); 
+          cancelEdit(tableName); 
+          refreshUI(); 
+          document.getElementById('loading').style.display = 'none'; 
+      }, 800);
+    }
+
+    function deleteDataFront(tableName, id) {
+      if(confirm('Yakin ingin menghapus data ini?')) {
+        document.getElementById('loading').style.display = 'flex';
+        setTimeout(() => {
+          if (tableName === 'Transaksi' || tableName === 'Transfer') {
+             // Revert saldo
+             const tb = tableName === 'Transaksi' ? appData.Transaksi : appData.Transfer;
+             const item = tb.find(x => x.ID === id);
+             if(item) {
+                 if(tableName === 'Transaksi') {
+                     const dompet = appData.Dompet.find(d => d.Nama === item.DompetAsal);
+                     if(dompet) {
+                         if(item.Jenis === 'Pemasukan') dompet.SaldoSaatIni -= item.Nominal;
+                         else dompet.SaldoSaatIni += item.Nominal;
+                     }
+                 } else { // Transfer
+                     const dari = appData.Dompet.find(d => d.Nama === item.DariDompet);
+                     const ke = appData.Dompet.find(d => d.Nama === item.KeDompet);
+                     if(dari) dari.SaldoSaatIni += item.Jumlah;
+                     if(ke) ke.SaldoSaatIni -= item.Jumlah;
+                 }
+             }
+          }
+          
+          appData[tableName] = appData[tableName].filter(x => x.ID !== id);
+          showAlert(`Data berhasil dihapus!`, 'success');
+          refreshUI();
+          document.getElementById('loading').style.display = 'none';
+        }, 500);
+      }
+    }
+
+    function formatRupiah(angka) { return Number(angka).toLocaleString('id-ID'); }
+    
+    function showAlert(msg, type) {
+      const box = document.getElementById('alertBox');
+      box.className = `p-4 mb-4 text-sm rounded-lg fixed top-6 right-6 z-50 shadow-lg w-80 block fade-in ${type === 'success' ? 'bg-green-100 border-l-4 border-green-500 text-green-800' : 'bg-red-100 border-l-4 border-red-500 text-red-800'}`;
+      box.innerHTML = `<div class="font-bold mb-1">${type === 'success' ? 'Berhasil' : 'Error'}</div>${msg}`;
+      setTimeout(() => { box.classList.add('hidden'); }, 3000);
+    }
+  </script>
+</body>
+</html>
