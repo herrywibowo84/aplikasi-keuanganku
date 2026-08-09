@@ -319,6 +319,50 @@
   </div>
   <!-- Wallet grid -->
   <div id="dompetGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"></div>
+  <!-- Manage dompet section -->
+  <div class="bg-white rounded-xl shadow overflow-hidden mb-6">
+    <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+      <h3 class="font-bold text-gray-800"><i class="fas fa-wallet mr-2 text-blue-500"></i>Kelola Dompet & Rekening</h3>
+      <button onclick="toggleForm('formDompetContainer')" class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"><i class="fas fa-plus mr-1"></i>Tambah Baru</button>
+    </div>
+    <div id="formDompetContainer" class="p-4 bg-blue-50 border-b hidden">
+      <form id="formDompet" onsubmit="submitDompet(event)" class="space-y-3">
+        <input type="hidden" id="dompetID">
+        <div><label class="block text-xs font-medium text-gray-700 mb-1">Nama Rekening/Dompet</label>
+          <input type="text" id="dompetNama" required class="w-full border rounded p-2 text-sm"></div>
+        <div><label class="block text-xs font-medium text-gray-700 mb-1">Tipe</label>
+          <select id="dompetKategori" required class="w-full border rounded p-2 text-sm" onchange="toggleKartuKredit()">
+            <option value="Bank">Bank</option><option value="E-Wallet">E-Wallet</option>
+            <option value="Tunai">Tunai</option><option value="Kartu Kredit">Kartu Kredit (Hutang)</option>
+          </select></div>
+        <div id="fieldSaldoNormal"><label class="block text-xs font-medium text-gray-700 mb-1">Saldo Awal (Rp)</label>
+          <input type="number" id="dompetSaldoAwal" value="0" class="w-full border rounded p-2 text-sm"></div>
+        <div id="fieldRevisiSaldo" class="hidden bg-yellow-50 p-2 rounded border border-yellow-300">
+          <label class="block text-xs font-bold text-yellow-800 mb-1">Revisi Saldo Saat Ini (Rp)</label>
+          <input type="number" id="dompetSaldoEdit" class="w-full border rounded p-2 text-sm font-bold">
+          <p class="text-[10px] text-yellow-600 mt-1">Selisih akan tercatat otomatis sebagai koreksi.</p>
+        </div>
+        <div id="fieldKartuKredit" class="hidden space-y-2 bg-red-50 p-2 rounded border border-red-200">
+          <div><label class="block text-xs font-bold text-red-700 mb-1">Limit Kartu Kredit (Rp)</label>
+            <input type="number" id="dompetLimitCC" class="w-full border rounded p-2 text-sm" placeholder="Misal: 30000000"></div>
+          <div id="fieldTagihanCC"><label class="block text-xs font-bold text-red-700 mb-1">Tagihan Terpakai (Rp)</label>
+            <input type="number" id="dompetTagihanCC" value="0" class="w-full border rounded p-2 text-sm"></div>
+        </div>
+        <div class="flex justify-end gap-2 pt-1">
+          <button type="button" onclick="cancelEdit('Dompet')" id="btnCancelDompet" class="hidden px-3 py-1 bg-gray-200 text-sm rounded">Batal</button>
+          <button type="submit" class="px-4 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Simpan</button>
+        </div>
+      </form>
+    </div>
+    <div class="overflow-x-auto p-4">
+      <table class="min-w-full text-sm">
+        <thead><tr class="text-left text-gray-500 border-b text-xs">
+          <th class="pb-2">Nama</th><th class="pb-2">Tipe</th><th class="pb-2 text-right">Saldo/Tagihan</th><th class="pb-2 text-center">Aksi</th>
+        </tr></thead>
+        <tbody id="dompetTableBody" class="divide-y"></tbody>
+      </table>
+    </div>
+  </div>
   <!-- Detail panel -->
   <div id="dompetDetailPanel" class="hidden bg-white rounded-xl shadow overflow-hidden">
     <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
@@ -631,51 +675,8 @@
       <button onclick="exportCSV('Semua')" class="px-4 py-2 bg-gray-700 text-white text-sm rounded-lg hover:bg-gray-800"><i class="fas fa-archive mr-1"></i>Semua Data</button>
     </div>
   </div>
-  <!-- Dompet & Kategori -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <div class="bg-white rounded-xl shadow overflow-hidden">
-      <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-        <h3 class="font-bold text-gray-800"><i class="fas fa-wallet mr-2 text-blue-500"></i>Daftar Dompet</h3>
-        <button onclick="toggleForm('formDompetContainer')" class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"><i class="fas fa-plus mr-1"></i>Tambah</button>
-      </div>
-      <div id="formDompetContainer" class="p-4 bg-blue-50 border-b hidden">
-        <form id="formDompet" onsubmit="submitDompet(event)" class="space-y-3">
-          <input type="hidden" id="dompetID">
-          <div><label class="block text-xs font-medium text-gray-700 mb-1">Nama Rekening/Dompet</label>
-            <input type="text" id="dompetNama" required class="w-full border rounded p-2 text-sm"></div>
-          <div><label class="block text-xs font-medium text-gray-700 mb-1">Tipe</label>
-            <select id="dompetKategori" required class="w-full border rounded p-2 text-sm" onchange="toggleKartuKredit()">
-              <option value="Bank">Bank</option><option value="E-Wallet">E-Wallet</option>
-              <option value="Tunai">Tunai</option><option value="Kartu Kredit">Kartu Kredit (Hutang)</option>
-            </select></div>
-          <div id="fieldSaldoNormal"><label class="block text-xs font-medium text-gray-700 mb-1">Saldo Awal (Rp)</label>
-            <input type="number" id="dompetSaldoAwal" value="0" class="w-full border rounded p-2 text-sm"></div>
-          <div id="fieldRevisiSaldo" class="hidden bg-yellow-50 p-2 rounded border border-yellow-300">
-            <label class="block text-xs font-bold text-yellow-800 mb-1">Revisi Saldo Saat Ini (Rp)</label>
-            <input type="number" id="dompetSaldoEdit" class="w-full border rounded p-2 text-sm font-bold">
-            <p class="text-[10px] text-yellow-600 mt-1">Selisih akan tercatat otomatis sebagai koreksi.</p>
-          </div>
-          <div id="fieldKartuKredit" class="hidden space-y-2 bg-red-50 p-2 rounded border border-red-200">
-            <div><label class="block text-xs font-bold text-red-700 mb-1">Limit Kartu Kredit (Rp)</label>
-              <input type="number" id="dompetLimitCC" class="w-full border rounded p-2 text-sm" placeholder="Misal: 30000000"></div>
-            <div id="fieldTagihanCC"><label class="block text-xs font-bold text-red-700 mb-1">Tagihan Terpakai (Rp)</label>
-              <input type="number" id="dompetTagihanCC" value="0" class="w-full border rounded p-2 text-sm"></div>
-          </div>
-          <div class="flex justify-end gap-2 pt-1">
-            <button type="button" onclick="cancelEdit('Dompet')" id="btnCancelDompet" class="hidden px-3 py-1 bg-gray-200 text-sm rounded">Batal</button>
-            <button type="submit" class="px-4 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Simpan</button>
-          </div>
-        </form>
-      </div>
-      <div class="overflow-x-auto p-4">
-        <table class="min-w-full text-sm">
-          <thead><tr class="text-left text-gray-500 border-b text-xs">
-            <th class="pb-2">Nama</th><th class="pb-2">Tipe</th><th class="pb-2 text-right">Saldo/Tagihan</th><th class="pb-2 text-center">Aksi</th>
-          </tr></thead>
-          <tbody id="dompetTableBody" class="divide-y"></tbody>
-        </table>
-      </div>
-    </div>
+  <!-- Kategori -->
+  <div class="mb-6">
     <div class="bg-white rounded-xl shadow overflow-hidden h-fit">
       <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
         <h3 class="font-bold text-gray-800"><i class="fas fa-tags mr-2 text-green-500"></i>Daftar Kategori</h3>
@@ -1039,7 +1040,7 @@ function submitDompet(e) {
       Nominal:Math.abs(selisih), Biaya:0, Keterangan:'Koreksi saldo '+obj.Nama, DompetAsal:obj.Nama
     });
   }
-  gasRun('saveRecord',['Dompet',obj], () => { cancelEdit('Dompet'); document.getElementById('formDompetContainer').classList.add('hidden'); renderPengaturan(); });
+  gasRun('saveRecord',['Dompet',obj], () => { cancelEdit('Dompet'); document.getElementById('formDompetContainer').classList.add('hidden'); renderDompetPage(); });
 }
 function submitKategori(e) {
   e.preventDefault();
@@ -1310,7 +1311,8 @@ function renderDompetPage() {
 
   const grid=document.getElementById('dompetGrid');
   grid.innerHTML='';
-  if (!appData.Dompet.length) { grid.innerHTML='<p class="text-gray-400 text-sm col-span-3 text-center py-8">Belum ada dompet. Tambahkan di Pengaturan.</p>'; return; }
+  if (!appData.Dompet.length) { grid.innerHTML='<p class="text-gray-400 text-sm col-span-3 text-center py-8">Belum ada dompet. Tambahkan melalui tombol di bawah.</p>'; }
+  renderDompetTable();
 
   appData.Dompet.forEach(d => {
     const isCC=d.IsCC==='true'||d.Kategori==='Kartu Kredit';
@@ -1616,14 +1618,16 @@ function editInvestasi(id) {
 // ============================================================
 // PENGATURAN
 // ============================================================
-function renderPengaturan() {
-  const tbodyD=document.getElementById('dompetTableBody'); tbodyD.innerHTML='';
+function renderDompetTable() {
+  const tbody=document.getElementById('dompetTableBody'); if (!tbody) return;
+  tbody.innerHTML='';
+  if (!appData.Dompet.length) { tbody.innerHTML='<tr><td colspan="4" class="py-4 text-center text-gray-400 text-sm">Belum ada dompet.</td></tr>'; return; }
   appData.Dompet.forEach(d => {
     const isCC=d.IsCC==='true'||d.Kategori==='Kartu Kredit';
     const saldo=parseFloat(d.SaldoSaatIni)||0;
     const display=isCC?`(Tagihan) Rp ${fmt(saldo)}`:`Rp ${fmt(saldo)}`;
     const color=isCC?'text-red-600':saldo<0?'text-red-600':'text-gray-800';
-    tbodyD.innerHTML+=`<tr class="hover:bg-gray-50 text-sm">
+    tbody.innerHTML+=`<tr class="hover:bg-gray-50 text-sm">
       <td class="py-2 font-medium">${d.Nama}</td>
       <td class="py-2"><span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">${d.Kategori}</span></td>
       <td class="py-2 text-right font-bold ${color}">${display}</td>
@@ -1632,6 +1636,8 @@ function renderPengaturan() {
         <button onclick="deleteData('Dompet','${d.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
       </td></tr>`;
   });
+}
+function renderPengaturan() {
   const tbodyK=document.getElementById('kategoriTableBody'); tbodyK.innerHTML='';
   appData.Kategori.forEach(k => {
     const color=k.Jenis==='Pemasukan'?'text-green-600':'text-red-600';
@@ -1646,6 +1652,7 @@ function renderPengaturan() {
 }
 function editDompet(id) {
   const data=appData.Dompet.find(d=>d.ID===id); if (!data) return;
+  switchPage('dompet');
   document.getElementById('formDompetContainer').classList.remove('hidden');
   document.getElementById('dompetID').value=data.ID;
   document.getElementById('dompetNama').value=data.Nama;
