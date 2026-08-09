@@ -3,1450 +3,1625 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aplikasi Catatan Keuangan</title>
+  <title>Aplikasi Keuanganku</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; }
-    .nav-item.active { background-color: #eff6ff; color: #2563eb; border-right: 4px solid #2563eb; }
-    .fade-in { animation: fadeIn 0.3s ease-in-out; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    .tab-btn.active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; }
+    .nav-item.active { background: #eff6ff; color: #2563eb; border-right: 3px solid #2563eb; font-weight: 600; }
+    .fade-in { animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
+    .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+    #loadingOverlay { display:none; position:fixed; inset:0; background:rgba(255,255,255,.85); z-index:999;
+      flex-direction:column; align-items:center; justify-content:center; }
+    .progress-bar { height:8px; border-radius:4px; background:#e5e7eb; overflow:hidden; }
+    .progress-fill { height:100%; border-radius:4px; transition:width .4s; }
+    #alertBox { display:none; position:fixed; top:20px; right:20px; z-index:1000; min-width:280px; max-width:380px; }
   </style>
 </head>
 <body class="flex h-screen overflow-hidden text-gray-800">
 
-  <!-- Sidebar -->
-  <aside class="w-64 bg-white shadow-lg flex flex-col justify-between hidden md:flex z-10 relative">
-    <div>
-      <div class="p-6 border-b">
-        <h1 class="text-2xl font-bold text-blue-600"><i class="fas fa-wallet mr-2"></i>KeuanganKu</h1>
-      </div>
-      <nav class="mt-4">
-        <a href="#" onclick="switchPage('dashboard')" class="nav-item active block px-6 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-chart-pie w-6"></i> Dashboard</a>
-        <a href="#" onclick="switchPage('catat')" class="nav-item block px-6 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-edit w-6"></i> Catat Transaksi</a>
-        <a href="#" onclick="switchPage('riwayat')" class="nav-item block px-6 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-list w-6"></i> Riwayat Transaksi</a>
-        <a href="#" onclick="switchPage('anggaran')" class="nav-item block px-6 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-bullseye w-6"></i> Anggaran</a>
-        <a href="#" onclick="switchPage('investasi')" class="nav-item block px-6 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-chart-line w-6"></i> Investasi</a>
-        <a href="#" onclick="switchPage('pengaturan')" class="nav-item block px-6 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-cog w-6"></i> Pengaturan</a>
-      </nav>
+<!-- Loading Overlay -->
+<div id="loadingOverlay">
+  <i class="fas fa-circle-notch fa-spin text-5xl text-blue-600 mb-3"></i>
+  <p id="loadingMsg" class="text-gray-600 font-medium">Memuat data...</p>
+</div>
+
+<!-- Alert -->
+<div id="alertBox" class="p-4 rounded-xl shadow-lg text-sm font-medium"></div>
+
+<!-- SIDEBAR -->
+<aside class="w-60 bg-white shadow-lg flex-col justify-between hidden md:flex z-10 flex-shrink-0">
+  <div>
+    <div class="p-5 border-b bg-gradient-to-r from-blue-700 to-blue-500">
+      <h1 class="text-xl font-bold text-white"><i class="fas fa-wallet mr-2"></i>KeuanganKu</h1>
+      <p id="userEmail" class="text-blue-100 text-xs mt-1 truncate">Memuat...</p>
     </div>
-    <div class="p-6 border-t text-sm text-gray-500">
-      <p id="userEmail" class="truncate"><i class="fas fa-user-circle mr-1"></i> Memuat...</p>
+    <nav class="mt-2 text-sm">
+      <a href="#" onclick="switchPage('dashboard')" class="nav-item active block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-chart-pie w-5 mr-2"></i>Dashboard</a>
+      <a href="#" onclick="switchPage('catat')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-edit w-5 mr-2"></i>Catat Transaksi</a>
+      <a href="#" onclick="switchPage('riwayat')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-list w-5 mr-2"></i>Riwayat</a>
+      <a href="#" onclick="switchPage('anggaran')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-bullseye w-5 mr-2"></i>Anggaran</a>
+      <a href="#" onclick="switchPage('hutang')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-handshake w-5 mr-2"></i>Hutang & Piutang</a>
+      <a href="#" onclick="switchPage('investasi')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-chart-line w-5 mr-2"></i>Investasi</a>
+      <a href="#" onclick="switchPage('pengaturan')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-cog w-5 mr-2"></i>Pengaturan</a>
+    </nav>
+  </div>
+  <div class="p-4 border-t text-xs text-gray-400 text-center">v2.0 &bull; Google Sheets DB</div>
+</aside>
+
+<!-- MOBILE HEADER -->
+<div class="md:hidden fixed top-0 left-0 right-0 bg-white shadow z-20 px-4 py-3 flex justify-between items-center">
+  <h1 class="text-lg font-bold text-blue-600"><i class="fas fa-wallet mr-1"></i>KeuanganKu</h1>
+  <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="text-gray-600"><i class="fas fa-bars text-xl"></i></button>
+</div>
+<div id="mobileMenu" class="hidden md:hidden fixed top-[52px] left-0 right-0 bg-white shadow-lg z-20 text-sm">
+  <a href="#" onclick="switchPage('dashboard');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-chart-pie mr-2"></i>Dashboard</a>
+  <a href="#" onclick="switchPage('catat');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-edit mr-2"></i>Catat Transaksi</a>
+  <a href="#" onclick="switchPage('riwayat');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-list mr-2"></i>Riwayat</a>
+  <a href="#" onclick="switchPage('anggaran');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-bullseye mr-2"></i>Anggaran</a>
+  <a href="#" onclick="switchPage('hutang');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-handshake mr-2"></i>Hutang & Piutang</a>
+  <a href="#" onclick="switchPage('investasi');closeMobileMenu()" class="block px-4 py-3 border-b text-gray-700"><i class="fas fa-chart-line mr-2"></i>Investasi</a>
+  <a href="#" onclick="switchPage('pengaturan');closeMobileMenu()" class="block px-4 py-3 text-gray-700"><i class="fas fa-cog mr-2"></i>Pengaturan</a>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50 pt-14 md:pt-0">
+<div class="flex-1 overflow-y-auto p-4 md:p-6" id="mainContainer">
+
+<!-- 1. DASHBOARD -->
+<div id="dashboardPage" class="page-content fade-in">
+  <h2 class="text-2xl font-bold text-gray-800 mb-5">Ringkasan Keuangan</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow p-5 border-l-4 border-blue-500">
+      <p class="text-xs text-gray-500 font-medium mb-1">Total Saldo (Kas/Bank)</p>
+      <h3 class="text-2xl font-bold text-gray-800" id="dashTotalSaldo">Rp 0</h3>
     </div>
-  </aside>
-
-  <!-- Mobile Header & Nav -->
-  <div class="md:hidden fixed top-0 left-0 right-0 bg-white shadow-md z-20 px-4 py-3 flex justify-between items-center">
-    <h1 class="text-xl font-bold text-blue-600"><i class="fas fa-wallet mr-2"></i>KeuanganKu</h1>
-    <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="text-gray-600 focus:outline-none"><i class="fas fa-bars text-2xl"></i></button>
+    <div class="bg-white rounded-xl shadow p-5 border-l-4 border-green-500">
+      <p class="text-xs text-gray-500 font-medium mb-1">Pemasukan Bulan Ini</p>
+      <h3 class="text-2xl font-bold text-green-600" id="dashPemasukan">Rp 0</h3>
+    </div>
+    <div class="bg-white rounded-xl shadow p-5 border-l-4 border-red-500">
+      <p class="text-xs text-gray-500 font-medium mb-1">Pengeluaran Bulan Ini</p>
+      <h3 class="text-2xl font-bold text-red-600" id="dashPengeluaran">Rp 0</h3>
+    </div>
   </div>
-  <div id="mobileMenu" class="hidden md:hidden fixed top-[52px] left-0 right-0 bg-white shadow-lg z-20 flex flex-col">
-    <a href="#" onclick="switchPage('dashboard'); document.getElementById('mobileMenu').classList.add('hidden')" class="px-4 py-3 border-b text-gray-700"><i class="fas fa-chart-pie w-6"></i> Dashboard</a>
-    <a href="#" onclick="switchPage('catat'); document.getElementById('mobileMenu').classList.add('hidden')" class="px-4 py-3 border-b text-gray-700"><i class="fas fa-edit w-6"></i> Catat Transaksi</a>
-    <a href="#" onclick="switchPage('riwayat'); document.getElementById('mobileMenu').classList.add('hidden')" class="px-4 py-3 border-b text-gray-700"><i class="fas fa-list w-6"></i> Riwayat Transaksi</a>
-    <a href="#" onclick="switchPage('anggaran'); document.getElementById('mobileMenu').classList.add('hidden')" class="px-4 py-3 border-b text-gray-700"><i class="fas fa-bullseye w-6"></i> Anggaran</a>
-    <a href="#" onclick="switchPage('investasi'); document.getElementById('mobileMenu').classList.add('hidden')" class="px-4 py-3 border-b text-gray-700"><i class="fas fa-chart-line w-6"></i> Investasi</a>
-    <a href="#" onclick="switchPage('pengaturan'); document.getElementById('mobileMenu').classList.add('hidden')" class="px-4 py-3 text-gray-700"><i class="fas fa-cog w-6"></i> Pengaturan</a>
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+    <div class="bg-white rounded-xl shadow p-5 lg:col-span-3">
+      <h3 class="text-base font-bold text-gray-800 mb-3">Arus Kas (Per Tanggal)</h3>
+      <div class="relative h-56"><canvas id="cashflowChart"></canvas></div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-5 lg:col-span-2">
+      <h3 class="text-base font-bold text-gray-800 mb-3">Pengeluaran per Kategori</h3>
+      <div class="relative h-56 flex justify-center"><canvas id="expenseChart"></canvas></div>
+    </div>
   </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl shadow p-5">
+      <h3 class="text-base font-bold text-gray-800 mb-3">5 Transaksi Terakhir</h3>
+      <table class="min-w-full text-sm"><tbody id="dashLatestTrx"><tr><td class="py-4 text-center text-gray-400">Belum ada transaksi</td></tr></tbody></table>
+    </div>
+    <div class="bg-white rounded-xl shadow p-5">
+      <h3 class="text-base font-bold text-gray-800 mb-3">Anggaran Bulan Ini</h3>
+      <div id="dashAnggaran" class="space-y-3"><p class="text-gray-400 text-sm">Belum ada anggaran</p></div>
+    </div>
+  </div>
+</div>
 
-  <!-- Main Content -->
-  <main class="flex-1 flex flex-col h-screen overflow-hidden bg-gray-50 pt-14 md:pt-0">
-    <div class="flex-1 overflow-y-auto p-4 md:p-8" id="mainContainer">
-      <!-- Loading / Alerts -->
-      <div id="alertBox" class="hidden"></div>
-      <div id="loading" class="fixed inset-0 bg-white bg-opacity-80 z-50 flex flex-col justify-center items-center hidden">
-        <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600 mb-2"></i>
-        <p class="text-gray-600 font-medium">Memproses data...</p>
-      </div>
-
-      <!-- PAGES -->
-      <!-- 1. DASHBOARD -->
-      <div id="dashboardPage" class="page-content fade-in">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">Ringkasan Keuangan</h2>
-        <!-- 3 Kartu Ringkasan -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div class="bg-white rounded-xl shadow p-6 border-l-4 border-blue-500">
-            <p class="text-sm text-gray-500 font-medium mb-1">Total Saldo Kas/Bank</p>
-            <h3 class="text-2xl font-bold text-gray-800" id="dashTotalSaldo">Rp 0</h3>
+<!-- 2. CATAT TRANSAKSI -->
+<div id="catatPage" class="page-content hidden fade-in max-w-2xl mx-auto">
+  <h2 class="text-2xl font-bold text-gray-800 mb-5 text-center">Catat Transaksi</h2>
+  <div class="bg-white rounded-xl shadow overflow-hidden">
+    <div class="flex border-b">
+      <button onclick="setCatatTab('pengeluaran')" id="tabPengeluaran" class="flex-1 py-3 text-center text-sm text-red-600 hover:bg-red-50 transition">
+        <i class="fas fa-arrow-up mr-1"></i>Pengeluaran</button>
+      <button onclick="setCatatTab('pemasukan')" id="tabPemasukan" class="flex-1 py-3 text-center text-sm text-green-600 hover:bg-green-50 transition">
+        <i class="fas fa-arrow-down mr-1"></i>Pemasukan</button>
+      <button onclick="setCatatTab('transfer')" id="tabTransfer" class="flex-1 py-3 text-center text-sm text-blue-600 hover:bg-blue-50 transition">
+        <i class="fas fa-exchange-alt mr-1"></i>Transfer</button>
+      <button onclick="setCatatTab('import')" id="tabImport" class="flex-1 py-3 text-center text-sm text-purple-600 hover:bg-purple-50 transition">
+        <i class="fas fa-file-import mr-1"></i>Import CSV</button>
+    </div>
+    <div class="p-6">
+      <!-- Form Transaksi -->
+      <form id="formCatat" onsubmit="submitTransaksi(event)" class="space-y-4">
+        <input type="hidden" id="transaksiID">
+        <input type="hidden" id="transaksiJenis" value="Pengeluaran">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
+            <input type="date" id="transaksiTanggal" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm">
           </div>
-          <div class="bg-white rounded-xl shadow p-6 border-l-4 border-green-500">
-            <p class="text-sm text-gray-500 font-medium mb-1">Pemasukan Bulan Ini</p>
-            <h3 class="text-2xl font-bold text-green-600" id="dashPemasukan">Rp 0</h3>
-          </div>
-          <div class="bg-white rounded-xl shadow p-6 border-l-4 border-red-500">
-            <p class="text-sm text-gray-500 font-medium mb-1">Pengeluaran Bulan Ini</p>
-            <h3 class="text-2xl font-bold text-red-600" id="dashPengeluaran">Rp 0</h3>
-          </div>
-        </div>
-
-        <!-- Grafik Arus Kas -->
-        <div class="bg-white rounded-xl shadow p-6 mb-8">
-          <h3 class="text-lg font-bold text-gray-800 mb-4">Arus Kas (Pemasukan vs Pengeluaran)</h3>
-          <div class="relative h-64 w-full">
-            <canvas id="cashflowChart"></canvas>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <!-- Grafik Kategori -->
-          <div class="bg-white rounded-xl shadow p-6">
-            <h3 class="text-lg font-bold text-gray-800 mb-4">Pengeluaran per Kategori</h3>
-            <div class="relative h-64 w-full flex justify-center">
-              <canvas id="expenseChart"></canvas>
-            </div>
-          </div>
-          
-          <!-- Transaksi Terakhir -->
-          <div class="bg-white rounded-xl shadow p-6">
-            <h3 class="text-lg font-bold text-gray-800 mb-4 flex justify-between items-center">
-              Transaksi Terakhir
-              <button onclick="switchPage('riwayat')" class="text-sm text-blue-600 font-normal hover:underline">Lihat Semua</button>
-            </h3>
-            <div class="overflow-x-auto">
-              <table class="min-w-full text-sm">
-                <tbody id="dashLatestTrx">
-                  <!-- Injected via JS -->
-                </tbody>
-              </table>
-            </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
+            <input type="number" id="transaksiNominal" required min="1" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm">
           </div>
         </div>
-      </div>
-
-      <!-- 2. CATAT TRANSAKSI -->
-      <div id="catatPage" class="page-content hidden fade-in max-w-2xl mx-auto">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Catat Transaksi</h2>
-        
-        <div class="bg-white rounded-xl shadow overflow-hidden">
-          <div class="flex border-b">
-            <button onclick="setCatatTab('pengeluaran')" id="tabPengeluaran" class="flex-1 py-3 text-center tab-btn active text-red-600 font-medium"><i class="fas fa-arrow-up mr-1"></i> Pengeluaran</button>
-            <button onclick="setCatatTab('pemasukan')" id="tabPemasukan" class="flex-1 py-3 text-center tab-btn text-green-600"><i class="fas fa-arrow-down mr-1"></i> Pemasukan</button>
-            <button onclick="setCatatTab('transfer')" id="tabTransfer" class="flex-1 py-3 text-center tab-btn text-blue-600"><i class="fas fa-exchange-alt mr-1"></i> Transfer</button>
-            <button onclick="setCatatTab('import')" id="tabImport" class="flex-1 py-3 text-center tab-btn text-purple-600"><i class="fas fa-file-import mr-1"></i> Import CSV</button>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Dompet</label>
+            <select id="transaksiDompet" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm"></select>
           </div>
-
-          <div class="p-6">
-            <!-- Form Pengeluaran & Pemasukan -->
-            <form id="formCatat" onsubmit="submitForm(event, 'Transaksi')" class="space-y-4">
-              <input type="hidden" id="transaksiID">
-              <input type="hidden" id="transaksiJenis" value="Pengeluaran">
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
-                  <input type="date" id="transaksiTanggal" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
-                  <input type="number" id="transaksiNominal" required min="1" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
-                </div>
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Dompet</label>
-                  <select id="transaksiDompet" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200"></select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-                  <select id="transaksiKategori" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200"></select>
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Keterangan / Catatan</label>
-                <input type="text" id="transaksiKeterangan" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200" placeholder="Misal: Makan siang">
-              </div>
-              <div class="flex justify-end pt-2 gap-2">
-                <button type="button" onclick="cancelEdit('Transaksi')" id="btnCancelTransaksi" class="hidden px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">Batal Edit</button>
-                <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition w-full sm:w-auto"><i class="fas fa-save mr-1"></i> Simpan Transaksi</button>
-              </div>
-            </form>
-
-            <!-- Form Transfer -->
-            <form id="formTransfer" onsubmit="submitForm(event, 'Transfer')" class="space-y-4 hidden">
-              <input type="hidden" id="tfID">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
-                <input type="date" id="tfTanggal" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Dari Dompet</label>
-                  <select id="tfDari" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200"></select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Ke Dompet</label>
-                  <select id="tfKe" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200"></select>
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
-                <input type="number" id="tfJumlah" required min="1" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Biaya Admin (Opsional)</label>
-                <input type="number" id="tfBiaya" value="0" min="0" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
-                <input type="text" id="tfCatatan" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
-              </div>
-              <div class="flex justify-end pt-2 gap-2">
-                <button type="button" onclick="cancelEdit('Transfer')" id="btnCancelTransfer" class="hidden px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">Batal Edit</button>
-                <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition w-full sm:w-auto"><i class="fas fa-save mr-1"></i> Simpan Transfer</button>
-              </div>
-            </form>
-
-            <!-- Import CSV -->
-            <div id="formImport" class="hidden space-y-4">
-              <div class="bg-blue-50 border border-blue-200 text-blue-800 text-sm p-4 rounded-lg mb-4">
-                <p class="font-bold mb-1"><i class="fas fa-info-circle mr-1"></i> Panduan Import CSV</p>
-                <ul class="list-disc ml-5 space-y-1">
-                  <li>Format file harus <b>.csv</b> (Bisa Export dari Excel/Google Sheets).</li>
-                  <li>Wajib memiliki minimal 3 kolom berurutan: <b>Tanggal</b>, <b>Keterangan</b>, <b>Nominal</b>.</li>
-                  <li>Format tanggal yang disarankan: YYYY-MM-DD (contoh: 2026-07-25).</li>
-                </ul>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Pilih File CSV Rekening Koran</label>
-                <input type="file" id="csvFileInput" accept=".csv" class="w-full border rounded-lg p-2 bg-gray-50">
-              </div>
-              <button type="button" onclick="handleImportCSV()" class="px-6 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition w-full"><i class="fas fa-upload mr-1"></i> Preview Data</button>
-
-              <!-- Preview Table -->
-              <div id="importPreviewContainer" class="hidden mt-6">
-                <h3 class="font-bold text-gray-800 mb-2 border-b pb-2">Review & Revisi Data (Belum Disimpan)</h3>
-                <div class="overflow-x-auto max-h-96">
-                  <table class="min-w-full bg-white text-sm">
-                    <thead class="bg-gray-100 sticky top-0">
-                      <tr>
-                        <th class="py-2 px-3 text-left">Tanggal</th>
-                        <th class="py-2 px-3 text-left">Jenis</th>
-                        <th class="py-2 px-3 text-left">Dompet (Pilih)</th>
-                        <th class="py-2 px-3 text-left">Kategori (Pilih)</th>
-                        <th class="py-2 px-3 text-left">Nominal</th>
-                        <th class="py-2 px-3 text-left">Keterangan</th>
-                        <th class="py-2 px-3 text-center">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody id="importPreviewBody" class="divide-y">
-                      <!-- Diisi via JS -->
-                    </tbody>
-                  </table>
-                </div>
-                <div class="mt-4 flex justify-end gap-2">
-                  <button type="button" onclick="document.getElementById('importPreviewContainer').classList.add('hidden')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Batal</button>
-                  <button type="button" onclick="saveImportedData()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"><i class="fas fa-save mr-1"></i> Simpan Semua Transaksi</button>
-                </div>
-              </div>
-            </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+            <select id="transaksiKategori" required class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm"></select>
           </div>
         </div>
-      </div>
-
-      <!-- 3. RIWAYAT TRANSAKSI (BUKU BESAR) -->
-      <div id="riwayatPage" class="page-content hidden fade-in">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">Buku Besar Transaksi</h2>
-        
-        <div class="bg-white rounded-xl shadow mb-6">
-          <div class="p-4 border-b bg-gray-50 flex flex-wrap gap-4 items-end">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Dari Tanggal</label>
-              <input type="date" id="filterStartDate" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Sampai Tanggal</label>
-              <input type="date" id="filterEndDate" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Dompet</label>
-              <select id="filterDompet" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
-                <option value="">Semua Dompet</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
-              <select id="filterJenis" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
-                <option value="">Semua Jenis</option>
-                <option value="Pemasukan">Pemasukan</option>
-                <option value="Pengeluaran">Pengeluaran</option>
-                <option value="Transfer">Transfer</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-              <select id="filterKategori" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
-                <option value="">Semua Kategori</option>
-              </select>
-            </div>
-            <!-- Fitur Sort (BARU) -->
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Urutkan</label>
-              <select id="filterSort" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200">
-                <option value="dateDesc">Tanggal (Terbaru - Terlama)</option>
-                <option value="dateAsc">Tanggal (Terlama - Terbaru)</option>
-                <option value="nomDesc">Nominal (Tertinggi - Terendah)</option>
-                <option value="nomAsc">Nominal (Terendah - Tertinggi)</option>
-              </select>
-            </div>
-            
-            <div class="flex gap-2 w-full md:w-auto">
-              <button onclick="applyTransaksiFilter()" class="flex-1 md:flex-none px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"><i class="fas fa-search"></i> Cari</button>
-              <button onclick="resetTransaksiFilter()" class="flex-1 md:flex-none px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"><i class="fas fa-sync-alt"></i> Reset</button>
-            </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
+          <input type="text" id="transaksiKeterangan" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm" placeholder="Misal: Makan siang di warung">
+        </div>
+        <div class="flex gap-2 pt-1">
+          <button type="button" onclick="cancelEdit('Transaksi')" id="btnCancelTransaksi" class="hidden px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">Batal Edit</button>
+          <button type="submit" class="flex-1 px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 text-sm"><i class="fas fa-save mr-1"></i>Simpan Transaksi</button>
+        </div>
+      </form>
+      <!-- Form Transfer -->
+      <form id="formTransfer" onsubmit="submitTransfer(event)" class="space-y-4 hidden">
+        <input type="hidden" id="tfID">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
+          <input type="date" id="tfTanggal" required class="w-full border rounded-lg p-2 text-sm">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Dari Dompet</label>
+            <select id="tfDari" required class="w-full border rounded-lg p-2 text-sm"></select>
           </div>
-          <div class="overflow-x-auto p-4">
-            <table class="min-w-full bg-white text-sm">
-              <thead class="bg-gray-100 text-gray-600">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Ke Dompet</label>
+            <select id="tfKe" required class="w-full border rounded-lg p-2 text-sm"></select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
+            <input type="number" id="tfJumlah" required min="1" class="w-full border rounded-lg p-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Biaya Admin (Rp)</label>
+            <input type="number" id="tfBiaya" value="0" min="0" class="w-full border rounded-lg p-2 text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+          <input type="text" id="tfCatatan" class="w-full border rounded-lg p-2 text-sm" placeholder="Opsional">
+        </div>
+        <div class="flex gap-2 pt-1">
+          <button type="button" onclick="cancelEdit('Transfer')" id="btnCancelTransfer" class="hidden px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">Batal Edit</button>
+          <button type="submit" class="flex-1 px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 text-sm"><i class="fas fa-save mr-1"></i>Simpan Transfer</button>
+        </div>
+      </form>
+      <!-- Form Import CSV -->
+      <div id="formImport" class="hidden space-y-4">
+        <div class="bg-blue-50 border border-blue-200 text-blue-800 text-xs p-4 rounded-lg">
+          <p class="font-bold mb-1"><i class="fas fa-info-circle mr-1"></i>Panduan Import CSV</p>
+          <ul class="list-disc ml-4 space-y-1">
+            <li>Format: <b>.csv</b> — kolom wajib: <b>Tanggal, Keterangan, Nominal</b></li>
+            <li>Format tanggal: YYYY-MM-DD (misal: 2026-07-25)</li>
+          </ul>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Pilih File CSV</label>
+          <input type="file" id="csvFileInput" accept=".csv" class="w-full border rounded-lg p-2 bg-gray-50 text-sm">
+        </div>
+        <button type="button" onclick="handleImportCSV()" class="w-full px-6 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 text-sm"><i class="fas fa-upload mr-1"></i>Preview Data</button>
+        <div id="importPreviewContainer" class="hidden">
+          <h3 class="font-bold text-gray-800 mb-2 text-sm border-b pb-2">Review Data (Belum Disimpan)</h3>
+          <div class="overflow-x-auto max-h-72">
+            <table class="min-w-full text-xs bg-white">
+              <thead class="bg-gray-100 sticky top-0">
                 <tr>
-                  <th class="py-3 px-4 text-left font-medium">Tanggal</th>
-                  <th class="py-3 px-4 text-left font-medium">Jenis</th>
-                  <th class="py-3 px-4 text-left font-medium">Rincian (Kategori/Dompet)</th>
-                  <th class="py-3 px-4 text-left font-medium">Keterangan</th>
-                  <th class="py-3 px-4 text-right font-medium">Nominal</th>
-                  <th class="py-3 px-4 text-center font-medium">Aksi</th>
+                  <th class="py-2 px-2 text-left">Tanggal</th><th class="py-2 px-2 text-left">Jenis</th>
+                  <th class="py-2 px-2 text-left">Dompet</th><th class="py-2 px-2 text-left">Kategori</th>
+                  <th class="py-2 px-2 text-left">Nominal</th><th class="py-2 px-2 text-left">Keterangan</th>
+                  <th class="py-2 px-2 text-center">Aksi</th>
                 </tr>
               </thead>
-              <tbody id="riwayatTableBody" class="divide-y divide-gray-200">
-                <!-- Data List from JS -->
-              </tbody>
+              <tbody id="importPreviewBody" class="divide-y"></tbody>
             </table>
           </div>
-        </div>
-      </div>
-
-      <!-- 4. ANGGARAN (Sama seperti sebelumnya) -->
-      <div id="anggaranPage" class="page-content hidden fade-in">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">Anggaran Bulanan</h2>
-        <p class="text-gray-600 mb-4">Buat batasan pengeluaran tiap kategori agar keuangan tetap terkontrol.</p>
-        <div class="bg-white rounded-xl shadow p-6 mb-8 text-center text-gray-500 italic">
-          <i class="fas fa-tools text-3xl mb-2"></i><br>Fitur Anggaran sedang dalam pengembangan UI lanjutan.
-        </div>
-      </div>
-
-      <!-- 5. INVESTASI -->
-      <div id="investasiPage" class="page-content hidden fade-in">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">Portofolio Investasi</h2>
-        
-        <!-- Live Harga Emas Calculator -->
-        <div class="bg-yellow-50 border border-yellow-300 rounded-xl p-4 mb-6 flex flex-col md:flex-row items-center justify-between shadow-sm">
-          <div class="flex items-center mb-4 md:mb-0">
-            <div class="bg-yellow-400 text-white p-3 rounded-full mr-4 shadow">
-              <i class="fas fa-coins text-xl"></i>
-            </div>
-            <div>
-              <h3 class="font-bold text-yellow-800 text-lg">Monitor Emas Terkini</h3>
-              <p class="text-sm text-yellow-700">Masukkan harga emas per-gram hari ini untuk melihat Profit/Loss.</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-bold text-gray-700">Rp</span>
-            <input type="number" id="hargaEmasLive" placeholder="Contoh: 1450000" class="border border-yellow-300 rounded-lg p-2 font-bold text-gray-800 focus:ring-yellow-500" onkeyup="updateLiveEmas()">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div class="lg:col-span-1 bg-white rounded-xl shadow p-6 h-fit">
-            <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2" id="titleFormInvestasi">Tambah Aset Baru</h3>
-            <form id="formInvestasi" onsubmit="submitForm(event, 'Investasi')" class="space-y-4">
-              <input type="hidden" id="invID">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Aset</label>
-                <input type="text" id="invNama" required class="w-full border rounded-lg p-2" placeholder="Misal: Reksadana Sucor, Emas Antam">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Instrumen</label>
-                <select id="invJenis" required class="w-full border rounded-lg p-2" onchange="toggleInvestasiFields()">
-                  <option value="Reksadana">Reksadana</option>
-                  <option value="Saham">Saham</option>
-                  <option value="Emas Batangan">Emas Batangan</option>
-                  <option value="Tabungan Emas">Tabungan Emas</option>
-                  <option value="Deposito">Deposito</option>
-                  <option value="Lainnya">Lainnya</option>
-                </select>
-              </div>
-              
-              <!-- Field khusus Emas -->
-              <div id="fieldEmas" class="hidden space-y-4 bg-yellow-50 p-3 rounded border border-yellow-200">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Berat (Gram)</label>
-                  <input type="number" id="invGram" step="0.01" class="w-full border rounded-lg p-2" placeholder="Misal: 5.5">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Harga Beli / Gram (Rp)</label>
-                  <input type="number" id="invHargaGram" class="w-full border rounded-lg p-2" placeholder="Misal: 1100000" onkeyup="calcTotalEmas()">
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Total Modal Beli (Rp)</label>
-                <input type="number" id="invModal" required min="1" class="w-full border rounded-lg p-2 font-bold bg-gray-50">
-              </div>
-
-              <!-- Integrasi Dompet -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Sumber Dana (Potong Saldo Dompet?)</label>
-                <select id="invSumberDana" class="w-full border rounded-lg p-2 text-blue-700 font-medium bg-blue-50">
-                  <option value="">-- Jangan Potong Saldo (Hanya catat aset) --</option>
-                  <!-- Diisi js opsi dompet -->
-                </select>
-              </div>
-
-              <div class="flex gap-2">
-                <button type="button" onclick="cancelEdit('Investasi')" id="btnCancelInv" class="hidden w-1/3 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300">Batal</button>
-                <button type="submit" class="flex-1 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"><i class="fas fa-save mr-1"></i> Simpan Aset</button>
-              </div>
-            </form>
-          </div>
-          <div class="lg:col-span-2 bg-white rounded-xl shadow overflow-hidden">
-            <div class="overflow-x-auto p-4">
-              <table class="min-w-full text-sm">
-                <thead class="bg-gray-50">
-                  <tr>
-                    <th class="py-3 px-4 text-left text-gray-600 font-medium">Aset</th>
-                    <th class="py-3 px-4 text-right text-gray-600 font-medium">Modal</th>
-                    <th class="py-3 px-4 text-right text-gray-600 font-medium">Estimasi Nilai</th>
-                    <th class="py-3 px-4 text-right text-gray-600 font-medium">Profit/Loss</th>
-                    <th class="py-3 px-4 text-center text-gray-600 font-medium">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="invTableBody" class="divide-y">
-                  <!-- Data List from JS -->
-                </tbody>
-              </table>
-            </div>
+          <div class="mt-3 flex justify-end gap-2">
+            <button onclick="document.getElementById('importPreviewContainer').classList.add('hidden')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">Batal</button>
+            <button onclick="saveImportedData()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm"><i class="fas fa-save mr-1"></i>Simpan Semua</button>
           </div>
         </div>
       </div>
-
-      <!-- 6. PENGATURAN -->
-      <div id="pengaturanPage" class="page-content hidden fade-in">
-        <h2 class="text-2xl font-bold text-gray-800 mb-6">Pengaturan Master Data</h2>
-        
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <!-- Tabel Dompet -->
-          <div class="bg-white rounded-xl shadow overflow-hidden">
-            <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-              <h3 class="font-bold text-gray-800">Daftar Dompet / Rekening</h3>
-              <button onclick="document.getElementById('formDompetContainer').classList.toggle('hidden')" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"><i class="fas fa-plus"></i> Tambah</button>
-            </div>
-            <div id="formDompetContainer" class="p-4 bg-blue-50 border-b hidden">
-              <form id="formDompet" onsubmit="submitForm(event, 'Dompet')" class="space-y-3">
-                <input type="hidden" id="dompetID">
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Nama Rekening/Dompet</label>
-                  <input type="text" id="dompetNama" required class="w-full border rounded p-2 text-sm">
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Tipe</label>
-                  <select id="dompetKategori" required class="w-full border rounded p-2 text-sm" onchange="toggleKartuKredit()">
-                    <option value="Bank">Bank</option>
-                    <option value="E-Wallet">E-Wallet</option>
-                    <option value="Tunai">Tunai</option>
-                    <option value="Kartu Kredit">Kartu Kredit (Hutang)</option>
-                  </select>
-                </div>
-                
-                <!-- Field Saldo Normal -->
-                <div id="fieldSaldoNormal">
-                  <label class="block text-xs font-medium text-gray-700 mb-1" id="labelSaldoAwal">Saldo Awal (Rp)</label>
-                  <input type="number" id="dompetSaldoAwal" value="0" class="w-full border rounded p-2 text-sm">
-                </div>
-                
-                <!-- Field Khusus Edit / Revisi Saldo -->
-                <div id="fieldRevisiSaldo" class="hidden bg-blue-100 p-2 rounded border border-blue-300">
-                   <label class="block text-xs font-bold text-blue-800 mb-1">Revisi Saldo Saat Ini (Rp)</label>
-                   <input type="number" id="dompetSaldoSaatIniEdit" class="w-full border-blue-400 rounded p-2 text-sm font-bold">
-                   <p class="text-[10px] text-blue-600 mt-1">Selisih akan otomatis tercatat di Riwayat Transaksi.</p>
-                </div>
-
-                <!-- Field Kartu Kredit -->
-                <div id="fieldKartuKredit" class="hidden space-y-3 bg-red-50 p-2 rounded border border-red-200">
-                  <div>
-                    <label class="block text-xs font-bold text-red-700 mb-1">Limit Kartu Kredit (Rp)</label>
-                    <input type="number" id="dompetLimitCC" class="w-full border-red-300 rounded p-2 text-sm" placeholder="Misal: 30000000">
-                  </div>
-                  <div id="fieldTagihanCC">
-                    <label class="block text-xs font-bold text-red-700 mb-1">Tagihan Terpakai Saat Ini (Rp)</label>
-                    <input type="number" id="dompetTagihanCC" class="w-full border-red-300 rounded p-2 text-sm" value="0">
-                  </div>
-                </div>
-
-                <div class="flex justify-end gap-2 pt-2">
-                  <button type="button" onclick="cancelEdit('Dompet')" id="btnCancelDompet" class="hidden px-3 py-1 bg-gray-200 text-sm rounded">Batal</button>
-                  <button type="submit" class="px-4 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Simpan</button>
-                </div>
-              </form>
-            </div>
-            <div class="overflow-x-auto p-4">
-              <table class="min-w-full text-sm">
-                <thead><tr class="text-left text-gray-500 border-b"><th class="pb-2">Nama</th><th class="pb-2">Tipe</th><th class="pb-2 text-right">Saldo/Tagihan</th><th class="pb-2 text-center">Aksi</th></tr></thead>
-                <tbody id="dompetTableBody" class="divide-y"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Tabel Kategori (Sama seperti sebelumnya) -->
-          <div class="bg-white rounded-xl shadow overflow-hidden h-fit">
-            <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-              <h3 class="font-bold text-gray-800">Daftar Kategori</h3>
-              <button onclick="document.getElementById('formKategoriContainer').classList.toggle('hidden')" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"><i class="fas fa-plus"></i> Tambah</button>
-            </div>
-            <div id="formKategoriContainer" class="p-4 bg-blue-50 border-b hidden">
-              <form id="formKategori" onsubmit="submitForm(event, 'Kategori')" class="space-y-3">
-                <input type="hidden" id="kategoriID">
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Jenis</label>
-                  <select id="kategoriJenis" required class="w-full border rounded p-2 text-sm">
-                    <option value="Pengeluaran">Pengeluaran</option>
-                    <option value="Pemasukan">Pemasukan</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Nama Kategori</label>
-                  <input type="text" id="kategoriNama" required class="w-full border rounded p-2 text-sm">
-                </div>
-                <div class="flex justify-end gap-2 pt-2">
-                  <button type="button" onclick="cancelEdit('Kategori')" id="btnCancelKat" class="hidden px-3 py-1 bg-gray-200 text-sm rounded">Batal</button>
-                  <button type="submit" class="px-4 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Simpan</button>
-                </div>
-              </form>
-            </div>
-            <div class="overflow-x-auto p-4">
-              <table class="min-w-full text-sm">
-                <thead><tr class="text-left text-gray-500 border-b"><th class="pb-2">Jenis</th><th class="pb-2">Kategori</th><th class="pb-2 text-center">Aksi</th></tr></thead>
-                <tbody id="kategoriTableBody" class="divide-y"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
-  </main>
+  </div>
+</div>
 
-  <script>
-    // === MOCK DATA (Untuk Preview Front-End Saja) ===
-    let appData = {
-      Dompet: [
-        { ID: 'd1', Nama: 'BCA Utama', Kategori: 'Bank', SaldoAwal: 5000000, SaldoSaatIni: 4500000 },
-        { ID: 'd2', Nama: 'Gopay', Kategori: 'E-Wallet', SaldoAwal: 200000, SaldoSaatIni: 150000 },
-        { ID: 'd3', Nama: 'CC Mandiri', Kategori: 'Kartu Kredit', SaldoAwal: 30000000, SaldoSaatIni: 28000000, isCC: true } // Tagihan 2jt
-      ],
-      Kategori: [
-        { ID: 'k1', Jenis: 'Pengeluaran', Nama: 'Makanan & Minuman' },
-        { ID: 'k2', Jenis: 'Pengeluaran', Nama: 'Transportasi' },
-        { ID: 'k3', Jenis: 'Pemasukan', Nama: 'Gaji Bulanan' },
-        { ID: 'k4', Jenis: 'Pengeluaran', Nama: 'Investasi - Beli Emas' },
-        { ID: 'k5', Jenis: 'Pengeluaran', Nama: 'Penyesuaian Saldo' },
-        { ID: 'k6', Jenis: 'Pemasukan', Nama: 'Penyesuaian Saldo' }
-      ],
-      Transaksi: [
-        { ID: 't1', Tanggal: '2026-07-01', Jenis: 'Pemasukan', Kategori: 'Gaji Bulanan', Keterangan: 'Gaji Juli', Nominal: 10000000, DompetAsal: 'BCA Utama' },
-        { ID: 't2', Tanggal: '2026-07-05', Jenis: 'Pengeluaran', Kategori: 'Makanan & Minuman', Keterangan: 'Makan Steak', Nominal: 300000, DompetAsal: 'CC Mandiri' },
-        { ID: 't3', Tanggal: '2026-07-10', Jenis: 'Pengeluaran', Kategori: 'Transportasi', Keterangan: 'Bensin', Nominal: 150000, DompetAsal: 'Gopay' }
-      ],
-      Transfer: [
-        { ID: 'tr1', Tanggal: '2026-07-08', DariDompet: 'BCA Utama', KeDompet: 'Gopay', Jumlah: 200000, Biaya: 0, Catatan: 'Topup' }
-      ],
-      Investasi: [
-        { ID: 'i1', NamaInvestasi: 'Reksadana Pasar Uang', JenisInvestasi: 'Reksadana', TotalModal: 5000000, NilaiSaatIni: 5100000, ReturnRate: 2 },
-        { ID: 'i2', NamaInvestasi: 'Emas Antam', JenisInvestasi: 'Emas Batangan', BeratGram: 5, HargaBeliGram: 1100000, TotalModal: 5500000, NilaiSaatIni: 5500000, ReturnRate: 0 }
-      ]
-    };
+<!-- 3. RIWAYAT -->
+<div id="riwayatPage" class="page-content hidden fade-in">
+  <h2 class="text-2xl font-bold text-gray-800 mb-5">Buku Besar Transaksi</h2>
+  <div class="bg-white rounded-xl shadow mb-5">
+    <div class="p-4 border-b bg-gray-50 flex flex-wrap gap-3 items-end">
+      <div><label class="block text-xs font-medium text-gray-700 mb-1">Dari Tanggal</label>
+        <input type="date" id="filterStartDate" class="border rounded-lg p-2 text-sm focus:ring focus:ring-blue-200"></div>
+      <div><label class="block text-xs font-medium text-gray-700 mb-1">Sampai Tanggal</label>
+        <input type="date" id="filterEndDate" class="border rounded-lg p-2 text-sm focus:ring focus:ring-blue-200"></div>
+      <div><label class="block text-xs font-medium text-gray-700 mb-1">Dompet</label>
+        <select id="filterDompet" class="border rounded-lg p-2 text-sm focus:ring focus:ring-blue-200"><option value="">Semua Dompet</option></select></div>
+      <div><label class="block text-xs font-medium text-gray-700 mb-1">Jenis</label>
+        <select id="filterJenis" class="border rounded-lg p-2 text-sm focus:ring focus:ring-blue-200">
+          <option value="">Semua</option><option>Pemasukan</option><option>Pengeluaran</option><option>Transfer</option>
+        </select></div>
+      <div><label class="block text-xs font-medium text-gray-700 mb-1">Urutkan</label>
+        <select id="filterSort" class="border rounded-lg p-2 text-sm focus:ring focus:ring-blue-200">
+          <option value="dateDesc">Terbaru</option><option value="dateAsc">Terlama</option>
+          <option value="nomDesc">Nominal Tertinggi</option><option value="nomAsc">Nominal Terendah</option>
+        </select></div>
+      <div class="flex gap-2">
+        <button onclick="applyFilter()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"><i class="fas fa-search mr-1"></i>Cari</button>
+        <button onclick="resetFilter()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"><i class="fas fa-sync-alt mr-1"></i>Reset</button>
+      </div>
+    </div>
+    <div class="overflow-x-auto p-4">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-gray-600">
+          <tr>
+            <th class="py-3 px-4 text-left font-medium">Tanggal</th>
+            <th class="py-3 px-4 text-left font-medium">Jenis</th>
+            <th class="py-3 px-4 text-left font-medium">Rincian</th>
+            <th class="py-3 px-4 text-left font-medium">Keterangan</th>
+            <th class="py-3 px-4 text-right font-medium">Nominal</th>
+            <th class="py-3 px-4 text-center font-medium">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="riwayatTableBody" class="divide-y divide-gray-100"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-    let importedDataTemp = []; // Store temporary CSV data
-    let filteredRiwayat = []; // Store combined transaction history
+<!-- 4. ANGGARAN -->
+<div id="anggaranPage" class="page-content hidden fade-in">
+  <h2 class="text-2xl font-bold text-gray-800 mb-5">Anggaran Bulanan</h2>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-1 bg-white rounded-xl shadow p-5 h-fit">
+      <h3 class="text-base font-bold text-gray-800 mb-4 border-b pb-2" id="titleFormAnggaran">Tambah Anggaran</h3>
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Bulan Berlaku</label>
+        <input type="month" id="anggaranBulanForm" class="w-full border rounded-lg p-2 text-sm focus:ring focus:ring-blue-200">
+      </div>
+      <form id="formAnggaran" onsubmit="submitAnggaran(event)" class="space-y-4">
+        <input type="hidden" id="anggaranID">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+          <select id="anggaranKategori" required class="w-full border rounded-lg p-2 text-sm"></select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Batas Nominal (Rp)</label>
+          <input type="number" id="anggaranNominal" required min="1" class="w-full border rounded-lg p-2 text-sm" placeholder="Misal: 2000000">
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="cancelEdit('Anggaran')" id="btnCancelAnggaran" class="hidden flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">Batal</button>
+          <button type="submit" class="flex-1 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 text-sm"><i class="fas fa-save mr-1"></i>Simpan</button>
+        </div>
+      </form>
+      <div class="mt-4 pt-4 border-t">
+        <label class="block text-xs font-medium text-gray-700 mb-1">Tampilkan Bulan</label>
+        <div class="flex gap-2">
+          <input type="month" id="anggaranBulanFilter" class="flex-1 border rounded-lg p-2 text-sm">
+          <button onclick="renderAnggaranList()" class="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"><i class="fas fa-search"></i></button>
+        </div>
+      </div>
+    </div>
+    <div class="lg:col-span-2 bg-white rounded-xl shadow p-5">
+      <h3 class="text-base font-bold text-gray-800 mb-4" id="anggaranBulanTitle">Anggaran Bulan Ini</h3>
+      <div id="anggaranList" class="space-y-4"><p class="text-gray-400 text-sm text-center py-4">Belum ada anggaran untuk bulan ini.</p></div>
+    </div>
+  </div>
+</div>
 
-    // === INITIALIZATION ===
-    window.onload = () => {
-      document.getElementById('transaksiTanggal').valueAsDate = new Date();
-      document.getElementById('tfTanggal').valueAsDate = new Date();
-      
-      // Load saved emas price if any
-      const savedEmas = localStorage.getItem('hargaEmasLive');
-      if(savedEmas) {
-          document.getElementById('hargaEmasLive').value = savedEmas;
-      }
+<!-- 5. HUTANG & PIUTANG -->
+<div id="hutangPage" class="page-content hidden fade-in">
+  <h2 class="text-2xl font-bold text-gray-800 mb-5">Hutang & Piutang</h2>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow p-5 border-l-4 border-red-500">
+      <p class="text-xs text-gray-500 mb-1">Total Hutang Aktif</p>
+      <h3 class="text-xl font-bold text-red-600" id="sumHutang">Rp 0</h3>
+    </div>
+    <div class="bg-white rounded-xl shadow p-5 border-l-4 border-green-500">
+      <p class="text-xs text-gray-500 mb-1">Total Piutang Aktif</p>
+      <h3 class="text-xl font-bold text-green-600" id="sumPiutang">Rp 0</h3>
+    </div>
+    <div class="bg-white rounded-xl shadow p-5 border-l-4 border-yellow-500">
+      <p class="text-xs text-gray-500 mb-1">Jatuh Tempo Minggu Ini</p>
+      <h3 class="text-xl font-bold text-yellow-600" id="sumJatuhTempo">0 item</h3>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-1 bg-white rounded-xl shadow p-5 h-fit">
+      <h3 class="text-base font-bold text-gray-800 mb-4 border-b pb-2" id="titleFormHP">Tambah Baru</h3>
+      <form id="formHP" onsubmit="submitHP(event)" class="space-y-4">
+        <input type="hidden" id="hpID">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Jenis</label>
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 text-sm"><input type="radio" name="hpJenis" value="Hutang" checked><span class="text-red-600 font-medium">Hutang (saya berhutang)</span></label>
+          </div>
+          <div class="flex gap-4 mt-2">
+            <label class="flex items-center gap-2 text-sm"><input type="radio" name="hpJenis" value="Piutang"><span class="text-green-600 font-medium">Piutang (orang berhutang ke saya)</span></label>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nama Orang / Pihak</label>
+          <input type="text" id="hpNama" required class="w-full border rounded-lg p-2 text-sm" placeholder="Misal: Budi Santoso">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
+          <input type="number" id="hpNominal" required min="1" class="w-full border rounded-lg p-2 text-sm">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
+            <input type="date" id="hpTanggal" required class="w-full border rounded-lg p-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Jatuh Tempo</label>
+            <input type="date" id="hpJatuhTempo" class="w-full border rounded-lg p-2 text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
+          <input type="text" id="hpKeterangan" class="w-full border rounded-lg p-2 text-sm" placeholder="Opsional">
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="cancelEdit('HutangPiutang')" id="btnCancelHP" class="hidden flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">Batal</button>
+          <button type="submit" class="flex-1 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 text-sm"><i class="fas fa-save mr-1"></i>Simpan</button>
+        </div>
+      </form>
+    </div>
+    <div class="lg:col-span-2 bg-white rounded-xl shadow overflow-hidden">
+      <div class="flex border-b text-sm">
+        <button onclick="filterHP('all')" id="hpTabAll" class="flex-1 py-3 text-center tab-active transition">Semua</button>
+        <button onclick="filterHP('Hutang')" id="hpTabHutang" class="flex-1 py-3 text-center text-red-600 hover:bg-red-50 transition">Hutang</button>
+        <button onclick="filterHP('Piutang')" id="hpTabPiutang" class="flex-1 py-3 text-center text-green-600 hover:bg-green-50 transition">Piutang</button>
+        <button onclick="filterHP('Lunas')" id="hpTabLunas" class="flex-1 py-3 text-center text-gray-500 hover:bg-gray-50 transition">Lunas</button>
+      </div>
+      <div class="overflow-x-auto p-4">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="py-3 px-4 text-left text-gray-600 font-medium">Nama</th>
+              <th class="py-3 px-4 text-left text-gray-600 font-medium">Jenis</th>
+              <th class="py-3 px-4 text-right text-gray-600 font-medium">Nominal</th>
+              <th class="py-3 px-4 text-center text-gray-600 font-medium">Jatuh Tempo</th>
+              <th class="py-3 px-4 text-center text-gray-600 font-medium">Status</th>
+              <th class="py-3 px-4 text-center text-gray-600 font-medium">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="hpTableBody" class="divide-y"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
 
+<!-- 6. INVESTASI -->
+<div id="investasiPage" class="page-content hidden fade-in">
+  <h2 class="text-2xl font-bold text-gray-800 mb-5">Portofolio Investasi</h2>
+  <div class="bg-yellow-50 border border-yellow-300 rounded-xl p-4 mb-5 flex flex-col md:flex-row items-center justify-between gap-3">
+    <div class="flex items-center">
+      <div class="bg-yellow-400 text-white p-3 rounded-full mr-3"><i class="fas fa-coins text-lg"></i></div>
+      <div>
+        <h3 class="font-bold text-yellow-800">Monitor Emas Terkini</h3>
+        <p class="text-xs text-yellow-700">Input harga per-gram untuk kalkulasi Profit/Loss emas.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-sm font-bold text-gray-700">Rp</span>
+      <input type="number" id="hargaEmasLive" placeholder="Misal: 1.550.000" class="border border-yellow-300 rounded-lg p-2 text-sm w-40" onchange="updateLiveEmas()">
+    </div>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-1 bg-white rounded-xl shadow p-5 h-fit">
+      <h3 class="text-base font-bold text-gray-800 mb-4 border-b pb-2" id="titleFormInvestasi">Tambah Aset</h3>
+      <form id="formInvestasi" onsubmit="submitInvestasi(event)" class="space-y-4">
+        <input type="hidden" id="invID">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nama Aset</label>
+          <input type="text" id="invNama" required class="w-full border rounded-lg p-2 text-sm" placeholder="Misal: Reksadana Sucor">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Instrumen</label>
+          <select id="invJenis" required class="w-full border rounded-lg p-2 text-sm" onchange="toggleEmasFields()">
+            <option value="Reksadana">Reksadana</option>
+            <option value="Saham">Saham</option>
+            <option value="Emas Batangan">Emas Batangan</option>
+            <option value="Tabungan Emas">Tabungan Emas</option>
+            <option value="Deposito">Deposito</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+        </div>
+        <div id="fieldEmas" class="hidden space-y-3 bg-yellow-50 p-3 rounded border border-yellow-200">
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">Berat (Gram)</label>
+            <input type="number" id="invGram" step="0.01" class="w-full border rounded-lg p-2 text-sm" oninput="calcTotalEmas()"></div>
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">Harga Beli / Gram (Rp)</label>
+            <input type="number" id="invHargaGram" class="w-full border rounded-lg p-2 text-sm" oninput="calcTotalEmas()"></div>
+        </div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1">Total Modal Beli (Rp)</label>
+          <input type="number" id="invModal" required min="1" class="w-full border rounded-lg p-2 text-sm bg-gray-50"></div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Beli</label>
+          <input type="date" id="invTanggal" class="w-full border rounded-lg p-2 text-sm">
+        </div>
+        <div id="invSumberDanaWrap">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Sumber Dana (Opsional)</label>
+          <select id="invSumberDana" class="w-full border rounded-lg p-2 text-sm text-blue-700 bg-blue-50">
+            <option value="">-- Hanya catat aset (jangan potong saldo) --</option>
+          </select>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="cancelEdit('Investasi')" id="btnCancelInv" class="hidden flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">Batal</button>
+          <button type="submit" class="flex-1 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 text-sm"><i class="fas fa-save mr-1"></i>Simpan</button>
+        </div>
+      </form>
+    </div>
+    <div class="lg:col-span-2 bg-white rounded-xl shadow overflow-hidden">
+      <div class="p-4">
+        <div class="grid grid-cols-3 gap-3 mb-4">
+          <div class="bg-blue-50 rounded-lg p-3 text-center">
+            <p class="text-xs text-gray-500">Total Modal</p>
+            <p class="font-bold text-blue-700" id="invTotalModal">Rp 0</p>
+          </div>
+          <div class="bg-green-50 rounded-lg p-3 text-center">
+            <p class="text-xs text-gray-500">Estimasi Nilai</p>
+            <p class="font-bold text-green-700" id="invTotalNilai">Rp 0</p>
+          </div>
+          <div class="bg-gray-50 rounded-lg p-3 text-center">
+            <p class="text-xs text-gray-500">Total P/L</p>
+            <p class="font-bold" id="invTotalPL">Rp 0</p>
+          </div>
+        </div>
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="py-3 px-4 text-left text-gray-600 font-medium">Aset</th>
+              <th class="py-3 px-4 text-right text-gray-600 font-medium">Modal</th>
+              <th class="py-3 px-4 text-right text-gray-600 font-medium">Estimasi Nilai</th>
+              <th class="py-3 px-4 text-right text-gray-600 font-medium">P/L</th>
+              <th class="py-3 px-4 text-center text-gray-600 font-medium">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="invTableBody" class="divide-y"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 7. PENGATURAN -->
+<div id="pengaturanPage" class="page-content hidden fade-in">
+  <h2 class="text-2xl font-bold text-gray-800 mb-5">Pengaturan Master Data</h2>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Dompet -->
+    <div class="bg-white rounded-xl shadow overflow-hidden">
+      <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+        <h3 class="font-bold text-gray-800">Daftar Dompet / Rekening</h3>
+        <button onclick="toggleForm('formDompetContainer')" class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"><i class="fas fa-plus mr-1"></i>Tambah</button>
+      </div>
+      <div id="formDompetContainer" class="p-4 bg-blue-50 border-b hidden">
+        <form id="formDompet" onsubmit="submitDompet(event)" class="space-y-3">
+          <input type="hidden" id="dompetID">
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">Nama Rekening/Dompet</label>
+            <input type="text" id="dompetNama" required class="w-full border rounded p-2 text-sm"></div>
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">Tipe</label>
+            <select id="dompetKategori" required class="w-full border rounded p-2 text-sm" onchange="toggleKartuKredit()">
+              <option value="Bank">Bank</option><option value="E-Wallet">E-Wallet</option>
+              <option value="Tunai">Tunai</option><option value="Kartu Kredit">Kartu Kredit (Hutang)</option>
+            </select></div>
+          <div id="fieldSaldoNormal"><label class="block text-xs font-medium text-gray-700 mb-1">Saldo Awal (Rp)</label>
+            <input type="number" id="dompetSaldoAwal" value="0" class="w-full border rounded p-2 text-sm"></div>
+          <div id="fieldRevisiSaldo" class="hidden bg-yellow-50 p-2 rounded border border-yellow-300">
+            <label class="block text-xs font-bold text-yellow-800 mb-1">Revisi Saldo Saat Ini (Rp)</label>
+            <input type="number" id="dompetSaldoEdit" class="w-full border rounded p-2 text-sm font-bold">
+            <p class="text-[10px] text-yellow-600 mt-1">Selisih akan tercatat otomatis sebagai koreksi.</p>
+          </div>
+          <div id="fieldKartuKredit" class="hidden space-y-2 bg-red-50 p-2 rounded border border-red-200">
+            <div><label class="block text-xs font-bold text-red-700 mb-1">Limit Kartu Kredit (Rp)</label>
+              <input type="number" id="dompetLimitCC" class="w-full border rounded p-2 text-sm" placeholder="Misal: 30000000"></div>
+            <div id="fieldTagihanCC"><label class="block text-xs font-bold text-red-700 mb-1">Tagihan Terpakai (Rp)</label>
+              <input type="number" id="dompetTagihanCC" value="0" class="w-full border rounded p-2 text-sm"></div>
+          </div>
+          <div class="flex justify-end gap-2 pt-1">
+            <button type="button" onclick="cancelEdit('Dompet')" id="btnCancelDompet" class="hidden px-3 py-1 bg-gray-200 text-sm rounded">Batal</button>
+            <button type="submit" class="px-4 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Simpan</button>
+          </div>
+        </form>
+      </div>
+      <div class="overflow-x-auto p-4">
+        <table class="min-w-full text-sm">
+          <thead><tr class="text-left text-gray-500 border-b text-xs">
+            <th class="pb-2">Nama</th><th class="pb-2">Tipe</th><th class="pb-2 text-right">Saldo/Tagihan</th><th class="pb-2 text-center">Aksi</th>
+          </tr></thead>
+          <tbody id="dompetTableBody" class="divide-y"></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Kategori -->
+    <div class="bg-white rounded-xl shadow overflow-hidden h-fit">
+      <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
+        <h3 class="font-bold text-gray-800">Daftar Kategori</h3>
+        <button onclick="toggleForm('formKategoriContainer')" class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"><i class="fas fa-plus mr-1"></i>Tambah</button>
+      </div>
+      <div id="formKategoriContainer" class="p-4 bg-blue-50 border-b hidden">
+        <form id="formKategori" onsubmit="submitKategori(event)" class="space-y-3">
+          <input type="hidden" id="kategoriID">
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">Jenis</label>
+            <select id="kategoriJenis" required class="w-full border rounded p-2 text-sm">
+              <option value="Pengeluaran">Pengeluaran</option><option value="Pemasukan">Pemasukan</option>
+            </select></div>
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">Nama Kategori</label>
+            <input type="text" id="kategoriNama" required class="w-full border rounded p-2 text-sm"></div>
+          <div class="flex justify-end gap-2 pt-1">
+            <button type="button" onclick="cancelEdit('Kategori')" id="btnCancelKat" class="hidden px-3 py-1 bg-gray-200 text-sm rounded">Batal</button>
+            <button type="submit" class="px-4 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Simpan</button>
+          </div>
+        </form>
+      </div>
+      <div class="overflow-x-auto p-4">
+        <table class="min-w-full text-sm">
+          <thead><tr class="text-left text-gray-500 border-b text-xs">
+            <th class="pb-2">Jenis</th><th class="pb-2">Kategori</th><th class="pb-2 text-center">Aksi</th>
+          </tr></thead>
+          <tbody id="kategoriTableBody" class="divide-y"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- Reset DB -->
+  <div class="mt-6 bg-red-50 border border-red-200 rounded-xl p-5">
+    <h3 class="font-bold text-red-800 mb-2"><i class="fas fa-exclamation-triangle mr-2"></i>Zona Berbahaya</h3>
+    <p class="text-sm text-red-700 mb-3">Reset database akan menghapus semua data dan memulai ulang dari awal.</p>
+    <button onclick="doResetDB()" class="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700">Reset Database</button>
+  </div>
+</div>
+
+</div><!-- end mainContainer -->
+</main>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let appData = { Dompet:[], Kategori:[], Anggaran:[], Transaksi:[], Transfer:[], HutangPiutang:[], Investasi:[] };
+let filteredRiwayat = [];
+let importedDataTemp = [];
+let cfChartInstance = null;
+let expChartInstance = null;
+let hpFilterMode = 'all';
+
+// ============================================================
+// INIT
+// ============================================================
+window.onload = () => {
+  const today = new Date().toISOString().split('T')[0];
+  const thisMonth = today.substring(0, 7);
+  document.getElementById('transaksiTanggal').value = today;
+  document.getElementById('tfTanggal').value = today;
+  document.getElementById('hpTanggal').value = today;
+  document.getElementById('invTanggal').value = today;
+  document.getElementById('anggaranBulanForm').value = thisMonth;
+  document.getElementById('anggaranBulanFilter').value = thisMonth;
+
+  const savedEmas = localStorage.getItem('hargaEmasLive');
+  if (savedEmas) document.getElementById('hargaEmasLive').value = savedEmas;
+
+  // Load user email
+  google.script.run.withSuccessHandler(email => {
+    document.getElementById('userEmail').innerText = email;
+  }).getUserProfile();
+
+  // Setup DB then load data
+  showLoading('Menghubungkan ke database...');
+  google.script.run
+    .withSuccessHandler(() => loadAllData())
+    .withFailureHandler(err => { showAlert('Gagal setup DB: ' + (err.message||err), 'error'); hideLoading(); })
+    .setupDB();
+};
+
+function loadAllData(callback) {
+  showLoading('Memuat data...');
+  google.script.run
+    .withSuccessHandler(data => {
+      appData = data;
       refreshUI();
-      // Animate dashboard numbers
-      setTimeout(() => renderDashboard(), 100);
+      if (callback) callback();
+      else { renderDashboard(); }
+      hideLoading();
+    })
+    .withFailureHandler(err => {
+      showAlert('Gagal memuat data: ' + (err.message||err), 'error');
+      hideLoading();
+    })
+    .getAppData();
+}
+
+// ============================================================
+// GAS SAVE / DELETE
+// ============================================================
+function gasRun(fnName, args, onSuccess) {
+  showLoading('Menyimpan...');
+  const runner = google.script.run
+    .withSuccessHandler(result => {
+      if (result && result.success === false) {
+        showAlert('Gagal: ' + (result.message || ''), 'error');
+        hideLoading();
+        return;
+      }
+      loadAllData(onSuccess);
+      showAlert('Berhasil disimpan!', 'success');
+    })
+    .withFailureHandler(err => {
+      showAlert('Error: ' + (err.message||err), 'error');
+      hideLoading();
+    });
+
+  if (fnName === 'saveRecord') runner.saveRecord(args[0], args[1]);
+  else if (fnName === 'deleteRecord') runner.deleteRecord(args[0], args[1]);
+  else if (fnName === 'resetAndSetupDB') runner.resetAndSetupDB();
+}
+
+function deleteData(tableName, id) {
+  if (!confirm('Yakin ingin menghapus data ini?')) return;
+  showLoading('Menghapus...');
+  google.script.run
+    .withSuccessHandler(result => {
+      if (result && result.success === false) {
+        showAlert('Gagal hapus: ' + (result.message||''), 'error');
+        hideLoading();
+        return;
+      }
+      showAlert('Data dihapus!', 'success');
+      loadAllData();
+    })
+    .withFailureHandler(err => {
+      showAlert('Error: ' + (err.message||err), 'error');
+      hideLoading();
+    })
+    .deleteRecord(tableName, id);
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function switchPage(pageId) {
+  document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
+  document.getElementById(pageId + 'Page').classList.remove('hidden');
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll(`a[onclick*="switchPage('${pageId}')"]`).forEach(el => el.classList.add('active'));
+
+  if (pageId === 'dashboard') renderDashboard();
+  if (pageId === 'catat') setCatatTab('pengeluaran');
+  if (pageId === 'riwayat') renderRiwayatPage();
+  if (pageId === 'anggaran') { renderAnggaranKategoriSelect(); renderAnggaranList(); }
+  if (pageId === 'hutang') renderHutangPage();
+  if (pageId === 'investasi') updateLiveEmas();
+  if (pageId === 'pengaturan') renderPengaturan();
+}
+
+function closeMobileMenu() { document.getElementById('mobileMenu').classList.add('hidden'); }
+function toggleForm(id) { document.getElementById(id).classList.toggle('hidden'); }
+
+// ============================================================
+// REFRESH UI (dropdowns, tables)
+// ============================================================
+function refreshUI() {
+  // Dompet dropdowns
+  const dompetNames = appData.Dompet.map(d => d.Nama);
+  populateSelect('transaksiDompet', dompetNames);
+  populateSelect('tfDari', dompetNames);
+  populateSelect('tfKe', dompetNames);
+  populateSelect('filterDompet', dompetNames, 'Semua Dompet');
+  populateSelect('invSumberDana', dompetNames, '-- Hanya catat aset (jangan potong saldo) --');
+
+  // Kategori dropdowns
+  populateKategoriDropdown();
+  renderAnggaranKategoriSelect();
+
+  // Compile transaction list
+  compileRiwayat();
+}
+
+function populateSelect(id, items, defaultText = null) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = defaultText ? `<option value="">${defaultText}</option>` : '';
+  items.forEach(item => el.innerHTML += `<option value="${item}">${item}</option>`);
+}
+
+function populateKategoriDropdown() {
+  const jenis = document.getElementById('transaksiJenis').value;
+  const filtered = appData.Kategori.filter(k => k.Jenis === jenis).map(k => k.Nama);
+  populateSelect('transaksiKategori', filtered);
+}
+
+// ============================================================
+// CATAT TRANSAKSI TABS
+// ============================================================
+function setCatatTab(tab) {
+  ['pengeluaran','pemasukan','transfer','import'].forEach(t => {
+    const el = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (el) el.classList.remove('tab-active');
+  });
+  document.getElementById('formCatat').classList.add('hidden');
+  document.getElementById('formTransfer').classList.add('hidden');
+  document.getElementById('formImport').classList.add('hidden');
+
+  if (tab === 'transfer') {
+    document.getElementById('formTransfer').classList.remove('hidden');
+    document.getElementById('tabTransfer').classList.add('tab-active');
+  } else if (tab === 'import') {
+    document.getElementById('formImport').classList.remove('hidden');
+    document.getElementById('tabImport').classList.add('tab-active');
+  } else {
+    document.getElementById('formCatat').classList.remove('hidden');
+    document.getElementById('transaksiJenis').value = tab === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran';
+    document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('tab-active');
+    populateKategoriDropdown();
+  }
+}
+
+// ============================================================
+// SUBMIT FORMS
+// ============================================================
+function submitTransaksi(e) {
+  e.preventDefault();
+  const id = document.getElementById('transaksiID').value;
+  const obj = {
+    ID: id || '',
+    Tanggal: document.getElementById('transaksiTanggal').value,
+    Jenis: document.getElementById('transaksiJenis').value,
+    Kategori: document.getElementById('transaksiKategori').value,
+    Nominal: parseFloat(document.getElementById('transaksiNominal').value),
+    Biaya: 0,
+    Keterangan: document.getElementById('transaksiKeterangan').value,
+    DompetAsal: document.getElementById('transaksiDompet').value
+  };
+  gasRun('saveRecord', ['Transaksi', obj], () => {
+    cancelEdit('Transaksi');
+    renderRiwayatPage();
+  });
+}
+
+function submitTransfer(e) {
+  e.preventDefault();
+  const dari = document.getElementById('tfDari').value;
+  const ke = document.getElementById('tfKe').value;
+  if (dari === ke) { showAlert('Dompet asal dan tujuan tidak boleh sama!', 'error'); return; }
+  const id = document.getElementById('tfID').value;
+  const obj = {
+    ID: id || '',
+    Tanggal: document.getElementById('tfTanggal').value,
+    DariDompet: dari,
+    KeDompet: ke,
+    Jumlah: parseFloat(document.getElementById('tfJumlah').value),
+    Biaya: parseFloat(document.getElementById('tfBiaya').value) || 0,
+    Catatan: document.getElementById('tfCatatan').value
+  };
+  gasRun('saveRecord', ['Transfer', obj], () => cancelEdit('Transfer'));
+}
+
+function submitDompet(e) {
+  e.preventDefault();
+  const id = document.getElementById('dompetID').value;
+  const kat = document.getElementById('dompetKategori').value;
+  const isCC = kat === 'Kartu Kredit';
+  let obj = { ID: id || '', Nama: document.getElementById('dompetNama').value, Kategori: kat, IsCC: isCC ? 'true' : 'false' };
+
+  if (isCC) {
+    const limit = parseFloat(document.getElementById('dompetLimitCC').value) || 0;
+    const tagihan = parseFloat(document.getElementById('dompetTagihanCC').value) || 0;
+    obj.Limit = limit;
+    obj.SaldoAwal = tagihan;
+    obj.SaldoSaatIni = tagihan; // CC: track tagihan
+  } else if (!id) {
+    const saldoAwal = parseFloat(document.getElementById('dompetSaldoAwal').value) || 0;
+    obj.SaldoAwal = saldoAwal;
+    obj.SaldoSaatIni = saldoAwal;
+    obj.Limit = 0;
+  } else {
+    // Edit: revisi saldo
+    const oldDompet = appData.Dompet.find(d => d.ID === id);
+    const saldoBaru = parseFloat(document.getElementById('dompetSaldoEdit').value) || 0;
+    const selisih = saldoBaru - (parseFloat(oldDompet?.SaldoSaatIni) || 0);
+    obj.SaldoSaatIni = saldoBaru;
+    obj.SaldoAwal = oldDompet?.SaldoAwal || 0;
+    obj.Limit = oldDompet?.Limit || 0;
+
+    if (selisih !== 0) {
+      // Log koreksi saldo
+      const koreksi = {
+        ID: '',
+        Tanggal: new Date().toISOString().split('T')[0],
+        Jenis: selisih > 0 ? 'Pemasukan' : 'Pengeluaran',
+        Kategori: 'Penyesuaian Saldo',
+        Nominal: Math.abs(selisih),
+        Biaya: 0,
+        Keterangan: 'Koreksi saldo ' + obj.Nama,
+        DompetAsal: obj.Nama
+      };
+      // Save koreksi transaksi first (without balance update since we'll set it directly)
+      google.script.run.saveRecord('Transaksi', koreksi);
+    }
+  }
+
+  gasRun('saveRecord', ['Dompet', obj], () => {
+    cancelEdit('Dompet');
+    document.getElementById('formDompetContainer').classList.add('hidden');
+    renderPengaturan();
+  });
+}
+
+function submitKategori(e) {
+  e.preventDefault();
+  const id = document.getElementById('kategoriID').value;
+  const obj = {
+    ID: id || '',
+    Jenis: document.getElementById('kategoriJenis').value,
+    Nama: document.getElementById('kategoriNama').value
+  };
+  gasRun('saveRecord', ['Kategori', obj], () => {
+    cancelEdit('Kategori');
+    document.getElementById('formKategoriContainer').classList.add('hidden');
+    renderPengaturan();
+  });
+}
+
+function submitAnggaran(e) {
+  e.preventDefault();
+  const bulan = document.getElementById('anggaranBulanForm').value;
+  const id = document.getElementById('anggaranID').value;
+  const obj = {
+    ID: id || '',
+    BulanTahun: bulan,
+    Kategori: document.getElementById('anggaranKategori').value,
+    Nominal: parseFloat(document.getElementById('anggaranNominal').value)
+  };
+  gasRun('saveRecord', ['Anggaran', obj], () => {
+    cancelEdit('Anggaran');
+    renderAnggaranList();
+  });
+}
+
+function submitHP(e) {
+  e.preventDefault();
+  const id = document.getElementById('hpID').value;
+  const jenis = document.querySelector('input[name="hpJenis"]:checked').value;
+  const obj = {
+    ID: id || '',
+    Jenis: jenis,
+    Nama: document.getElementById('hpNama').value,
+    Nominal: parseFloat(document.getElementById('hpNominal').value),
+    Tanggal: document.getElementById('hpTanggal').value,
+    JatuhTempo: document.getElementById('hpJatuhTempo').value,
+    Status: id ? undefined : 'Aktif',
+    Keterangan: document.getElementById('hpKeterangan').value
+  };
+  if (!id) obj.Status = 'Aktif';
+  gasRun('saveRecord', ['HutangPiutang', obj], () => { cancelEdit('HutangPiutang'); renderHutangPage(); });
+}
+
+function submitInvestasi(e) {
+  e.preventDefault();
+  const id = document.getElementById('invID').value;
+  const jenis = document.getElementById('invJenis').value;
+  const isEmas = jenis.includes('Emas');
+  const modal = parseFloat(document.getElementById('invModal').value) || 0;
+  const sumber = document.getElementById('invSumberDana').value;
+  const obj = {
+    ID: id || '',
+    NamaInvestasi: document.getElementById('invNama').value,
+    JenisInvestasi: jenis,
+    BeratGram: isEmas ? (parseFloat(document.getElementById('invGram').value)||0) : 0,
+    HargaBeliGram: isEmas ? (parseFloat(document.getElementById('invHargaGram').value)||0) : 0,
+    TotalModal: modal,
+    NilaiSaatIni: modal,
+    ReturnRate: 0,
+    Tanggal: document.getElementById('invTanggal').value
+  };
+  // If new and source fund chosen, create expense transaction
+  if (!id && sumber) {
+    const trx = {
+      ID: '', Tanggal: obj.Tanggal, Jenis: 'Pengeluaran',
+      Kategori: 'Investasi', Nominal: modal, Biaya: 0,
+      Keterangan: 'Beli Aset: ' + obj.NamaInvestasi, DompetAsal: sumber
     };
+    google.script.run.saveRecord('Transaksi', trx);
+  }
+  gasRun('saveRecord', ['Investasi', obj], () => { cancelEdit('Investasi'); renderInvestasi(); });
+}
 
-    // === UI NAVIGATION ===
-    function switchPage(pageId) {
-      document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
-      document.getElementById(pageId + 'Page').classList.remove('hidden');
-      
-      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active', 'bg-blue-50', 'border-r-4', 'border-blue-600'));
-      const activeBtns = document.querySelectorAll(`a[onclick="switchPage('${pageId}')"]`);
-      activeBtns.forEach(btn => btn.classList.add('active', 'bg-blue-50'));
+// ============================================================
+// CANCEL EDIT
+// ============================================================
+function cancelEdit(tipe) {
+  if (tipe === 'Transaksi') {
+    document.getElementById('formCatat').reset();
+    document.getElementById('transaksiID').value = '';
+    document.getElementById('btnCancelTransaksi').classList.add('hidden');
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('transaksiTanggal').value = today;
+  } else if (tipe === 'Transfer') {
+    document.getElementById('formTransfer').reset();
+    document.getElementById('tfID').value = '';
+    document.getElementById('btnCancelTransfer').classList.add('hidden');
+  } else if (tipe === 'Dompet') {
+    document.getElementById('formDompet').reset();
+    document.getElementById('dompetID').value = '';
+    document.getElementById('btnCancelDompet').classList.add('hidden');
+    document.getElementById('fieldSaldoNormal').classList.remove('hidden');
+    document.getElementById('fieldRevisiSaldo').classList.add('hidden');
+    document.getElementById('fieldTagihanCC').classList.remove('hidden');
+    toggleKartuKredit();
+  } else if (tipe === 'Kategori') {
+    document.getElementById('formKategori').reset();
+    document.getElementById('kategoriID').value = '';
+    document.getElementById('btnCancelKat').classList.add('hidden');
+  } else if (tipe === 'Anggaran') {
+    document.getElementById('formAnggaran').reset();
+    document.getElementById('anggaranID').value = '';
+    document.getElementById('btnCancelAnggaran').classList.add('hidden');
+    document.getElementById('titleFormAnggaran').innerText = 'Tambah Anggaran';
+  } else if (tipe === 'HutangPiutang') {
+    document.getElementById('formHP').reset();
+    document.getElementById('hpID').value = '';
+    document.getElementById('btnCancelHP').classList.add('hidden');
+    document.getElementById('titleFormHP').innerText = 'Tambah Baru';
+    document.querySelector('input[name="hpJenis"][value="Hutang"]').checked = true;
+    document.getElementById('hpTanggal').value = new Date().toISOString().split('T')[0];
+  } else if (tipe === 'Investasi') {
+    document.getElementById('formInvestasi').reset();
+    document.getElementById('invID').value = '';
+    document.getElementById('btnCancelInv').classList.add('hidden');
+    document.getElementById('titleFormInvestasi').innerText = 'Tambah Aset';
+    document.getElementById('invSumberDanaWrap').classList.remove('hidden');
+    toggleEmasFields();
+  }
+}
 
-      if(pageId === 'dashboard') renderDashboard();
-      if(pageId === 'catat') setCatatTab('pengeluaran');
-      if(pageId === 'riwayat') renderRiwayatPage();
-      if(pageId === 'investasi') updateLiveEmas(); // trigger kalkulasi emas
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard() {
+  const today = new Date();
+  const ym = today.toISOString().substring(0, 7);
+  let totalSaldo = 0, totalMasuk = 0, totalKeluar = 0;
+  const catKeluar = {};
+
+  appData.Dompet.forEach(d => {
+    if (d.Kategori !== 'Kartu Kredit') totalSaldo += parseFloat(d.SaldoSaatIni) || 0;
+  });
+
+  appData.Transaksi.forEach(t => {
+    if (!t.Tanggal.startsWith(ym)) return;
+    const nom = parseFloat(t.Nominal) || 0;
+    if (t.Jenis === 'Pemasukan') totalMasuk += nom;
+    if (t.Jenis === 'Pengeluaran') { totalKeluar += nom; catKeluar[t.Kategori] = (catKeluar[t.Kategori]||0) + nom; }
+  });
+
+  document.getElementById('dashTotalSaldo').innerText = 'Rp ' + fmt(totalSaldo);
+  document.getElementById('dashPemasukan').innerText = 'Rp ' + fmt(totalMasuk);
+  document.getElementById('dashPengeluaran').innerText = 'Rp ' + fmt(totalKeluar);
+
+  renderCashFlowChart();
+
+  // Expense chart
+  const ctxExp = document.getElementById('expenseChart');
+  if (expChartInstance) expChartInstance.destroy();
+  const expLabels = Object.keys(catKeluar);
+  expChartInstance = new Chart(ctxExp, {
+    type: 'doughnut',
+    data: {
+      labels: expLabels.length ? expLabels : ['Belum ada data'],
+      datasets: [{ data: expLabels.length ? Object.values(catKeluar) : [1],
+        backgroundColor: expLabels.length
+          ? ['#ef4444','#f97316','#f59e0b','#22c55e','#3b82f6','#8b5cf6','#ec4899','#14b8a6']
+          : ['#e5e7eb'] }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{ font:{size:11} } } } }
+  });
+
+  // Latest 5 transactions
+  const combined = compileRiwayat();
+  const tbody = document.getElementById('dashLatestTrx');
+  tbody.innerHTML = '';
+  combined.slice(0,5).forEach(t => {
+    const color = t.Jenis === 'Pemasukan' ? 'text-green-600' : (t.Jenis==='Transfer'?'text-blue-600':'text-red-600');
+    const sign = t.Jenis === 'Pemasukan' ? '+' : '-';
+    const desc = t.Jenis === 'Transfer' ? `${t.DariDompet} → ${t.KeDompet}` : (t.Keterangan || t.Kategori);
+    tbody.innerHTML += `<tr class="border-b border-gray-100 last:border-0">
+      <td class="py-2 text-xs text-gray-400">${t.Tanggal}</td>
+      <td class="py-2 text-xs">${desc}</td>
+      <td class="py-2 text-right text-xs font-bold ${color}">${sign} Rp ${fmt(t.Nominal||t.Jumlah)}</td>
+    </tr>`;
+  });
+  if (!combined.length) tbody.innerHTML = '<tr><td colspan="3" class="py-4 text-center text-gray-400 text-xs">Belum ada transaksi</td></tr>';
+
+  // Anggaran summary
+  const angDiv = document.getElementById('dashAnggaran');
+  const angBulanIni = appData.Anggaran.filter(a => a.BulanTahun === ym);
+  angDiv.innerHTML = '';
+  if (!angBulanIni.length) { angDiv.innerHTML = '<p class="text-gray-400 text-xs">Belum ada anggaran bulan ini</p>'; }
+  else {
+    angBulanIni.forEach(a => {
+      const spent = appData.Transaksi.filter(t => t.Jenis==='Pengeluaran' && t.Kategori===a.Kategori && t.Tanggal.startsWith(ym))
+        .reduce((s,t) => s+parseFloat(t.Nominal||0), 0);
+      const pct = Math.min(Math.round((spent/(parseFloat(a.Nominal)||1))*100), 100);
+      const over = spent > parseFloat(a.Nominal);
+      angDiv.innerHTML += `<div>
+        <div class="flex justify-between text-xs mb-1"><span class="font-medium">${a.Kategori}</span><span>${fmt(spent)} / ${fmt(a.Nominal)}</span></div>
+        <div class="progress-bar"><div class="progress-fill ${over?'bg-red-500':'bg-blue-500'}" style="width:${pct}%"></div></div>
+      </div>`;
+    });
+  }
+}
+
+function renderCashFlowChart() {
+  const ctxCF = document.getElementById('cashflowChart');
+  if (cfChartInstance) cfChartInstance.destroy();
+  const map = {};
+  appData.Transaksi.forEach(t => {
+    if (!map[t.Tanggal]) map[t.Tanggal] = { in:0, out:0 };
+    const nom = parseFloat(t.Nominal)||0;
+    if (t.Jenis==='Pemasukan') map[t.Tanggal].in += nom;
+    if (t.Jenis==='Pengeluaran') map[t.Tanggal].out += nom;
+  });
+  const dates = Object.keys(map).sort();
+  cfChartInstance = new Chart(ctxCF, {
+    type: 'line',
+    data: { labels: dates, datasets: [
+      { label:'Pemasukan', data: dates.map(d=>map[d].in), borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,.08)', tension:.4, fill:true, pointRadius:3 },
+      { label:'Pengeluaran', data: dates.map(d=>map[d].out), borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,.08)', tension:.4, fill:true, pointRadius:3 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'top'}}, scales:{y:{beginAtZero:true,ticks:{callback:v=>'Rp'+fmt(v)}}} }
+  });
+}
+
+// ============================================================
+// RIWAYAT
+// ============================================================
+function compileRiwayat() {
+  let combined = appData.Transaksi.map(t => ({...t, isTransfer:false}));
+  appData.Transfer.forEach(tf => combined.push({
+    ID:tf.ID, Tanggal:tf.Tanggal, Jenis:'Transfer',
+    DariDompet:tf.DariDompet, KeDompet:tf.KeDompet,
+    DompetAsal:tf.DariDompet, Nominal:tf.Jumlah,
+    Keterangan:tf.Catatan, isTransfer:true
+  }));
+  combined.sort((a,b) => new Date(b.Tanggal) - new Date(a.Tanggal));
+  filteredRiwayat = combined;
+  return combined;
+}
+
+function renderRiwayatPage() { compileRiwayat(); applyFilter(); }
+
+function applyFilter() {
+  const start = document.getElementById('filterStartDate').value;
+  const end = document.getElementById('filterEndDate').value;
+  const dompet = document.getElementById('filterDompet').value;
+  const jenis = document.getElementById('filterJenis').value;
+  const sort = document.getElementById('filterSort').value || 'dateDesc';
+
+  let res = [...filteredRiwayat];
+  if (start) res = res.filter(t => t.Tanggal >= start);
+  if (end) res = res.filter(t => t.Tanggal <= end);
+  if (dompet) res = res.filter(t => t.DompetAsal === dompet || (t.isTransfer && t.KeDompet === dompet));
+  if (jenis) res = res.filter(t => t.Jenis === jenis);
+
+  res.sort((a,b) => {
+    if (sort==='dateDesc') return new Date(b.Tanggal)-new Date(a.Tanggal);
+    if (sort==='dateAsc') return new Date(a.Tanggal)-new Date(b.Tanggal);
+    if (sort==='nomDesc') return (parseFloat(b.Nominal)||0)-(parseFloat(a.Nominal)||0);
+    if (sort==='nomAsc') return (parseFloat(a.Nominal)||0)-(parseFloat(b.Nominal)||0);
+  });
+
+  renderRiwayatTable(res);
+}
+
+function resetFilter() {
+  ['filterStartDate','filterEndDate'].forEach(id => document.getElementById(id).value = '');
+  ['filterDompet','filterJenis'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('filterSort').value = 'dateDesc';
+  applyFilter();
+}
+
+function renderRiwayatTable(data) {
+  const tbody = document.getElementById('riwayatTableBody');
+  tbody.innerHTML = '';
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-gray-400 text-sm">Tidak ada data yang sesuai filter.</td></tr>'; return; }
+  data.forEach(t => {
+    const color = t.Jenis==='Pemasukan'?'text-green-600':(t.Jenis==='Transfer'?'text-blue-600':'text-red-600');
+    const badge = t.Jenis==='Pemasukan'?'bg-green-100 text-green-700':(t.Jenis==='Transfer'?'bg-blue-100 text-blue-700':'bg-red-100 text-red-700');
+    const rincian = t.isTransfer
+      ? `${t.DariDompet} <i class="fas fa-arrow-right text-xs mx-1"></i> ${t.KeDompet}`
+      : `${t.Kategori} <br><span class="text-xs text-gray-400">${t.isTransfer?'':t.DompetAsal}</span>`;
+    const editBtn = t.isTransfer
+      ? `<button onclick="editTransfer('${t.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>`
+      : `<button onclick="editTransaksi('${t.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>`;
+    tbody.innerHTML += `<tr class="hover:bg-gray-50 text-sm">
+      <td class="py-3 px-4">${t.Tanggal}</td>
+      <td class="py-3 px-4"><span class="px-2 py-0.5 text-xs font-bold rounded ${badge}">${t.Jenis}</span></td>
+      <td class="py-3 px-4">${rincian}</td>
+      <td class="py-3 px-4 text-gray-500">${t.Keterangan||'-'}</td>
+      <td class="py-3 px-4 text-right font-bold ${color}">Rp ${fmt(t.Nominal)}</td>
+      <td class="py-3 px-4 text-center">
+        ${editBtn}
+        <button onclick="deleteData('${t.isTransfer?'Transfer':'Transaksi'}','${t.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  });
+}
+
+function editTransaksi(id) {
+  const data = appData.Transaksi.find(t => t.ID===id);
+  if (!data) return;
+  switchPage('catat');
+  setCatatTab(data.Jenis.toLowerCase()==='pemasukan'?'pemasukan':'pengeluaran');
+  document.getElementById('transaksiID').value = data.ID;
+  document.getElementById('transaksiTanggal').value = data.Tanggal;
+  document.getElementById('transaksiNominal').value = data.Nominal;
+  document.getElementById('transaksiDompet').value = data.DompetAsal;
+  document.getElementById('transaksiJenis').value = data.Jenis;
+  populateKategoriDropdown();
+  document.getElementById('transaksiKategori').value = data.Kategori;
+  document.getElementById('transaksiKeterangan').value = data.Keterangan;
+  document.getElementById('btnCancelTransaksi').classList.remove('hidden');
+}
+
+function editTransfer(id) {
+  const data = appData.Transfer.find(t => t.ID===id);
+  if (!data) return;
+  switchPage('catat');
+  setCatatTab('transfer');
+  document.getElementById('tfID').value = data.ID;
+  document.getElementById('tfTanggal').value = data.Tanggal;
+  document.getElementById('tfDari').value = data.DariDompet;
+  document.getElementById('tfKe').value = data.KeDompet;
+  document.getElementById('tfJumlah').value = data.Jumlah;
+  document.getElementById('tfBiaya').value = data.Biaya||0;
+  document.getElementById('tfCatatan').value = data.Catatan;
+  document.getElementById('btnCancelTransfer').classList.remove('hidden');
+}
+
+// ============================================================
+// ANGGARAN
+// ============================================================
+function renderAnggaranKategoriSelect() {
+  const pengeluaranKat = appData.Kategori.filter(k => k.Jenis==='Pengeluaran').map(k => k.Nama);
+  populateSelect('anggaranKategori', pengeluaranKat);
+}
+
+function renderAnggaranList() {
+  const bulan = document.getElementById('anggaranBulanFilter').value;
+  document.getElementById('anggaranBulanTitle').innerText = 'Anggaran ' + (bulan || 'Bulan Ini');
+  const list = appData.Anggaran.filter(a => !bulan || a.BulanTahun === bulan);
+  const div = document.getElementById('anggaranList');
+  div.innerHTML = '';
+
+  if (!list.length) {
+    div.innerHTML = '<p class="text-gray-400 text-sm text-center py-6"><i class="fas fa-inbox text-2xl block mb-2"></i>Belum ada anggaran untuk bulan ini.<br>Tambahkan melalui form di sebelah kiri.</p>';
+    return;
+  }
+
+  list.forEach(a => {
+    const spent = appData.Transaksi
+      .filter(t => t.Jenis==='Pengeluaran' && t.Kategori===a.Kategori && t.Tanggal.startsWith(a.BulanTahun))
+      .reduce((s,t) => s+parseFloat(t.Nominal||0), 0);
+    const limit = parseFloat(a.Nominal)||0;
+    const pct = limit ? Math.min(Math.round((spent/limit)*100), 100) : 0;
+    const over = spent > limit;
+    const sisa = limit - spent;
+
+    div.innerHTML += `<div class="border border-gray-100 rounded-xl p-4 hover:shadow-sm transition">
+      <div class="flex justify-between items-start mb-2">
+        <div>
+          <h4 class="font-bold text-gray-800">${a.Kategori}</h4>
+          <p class="text-xs text-gray-400">${a.BulanTahun}</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="editAnggaran('${a.ID}')" class="text-blue-500 hover:text-blue-700 text-sm"><i class="fas fa-edit"></i></button>
+          <button onclick="deleteData('Anggaran','${a.ID}')" class="text-red-500 hover:text-red-700 text-sm"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+      <div class="progress-bar mb-2"><div class="progress-fill ${over?'bg-red-500':pct>80?'bg-yellow-500':'bg-blue-500'}" style="width:${pct}%"></div></div>
+      <div class="flex justify-between text-xs">
+        <span class="text-gray-500">Terpakai: <b class="${over?'text-red-600':'text-gray-800'}">Rp ${fmt(spent)}</b></span>
+        <span class="text-gray-500">Limit: <b>Rp ${fmt(limit)}</b></span>
+        <span class="${over?'text-red-600 font-bold':'text-green-600'}">${over?'Melebihi: -Rp '+fmt(Math.abs(sisa)):'Sisa: Rp '+fmt(sisa)}</span>
+      </div>
+    </div>`;
+  });
+}
+
+function editAnggaran(id) {
+  const data = appData.Anggaran.find(a => a.ID===id);
+  if (!data) return;
+  document.getElementById('anggaranID').value = data.ID;
+  document.getElementById('anggaranBulanForm').value = data.BulanTahun;
+  renderAnggaranKategoriSelect();
+  document.getElementById('anggaranKategori').value = data.Kategori;
+  document.getElementById('anggaranNominal').value = data.Nominal;
+  document.getElementById('btnCancelAnggaran').classList.remove('hidden');
+  document.getElementById('titleFormAnggaran').innerText = 'Edit Anggaran';
+}
+
+// ============================================================
+// HUTANG & PIUTANG
+// ============================================================
+function renderHutangPage() {
+  let hutangTotal = 0, piutangTotal = 0, jatuhTempoCount = 0;
+  const now = new Date(); const nextWeek = new Date(now); nextWeek.setDate(now.getDate()+7);
+
+  appData.HutangPiutang.forEach(h => {
+    if (h.Status === 'Lunas') return;
+    const nom = parseFloat(h.Nominal)||0;
+    if (h.Jenis==='Hutang') hutangTotal += nom; else piutangTotal += nom;
+    if (h.JatuhTempo) { const jt = new Date(h.JatuhTempo); if (jt>=now && jt<=nextWeek) jatuhTempoCount++; }
+  });
+
+  document.getElementById('sumHutang').innerText = 'Rp ' + fmt(hutangTotal);
+  document.getElementById('sumPiutang').innerText = 'Rp ' + fmt(piutangTotal);
+  document.getElementById('sumJatuhTempo').innerText = jatuhTempoCount + ' item';
+  filterHP(hpFilterMode);
+}
+
+function filterHP(mode) {
+  hpFilterMode = mode;
+  ['all','Hutang','Piutang','Lunas'].forEach(m => {
+    const el = document.getElementById('hpTab'+(m==='all'?'All':m));
+    if (el) el.classList.toggle('tab-active', m===mode);
+  });
+
+  let data = appData.HutangPiutang;
+  if (mode==='Lunas') data = data.filter(h => h.Status==='Lunas');
+  else if (mode!=='all') data = data.filter(h => h.Jenis===mode && h.Status!=='Lunas');
+  else data = data.filter(h => h.Status!=='Lunas');
+
+  const tbody = document.getElementById('hpTableBody');
+  tbody.innerHTML = '';
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="py-6 text-center text-gray-400 text-sm">Tidak ada data.</td></tr>'; return; }
+
+  const now = new Date();
+  data.forEach(h => {
+    const color = h.Jenis==='Hutang'?'text-red-600':'text-green-600';
+    const badge = h.Jenis==='Hutang'?'bg-red-100 text-red-700':'bg-green-100 text-green-700';
+    const isLewat = h.JatuhTempo && new Date(h.JatuhTempo) < now && h.Status!=='Lunas';
+    const jtDisplay = h.JatuhTempo
+      ? `<span class="${isLewat?'text-red-600 font-bold':''}">${h.JatuhTempo}${isLewat?' ⚠️':''}</span>`
+      : '-';
+    const statusBadge = h.Status==='Lunas'
+      ? '<span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded font-medium">Lunas</span>'
+      : '<span class="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded font-medium">Aktif</span>';
+    tbody.innerHTML += `<tr class="hover:bg-gray-50 text-sm">
+      <td class="py-3 px-4 font-medium">${h.Nama}<br><span class="text-xs text-gray-400">${h.Keterangan||''}</span></td>
+      <td class="py-3 px-4"><span class="px-2 py-0.5 text-xs font-bold rounded ${badge}">${h.Jenis}</span></td>
+      <td class="py-3 px-4 text-right font-bold ${color}">Rp ${fmt(h.Nominal)}</td>
+      <td class="py-3 px-4 text-center text-sm">${jtDisplay}</td>
+      <td class="py-3 px-4 text-center">${statusBadge}</td>
+      <td class="py-3 px-4 text-center">
+        ${h.Status!=='Lunas'?`<button onclick="lunasinHP('${h.ID}')" class="text-green-500 hover:text-green-700 mx-1" title="Tandai Lunas"><i class="fas fa-check-circle"></i></button>`:''}
+        <button onclick="editHP('${h.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>
+        <button onclick="deleteData('HutangPiutang','${h.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  });
+}
+
+function editHP(id) {
+  const data = appData.HutangPiutang.find(h => h.ID===id);
+  if (!data) return;
+  document.getElementById('hpID').value = data.ID;
+  document.querySelector(`input[name="hpJenis"][value="${data.Jenis}"]`).checked = true;
+  document.getElementById('hpNama').value = data.Nama;
+  document.getElementById('hpNominal').value = data.Nominal;
+  document.getElementById('hpTanggal').value = data.Tanggal;
+  document.getElementById('hpJatuhTempo').value = data.JatuhTempo||'';
+  document.getElementById('hpKeterangan').value = data.Keterangan||'';
+  document.getElementById('btnCancelHP').classList.remove('hidden');
+  document.getElementById('titleFormHP').innerText = 'Edit Data';
+}
+
+function lunasinHP(id) {
+  if (!confirm('Tandai sebagai Lunas?')) return;
+  const data = appData.HutangPiutang.find(h => h.ID===id);
+  if (!data) return;
+  const obj = {...data, Status:'Lunas'};
+  gasRun('saveRecord', ['HutangPiutang', obj], () => renderHutangPage());
+}
+
+// ============================================================
+// INVESTASI
+// ============================================================
+function toggleEmasFields() {
+  const isEmas = document.getElementById('invJenis').value.includes('Emas');
+  document.getElementById('fieldEmas').classList.toggle('hidden', !isEmas);
+  document.getElementById('invModal').readOnly = isEmas;
+  document.getElementById('invModal').classList.toggle('bg-gray-100', isEmas);
+}
+
+function calcTotalEmas() {
+  const gr = parseFloat(document.getElementById('invGram').value)||0;
+  const harga = parseFloat(document.getElementById('invHargaGram').value)||0;
+  document.getElementById('invModal').value = gr * harga;
+}
+
+function updateLiveEmas() {
+  const harga = parseFloat(document.getElementById('hargaEmasLive').value)||0;
+  if (harga > 0) localStorage.setItem('hargaEmasLive', harga);
+  renderInvestasi();
+}
+
+function renderInvestasi() {
+  const hargaEmas = parseFloat(localStorage.getItem('hargaEmasLive'))||0;
+  const tbody = document.getElementById('invTableBody');
+  tbody.innerHTML = '';
+  let totModal = 0, totNilai = 0;
+
+  if (!appData.Investasi.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-gray-400 text-sm">Belum ada aset investasi.</td></tr>';
+  }
+
+  appData.Investasi.forEach(i => {
+    const isEmas = (i.JenisInvestasi||'').includes('Emas');
+    const modal = parseFloat(i.TotalModal)||0;
+    let nilai = parseFloat(i.NilaiSaatIni)||modal;
+    if (isEmas && hargaEmas > 0) nilai = (parseFloat(i.BeratGram)||0) * hargaEmas;
+
+    const pl = nilai - modal;
+    const plClass = pl > 0 ? 'text-green-600' : (pl < 0 ? 'text-red-600' : 'text-gray-500');
+    const pct = modal > 0 ? ((pl/modal)*100).toFixed(2) : 0;
+    totModal += modal; totNilai += nilai;
+
+    tbody.innerHTML += `<tr class="hover:bg-gray-50 text-sm">
+      <td class="py-3 px-4"><b>${i.NamaInvestasi}</b><br>
+        <span class="text-xs bg-blue-50 text-blue-700 px-1 rounded">${i.JenisInvestasi}</span>
+        ${isEmas && i.BeratGram ? `<span class="text-xs text-gray-400 ml-1">${i.BeratGram}g @ Rp${fmt(i.HargaBeliGram)}</span>` : ''}
+      </td>
+      <td class="py-3 px-4 text-right">Rp ${fmt(modal)}</td>
+      <td class="py-3 px-4 text-right font-bold">Rp ${fmt(nilai)}</td>
+      <td class="py-3 px-4 text-right font-bold ${plClass}">${pl>0?'+':''}Rp ${fmt(pl)}<br><span class="text-xs">(${pl>0?'+':''}${pct}%)</span></td>
+      <td class="py-3 px-4 text-center">
+        <button onclick="editInvestasi('${i.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>
+        <button onclick="deleteData('Investasi','${i.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  });
+
+  const totPL = totNilai - totModal;
+  document.getElementById('invTotalModal').innerText = 'Rp ' + fmt(totModal);
+  document.getElementById('invTotalNilai').innerText = 'Rp ' + fmt(totNilai);
+  const plEl = document.getElementById('invTotalPL');
+  plEl.innerText = (totPL>=0?'+':'') + 'Rp ' + fmt(totPL);
+  plEl.className = 'font-bold ' + (totPL>0?'text-green-700':totPL<0?'text-red-700':'text-gray-600');
+}
+
+function editInvestasi(id) {
+  const data = appData.Investasi.find(i => i.ID===id);
+  if (!data) return;
+  document.getElementById('invID').value = data.ID;
+  document.getElementById('invNama').value = data.NamaInvestasi;
+  document.getElementById('invJenis').value = data.JenisInvestasi;
+  toggleEmasFields();
+  if ((data.JenisInvestasi||'').includes('Emas')) {
+    document.getElementById('invGram').value = data.BeratGram;
+    document.getElementById('invHargaGram').value = data.HargaBeliGram;
+  }
+  document.getElementById('invModal').value = data.TotalModal;
+  document.getElementById('invTanggal').value = data.Tanggal||'';
+  document.getElementById('btnCancelInv').classList.remove('hidden');
+  document.getElementById('titleFormInvestasi').innerText = 'Edit Aset';
+  document.getElementById('invSumberDanaWrap').classList.add('hidden');
+}
+
+// ============================================================
+// PENGATURAN
+// ============================================================
+function renderPengaturan() {
+  // Dompet table
+  const tbodyD = document.getElementById('dompetTableBody');
+  tbodyD.innerHTML = '';
+  appData.Dompet.forEach(d => {
+    const isCC = d.IsCC === 'true' || d.Kategori === 'Kartu Kredit';
+    const saldo = parseFloat(d.SaldoSaatIni)||0;
+    const display = isCC ? `(Tagihan) Rp ${fmt(saldo)}` : `Rp ${fmt(saldo)}`;
+    const color = isCC ? 'text-red-600' : (saldo < 0 ? 'text-red-600' : 'text-gray-800');
+    tbodyD.innerHTML += `<tr class="hover:bg-gray-50 text-sm">
+      <td class="py-2 font-medium">${d.Nama}</td>
+      <td class="py-2"><span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">${d.Kategori}</span></td>
+      <td class="py-2 text-right font-bold ${color}">${display}</td>
+      <td class="py-2 text-center">
+        <button onclick="editDompet('${d.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>
+        <button onclick="deleteData('Dompet','${d.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  });
+
+  // Kategori table
+  const tbodyK = document.getElementById('kategoriTableBody');
+  tbodyK.innerHTML = '';
+  appData.Kategori.forEach(k => {
+    const color = k.Jenis==='Pemasukan'?'text-green-600':'text-red-600';
+    tbodyK.innerHTML += `<tr class="hover:bg-gray-50 text-sm">
+      <td class="py-2 font-bold ${color} text-xs">${k.Jenis}</td>
+      <td class="py-2">${k.Nama}</td>
+      <td class="py-2 text-center">
+        <button onclick="editKategori('${k.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>
+        <button onclick="deleteData('Kategori','${k.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  });
+}
+
+function editDompet(id) {
+  const data = appData.Dompet.find(d => d.ID===id);
+  if (!data) return;
+  document.getElementById('formDompetContainer').classList.remove('hidden');
+  document.getElementById('dompetID').value = data.ID;
+  document.getElementById('dompetNama').value = data.Nama;
+  document.getElementById('dompetKategori').value = data.Kategori;
+  toggleKartuKredit();
+
+  if (data.Kategori === 'Kartu Kredit') {
+    document.getElementById('dompetLimitCC').value = data.Limit||0;
+    document.getElementById('fieldTagihanCC').classList.add('hidden'); // don't edit during edit mode
+  } else {
+    document.getElementById('fieldSaldoNormal').classList.add('hidden');
+    document.getElementById('fieldRevisiSaldo').classList.remove('hidden');
+    document.getElementById('dompetSaldoEdit').value = data.SaldoSaatIni;
+  }
+  document.getElementById('btnCancelDompet').classList.remove('hidden');
+}
+
+function editKategori(id) {
+  const data = appData.Kategori.find(k => k.ID===id);
+  if (!data) return;
+  document.getElementById('formKategoriContainer').classList.remove('hidden');
+  document.getElementById('kategoriID').value = data.ID;
+  document.getElementById('kategoriJenis').value = data.Jenis;
+  document.getElementById('kategoriNama').value = data.Nama;
+  document.getElementById('btnCancelKat').classList.remove('hidden');
+}
+
+function toggleKartuKredit() {
+  const isCC = document.getElementById('dompetKategori').value === 'Kartu Kredit';
+  document.getElementById('fieldKartuKredit').classList.toggle('hidden', !isCC);
+  document.getElementById('fieldSaldoNormal').classList.toggle('hidden', isCC);
+}
+
+function doResetDB() {
+  if (!confirm('PERHATIAN!\n\nSemua data akan DIHAPUS PERMANEN.\n\nYakin ingin reset database?')) return;
+  if (!confirm('Konfirmasi terakhir: Reset database?')) return;
+  showLoading('Mereset database...');
+  google.script.run
+    .withSuccessHandler(() => { showAlert('Database berhasil direset!', 'success'); loadAllData(); })
+    .withFailureHandler(err => { showAlert('Gagal: '+(err.message||err),'error'); hideLoading(); })
+    .resetAndSetupDB();
+}
+
+// ============================================================
+// CSV IMPORT
+// ============================================================
+function handleImportCSV() {
+  const file = document.getElementById('csvFileInput').files[0];
+  if (!file) { showAlert('Pilih file CSV terlebih dahulu.', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = e => processCSV(e.target.result);
+  reader.readAsText(file);
+}
+
+function processCSV(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length < 2) { showAlert('CSV kosong atau format salah.', 'error'); return; }
+  importedDataTemp = [];
+  for (let i=1; i<lines.length; i++) {
+    const cols = lines[i].split(',');
+    if (cols.length < 3) continue;
+    const tgl = cols[0].replace(/['"]/g,'').trim();
+    const ket = cols[1].replace(/['"]/g,'').trim();
+    let nom = parseFloat(cols[2].replace(/[^0-9.-]/g,''));
+    if (isNaN(nom)) continue;
+    const jenis = nom > 0 && /masuk|gaji|terima|kredit/i.test(ket) ? 'Pemasukan' : 'Pengeluaran';
+    importedDataTemp.push({ idx:i, Tanggal:tgl.length>=8?tgl:new Date().toISOString().split('T')[0], Jenis:jenis, Keterangan:ket, Nominal:Math.abs(nom) });
+  }
+  renderImportPreview();
+}
+
+function renderImportPreview() {
+  document.getElementById('importPreviewContainer').classList.remove('hidden');
+  const tbody = document.getElementById('importPreviewBody');
+  tbody.innerHTML = '';
+  const dompetOpts = appData.Dompet.map(d=>`<option value="${d.Nama}">${d.Nama}</option>`).join('');
+  const katOut = appData.Kategori.filter(k=>k.Jenis==='Pengeluaran').map(k=>`<option value="${k.Nama}">${k.Nama}</option>`).join('');
+  const katIn = appData.Kategori.filter(k=>k.Jenis==='Pemasukan').map(k=>`<option value="${k.Nama}">${k.Nama}</option>`).join('');
+
+  importedDataTemp.forEach(row => {
+    const kOpts = row.Jenis==='Pemasukan' ? katIn : katOut;
+    tbody.innerHTML += `<tr id="impRow_${row.idx}">
+      <td class="py-1 px-2"><input type="date" class="border p-1 text-xs w-28" value="${row.Tanggal}" id="impTgl_${row.idx}"></td>
+      <td class="py-1 px-2"><select class="border p-1 text-xs" id="impJenis_${row.idx}" onchange="changeImportJenis(${row.idx})">
+        <option value="Pengeluaran" ${row.Jenis==='Pengeluaran'?'selected':''}>Keluar</option>
+        <option value="Pemasukan" ${row.Jenis==='Pemasukan'?'selected':''}>Masuk</option>
+      </select></td>
+      <td class="py-1 px-2"><select class="border p-1 text-xs" id="impDompet_${row.idx}">${dompetOpts}</select></td>
+      <td class="py-1 px-2"><select class="border p-1 text-xs" id="impKat_${row.idx}">${kOpts}</select></td>
+      <td class="py-1 px-2"><input type="number" class="border p-1 text-xs w-24" value="${row.Nominal}" id="impNom_${row.idx}"></td>
+      <td class="py-1 px-2"><input type="text" class="border p-1 text-xs w-28" value="${row.Keterangan}" id="impKet_${row.idx}"></td>
+      <td class="py-1 px-2 text-center"><button onclick="removeImportRow(${row.idx})" class="text-red-500"><i class="fas fa-times"></i></button></td>
+    </tr>`;
+  });
+}
+
+function changeImportJenis(idx) {
+  const jenis = document.getElementById(`impJenis_${idx}`).value;
+  const katEl = document.getElementById(`impKat_${idx}`);
+  katEl.innerHTML = appData.Kategori.filter(k=>k.Jenis===jenis).map(k=>`<option value="${k.Nama}">${k.Nama}</option>`).join('');
+}
+
+function removeImportRow(idx) {
+  document.getElementById(`impRow_${idx}`)?.remove();
+  importedDataTemp = importedDataTemp.filter(r => r.idx!==idx);
+}
+
+async function saveImportedData() {
+  if (!importedDataTemp.length) { showAlert('Tidak ada data untuk disimpan.', 'error'); return; }
+  showLoading(`Menyimpan ${importedDataTemp.length} transaksi...`);
+
+  const batch = importedDataTemp
+    .filter(row => document.getElementById(`impRow_${row.idx}`))
+    .map(row => ({
+      ID: '',
+      Tanggal: document.getElementById(`impTgl_${row.idx}`).value,
+      Jenis: document.getElementById(`impJenis_${row.idx}`).value,
+      Kategori: document.getElementById(`impKat_${row.idx}`).value,
+      Nominal: parseFloat(document.getElementById(`impNom_${row.idx}`).value)||0,
+      Biaya: 0,
+      Keterangan: document.getElementById(`impKet_${row.idx}`).value,
+      DompetAsal: document.getElementById(`impDompet_${row.idx}`).value
+    }));
+
+  let saved = 0;
+  const saveNext = (i) => {
+    if (i >= batch.length) {
+      document.getElementById('importPreviewContainer').classList.add('hidden');
+      document.getElementById('csvFileInput').value = '';
+      importedDataTemp = [];
+      showAlert(`Berhasil import ${saved} transaksi!`, 'success');
+      loadAllData();
+      return;
     }
-
-    // === REFRESH ALL DATA & DROPDOWNS ===
-    function refreshUI() {
-      // 1. Populate Dropdowns
-      populateSelect('transaksiDompet', appData.Dompet.map(d => d.Nama));
-      populateSelect('tfDari', appData.Dompet.map(d => d.Nama));
-      populateSelect('tfKe', appData.Dompet.map(d => d.Nama));
-      populateSelect('filterDompet', appData.Dompet.map(d => d.Nama), "Semua Dompet");
-      populateSelect('invSumberDana', appData.Dompet.map(d => d.Nama), "-- Jangan Potong Saldo (Hanya catat aset) --");
-      
-      populateKategori();
-      
-      // Filter Kategori (Gabungan Pemasukan & Pengeluaran)
-      const allKat = appData.Kategori.map(k => k.Nama);
-      const uniqueKat = [...new Set(allKat)];
-      populateSelect('filterKategori', uniqueKat, "Semua Kategori");
-
-      // 2. Render Tables
-      renderPengaturan();
-      renderInvestasi();
-      
-      // Update global transaction state
-      compileRiwayatData();
-    }
-
-    function populateSelect(id, dataArray, defaultOptionText = null) {
-      const el = document.getElementById(id);
-      if(!el) return;
-      el.innerHTML = '';
-      if(defaultOptionText) {
-          el.innerHTML = `<option value="">${defaultOptionText}</option>`;
-      }
-      dataArray.forEach(item => {
-        el.innerHTML += `<option value="${item}">${item}</option>`;
-      });
-    }
-
-    function populateKategori() {
-      const jenis = document.getElementById('transaksiJenis').value;
-      const filtered = appData.Kategori.filter(k => k.Jenis === jenis);
-      populateSelect('transaksiKategori', filtered.map(k => k.Nama));
-    }
-
-    // === TAB CATAT TRANSAKSI ===
-    function setCatatTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(el => {
-        el.classList.remove('active', 'border-blue-600', 'border-red-600', 'border-green-600', 'border-purple-600');
-        el.style.borderBottom = 'none';
-      });
-      document.getElementById('formCatat').classList.add('hidden');
-      document.getElementById('formTransfer').classList.add('hidden');
-      document.getElementById('formImport').classList.add('hidden');
-
-      if (tab === 'transfer') {
-        document.getElementById('formTransfer').classList.remove('hidden');
-        document.getElementById('tabTransfer').style.borderBottom = '2px solid #2563eb';
-      } else if (tab === 'import') {
-        document.getElementById('formImport').classList.remove('hidden');
-        document.getElementById('tabImport').style.borderBottom = '2px solid #9333ea';
-      } else {
-        document.getElementById('formCatat').classList.remove('hidden');
-        document.getElementById('transaksiJenis').value = tab === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran';
-        document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).style.borderBottom = `2px solid ${tab==='pemasukan'?'#16a34a':'#dc2626'}`;
-        populateKategori();
-      }
-    }
-
-    // === DASHBOARD LOGIC ===
-    let cfChartInstance = null;
-    let expChartInstance = null;
-
-    function renderDashboard() {
-      let totalSaldo = 0;
-      let totalMasuk = 0;
-      let totalKeluar = 0;
-      const currMonth = new Date().getMonth();
-      const currYear = new Date().getFullYear();
-      let catKeluar = {};
-
-      // Hitung Saldo Asli (Kas/Bank/Ewallet). Kartu Kredit (Hutang) TIDAK masuk hitungan kekayaan!
-      appData.Dompet.forEach(d => {
-        if(d.Kategori !== 'Kartu Kredit') {
-            totalSaldo += parseFloat(d.SaldoSaatIni);
-        }
-      });
-
-      appData.Transaksi.forEach(t => {
-        const d = new Date(t.Tanggal);
-        if(d.getMonth() === currMonth && d.getFullYear() === currYear) {
-          if(t.Jenis === 'Pemasukan') totalMasuk += parseFloat(t.Nominal);
-          if(t.Jenis === 'Pengeluaran') {
-            totalKeluar += parseFloat(t.Nominal);
-            catKeluar[t.Kategori] = (catKeluar[t.Kategori] || 0) + parseFloat(t.Nominal);
-          }
-        }
-      });
-
-      document.getElementById('dashTotalSaldo').innerText = 'Rp ' + formatRupiah(totalSaldo);
-      document.getElementById('dashPemasukan').innerText = 'Rp ' + formatRupiah(totalMasuk);
-      document.getElementById('dashPengeluaran').innerText = 'Rp ' + formatRupiah(totalKeluar);
-
-      // Render Charts
-      renderCashFlowChart();
-      
-      const ctxExp = document.getElementById('expenseChart');
-      if(expChartInstance) expChartInstance.destroy();
-      expChartInstance = new Chart(ctxExp, {
-        type: 'doughnut',
-        data: {
-          labels: Object.keys(catKeluar).length ? Object.keys(catKeluar) : ['Belum ada data'],
-          datasets: [{
-            data: Object.keys(catKeluar).length ? Object.values(catKeluar) : [1],
-            backgroundColor: Object.keys(catKeluar).length ? ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#3b82f6', '#8b5cf6'] : ['#e5e7eb']
-          }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
-      });
-
-      // Render 5 Trx terakhir (gabungan transaksi & transfer)
-      let allTrx = compileRiwayatData().slice(0, 5); // get top 5 latest
-      const tbody = document.getElementById('dashLatestTrx');
-      tbody.innerHTML = '';
-      allTrx.forEach(t => {
-        const isKeluar = t.Jenis === 'Pengeluaran' || t.Jenis === 'Transfer';
-        const color = t.Jenis === 'Pemasukan' ? 'text-green-600' : (t.Jenis==='Transfer'? 'text-blue-600' : 'text-red-600');
-        const sign = t.Jenis === 'Pemasukan' ? '+' : '-';
-        const deskripsi = t.Jenis === 'Transfer' ? `${t.DariDompet} ➔ ${t.KeDompet}` : t.Kategori;
-        tbody.innerHTML += `
-          <tr class="border-b border-gray-100">
-            <td class="py-2 text-gray-500">${t.Tanggal}</td>
-            <td class="py-2 font-medium">${deskripsi}</td>
-            <td class="py-2 text-right font-bold ${color}">${sign} Rp ${formatRupiah(t.Nominal || t.Jumlah)}</td>
-          </tr>
-        `;
-      });
-    }
-
-    function renderCashFlowChart() {
-       const ctxCF = document.getElementById('cashflowChart');
-       if(cfChartInstance) cfChartInstance.destroy();
-
-       // Group data by Date
-       let chartData = {};
-       appData.Transaksi.forEach(t => {
-           if(!chartData[t.Tanggal]) chartData[t.Tanggal] = { in: 0, out: 0 };
-           if(t.Jenis === 'Pemasukan') chartData[t.Tanggal].in += parseFloat(t.Nominal);
-           if(t.Jenis === 'Pengeluaran') chartData[t.Tanggal].out += parseFloat(t.Nominal);
-       });
-
-       const sortedDates = Object.keys(chartData).sort((a,b) => new Date(a) - new Date(b));
-       const dataIn = sortedDates.map(d => chartData[d].in);
-       const dataOut = sortedDates.map(d => chartData[d].out);
-
-       cfChartInstance = new Chart(ctxCF, {
-           type: 'line',
-           data: {
-               labels: sortedDates,
-               datasets: [
-                   { label: 'Pemasukan', data: dataIn, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4, fill: true },
-                   { label: 'Pengeluaran', data: dataOut, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', tension: 0.4, fill: true }
-               ]
-           },
-           options: { responsive: true, maintainAspectRatio: false }
-       });
-    }
-
-    // === RIWAYAT (BUKU BESAR) LOGIC ===
-    function compileRiwayatData() {
-        // Menggabungkan Transaksi dan Transfer ke dalam satu array
-        let combined = [];
-        appData.Transaksi.forEach(t => combined.push({...t, isTransfer: false}));
-        appData.Transfer.forEach(tf => {
-            combined.push({
-                ID: tf.ID, Tanggal: tf.Tanggal, Jenis: 'Transfer',
-                DompetAsal: tf.DariDompet, KeDompet: tf.KeDompet, 
-                Nominal: tf.Jumlah, Keterangan: tf.Catatan, isTransfer: true
-            });
-        });
-        // Sort descending by default
-        combined.sort((a, b) => new Date(b.Tanggal) - new Date(a.Tanggal));
-        filteredRiwayat = combined;
-        return combined;
-    }
-
-    function renderRiwayatPage() {
-        compileRiwayatData();
-        applyTransaksiFilter(); 
-    }
-
-    function resetTransaksiFilter() {
-        document.getElementById('filterStartDate').value = '';
-        document.getElementById('filterEndDate').value = '';
-        document.getElementById('filterDompet').value = '';
-        document.getElementById('filterJenis').value = '';
-        document.getElementById('filterKategori').value = '';
-        document.getElementById('filterSort').value = 'dateDesc';
-        compileRiwayatData();
-        renderRiwayatTable();
-    }
-
-    function applyTransaksiFilter() {
-        const start = document.getElementById('filterStartDate').value;
-        const end = document.getElementById('filterEndDate').value;
-        const dompet = document.getElementById('filterDompet').value;
-        const jenis = document.getElementById('filterJenis').value;
-        const kategori = document.getElementById('filterKategori').value;
-        const sortMode = document.getElementById('filterSort').value || 'dateDesc';
-
-        let res = appData.Transaksi.map(t => ({...t, isTransfer: false}));
-        appData.Transfer.forEach(tf => {
-            res.push({
-                ID: tf.ID, Tanggal: tf.Tanggal, Jenis: 'Transfer',
-                DompetAsal: tf.DariDompet, KeDompet: tf.KeDompet, 
-                Nominal: tf.Jumlah, Keterangan: tf.Catatan, isTransfer: true
-            });
-        });
-
-        // Date Filter
-        if(start) res = res.filter(t => t.Tanggal >= start);
-        if(end) res = res.filter(t => t.Tanggal <= end);
-        
-        // Dompet Filter (mencakup Asal dan Tujuan jika Transfer)
-        if(dompet) {
-            res = res.filter(t => t.DompetAsal === dompet || (t.isTransfer && t.KeDompet === dompet));
-        }
-
-        // Jenis & Kategori Filter
-        if(jenis) res = res.filter(t => t.Jenis === jenis);
-        if(kategori) res = res.filter(t => !t.isTransfer && t.Kategori === kategori);
-
-        // Sorting Logic
-        res.sort((a, b) => {
-            if (sortMode === 'dateDesc') return new Date(b.Tanggal) - new Date(a.Tanggal);
-            if (sortMode === 'dateAsc') return new Date(a.Tanggal) - new Date(b.Tanggal);
-            
-            const nomA = parseFloat(a.Nominal || 0);
-            const nomB = parseFloat(b.Nominal || 0);
-            
-            if (sortMode === 'nomDesc') return nomB - nomA;
-            if (sortMode === 'nomAsc') return nomA - nomB;
-            return 0;
-        });
-
-        filteredRiwayat = res;
-        renderRiwayatTable();
-    }
-
-    function renderRiwayatTable() {
-        const tbody = document.getElementById('riwayatTableBody');
-        tbody.innerHTML = '';
-        if(filteredRiwayat.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-gray-500">Tidak ada transaksi yang sesuai.</td></tr>';
-            return;
-        }
-
-        filteredRiwayat.forEach(t => {
-            let color, badgeColor, rincian, editFunc;
-            if(t.Jenis === 'Pemasukan') {
-                color = 'text-green-600'; badgeColor = 'bg-green-100 text-green-700';
-                rincian = `${t.Kategori} <br> <span class="text-xs text-gray-500">Masuk ke: ${t.DompetAsal}</span>`;
-                editFunc = `editTransaksi('${t.ID}')`;
-            } else if (t.Jenis === 'Pengeluaran') {
-                color = 'text-red-600'; badgeColor = 'bg-red-100 text-red-700';
-                rincian = `${t.Kategori} <br> <span class="text-xs text-gray-500">Dari: ${t.DompetAsal}</span>`;
-                editFunc = `editTransaksi('${t.ID}')`;
-            } else {
-                color = 'text-blue-600'; badgeColor = 'bg-blue-100 text-blue-700';
-                rincian = `${t.DompetAsal} ➔ ${t.KeDompet}`;
-                editFunc = `editTransfer('${t.ID}')`;
-            }
-
-            tbody.innerHTML += `
-              <tr class="hover:bg-gray-50">
-                <td class="py-3 px-4">${t.Tanggal}</td>
-                <td class="py-3 px-4"><span class="px-2 py-1 text-xs font-bold rounded ${badgeColor}">${t.Jenis}</span></td>
-                <td class="py-3 px-4">${rincian}</td>
-                <td class="py-3 px-4">${t.Keterangan || '-'}</td>
-                <td class="py-3 px-4 text-right font-bold ${color}">Rp ${formatRupiah(t.Nominal)}</td>
-                <td class="py-3 px-4 text-center">
-                  <button onclick="${editFunc}" class="text-blue-500 hover:text-blue-700 mx-1" title="Edit"><i class="fas fa-edit"></i></button>
-                  <button onclick="deleteDataFront('${t.isTransfer ? 'Transfer' : 'Transaksi'}', '${t.ID}')" class="text-red-500 hover:text-red-700 mx-1" title="Hapus"><i class="fas fa-trash"></i></button>
-                </td>
-              </tr>
-            `;
-        });
-    }
-
-    // === EDIT TRANSAKSI / TRANSFER DARI RIWAYAT ===
-    function editTransaksi(id) {
-        const data = appData.Transaksi.find(x => x.ID === id);
-        if(!data) return;
-        switchPage('catat');
-        setCatatTab(data.Jenis.toLowerCase());
-        
-        document.getElementById('transaksiID').value = data.ID;
-        document.getElementById('transaksiTanggal').value = data.Tanggal;
-        document.getElementById('transaksiNominal').value = data.Nominal;
-        document.getElementById('transaksiDompet').value = data.DompetAsal;
-        
-        // force trigger populate to set kategori correctly
-        document.getElementById('transaksiJenis').value = data.Jenis;
-        populateKategori();
-        document.getElementById('transaksiKategori').value = data.Kategori;
-        
-        document.getElementById('transaksiKeterangan').value = data.Keterangan;
-        document.getElementById('btnCancelTransaksi').classList.remove('hidden');
-    }
-
-    function editTransfer(id) {
-        const data = appData.Transfer.find(x => x.ID === id);
-        if(!data) return;
-        switchPage('catat');
-        setCatatTab('transfer');
-        
-        document.getElementById('tfID').value = data.ID;
-        document.getElementById('tfTanggal').value = data.Tanggal;
-        document.getElementById('tfDari').value = data.DariDompet;
-        document.getElementById('tfKe').value = data.KeDompet;
-        document.getElementById('tfJumlah').value = data.Jumlah;
-        document.getElementById('tfBiaya').value = data.Biaya;
-        document.getElementById('tfCatatan').value = data.Catatan;
-        document.getElementById('btnCancelTransfer').classList.remove('hidden');
-    }
-
-    // === INVESTASI LOGIC ===
-    function toggleInvestasiFields() {
-        const val = document.getElementById('invJenis').value;
-        if(val.includes('Emas')) {
-            document.getElementById('fieldEmas').classList.remove('hidden');
-            document.getElementById('invModal').readOnly = true;
-            document.getElementById('invModal').classList.add('bg-gray-100');
-        } else {
-            document.getElementById('fieldEmas').classList.add('hidden');
-            document.getElementById('invModal').readOnly = false;
-            document.getElementById('invModal').classList.remove('bg-gray-100');
-        }
-    }
-
-    function calcTotalEmas() {
-        const gr = parseFloat(document.getElementById('invGram').value || 0);
-        const harga = parseFloat(document.getElementById('invHargaGram').value || 0);
-        document.getElementById('invModal').value = (gr * harga);
-    }
-
-    function updateLiveEmas() {
-        const hrgStr = document.getElementById('hargaEmasLive').value;
-        const hargaSkrg = parseFloat(hrgStr);
-        
-        if(!isNaN(hargaSkrg) && hargaSkrg > 0) {
-            localStorage.setItem('hargaEmasLive', hargaSkrg); // Simpan ke browser
-            // Update appData mockup
-            appData.Investasi.forEach(inv => {
-                if(inv.JenisInvestasi.includes('Emas')) {
-                    inv.NilaiSaatIni = (inv.BeratGram || 0) * hargaSkrg;
-                }
-            });
-        }
-        renderInvestasi();
-    }
-
-    function renderInvestasi() {
-        const tbody = document.getElementById('invTableBody');
-        tbody.innerHTML = '';
-        appData.Investasi.forEach(i => {
-            const isEmas = i.JenisInvestasi.includes('Emas');
-            const estimasi = parseFloat(i.NilaiSaatIni || i.TotalModal);
-            const pl = estimasi - parseFloat(i.TotalModal);
-            const plClass = pl > 0 ? 'text-green-600' : (pl < 0 ? 'text-red-600' : 'text-gray-500');
-            const pct = i.TotalModal > 0 ? ((pl / i.TotalModal) * 100).toFixed(2) : 0;
-            
-            let detailAset = isEmas ? `<br><span class="text-xs text-gray-500">${i.BeratGram} Gram x Rp ${formatRupiah(i.HargaBeliGram)}</span>` : '';
-
-            tbody.innerHTML += `
-              <tr class="hover:bg-gray-50">
-                <td class="py-3 px-4"><b>${i.NamaInvestasi}</b><br><span class="text-xs text-blue-600 bg-blue-50 px-1 rounded">${i.JenisInvestasi}</span>${detailAset}</td>
-                <td class="py-3 px-4 text-right">Rp ${formatRupiah(i.TotalModal)}</td>
-                <td class="py-3 px-4 text-right font-bold text-gray-800">Rp ${formatRupiah(estimasi)}</td>
-                <td class="py-3 px-4 text-right font-bold ${plClass}">${pl > 0 ? '+' : ''}Rp ${formatRupiah(pl)} <br><span class="text-xs">(${pl > 0 ? '+' : ''}${pct}%)</span></td>
-                <td class="py-3 px-4 text-center">
-                    <button onclick="editInvestasi('${i.ID}')" class="text-blue-500 hover:text-blue-700 mx-1" title="Edit"><i class="fas fa-edit"></i></button>
-                    <button onclick="deleteDataFront('Investasi', '${i.ID}')" class="text-red-500 hover:text-red-700 mx-1" title="Hapus"><i class="fas fa-trash"></i></button>
-                </td>
-              </tr>
-            `;
-        });
-    }
-
-    function editInvestasi(id) {
-        const data = appData.Investasi.find(x => x.ID === id);
-        if(!data) return;
-        
-        document.getElementById('titleFormInvestasi').innerText = 'Edit Aset';
-        document.getElementById('invID').value = data.ID;
-        document.getElementById('invNama').value = data.NamaInvestasi;
-        document.getElementById('invJenis').value = data.JenisInvestasi;
-        
-        toggleInvestasiFields();
-        if(data.JenisInvestasi.includes('Emas')) {
-            document.getElementById('invGram').value = data.BeratGram;
-            document.getElementById('invHargaGram').value = data.HargaBeliGram;
-        }
-        document.getElementById('invModal').value = data.TotalModal;
-        document.getElementById('btnCancelInv').classList.remove('hidden');
-        
-        // Sembunyikan potong dompet saat edit (karena sudah dipotong saat awal)
-        document.getElementById('invSumberDana').parentElement.classList.add('hidden');
-    }
-
-    // === PENGATURAN (DOMPET & KATEGORI) LOGIC ===
-    function toggleKartuKredit() {
-        const val = document.getElementById('dompetKategori').value;
-        if(val === 'Kartu Kredit') {
-            document.getElementById('fieldKartuKredit').classList.remove('hidden');
-            document.getElementById('fieldSaldoNormal').classList.add('hidden');
-            document.getElementById('dompetSaldoAwal').value = 0; // reset
-        } else {
-            document.getElementById('fieldKartuKredit').classList.add('hidden');
-            document.getElementById('fieldSaldoNormal').classList.remove('hidden');
-        }
-    }
-
-    function renderPengaturan() {
-      // DOMPET
-      const tbodyD = document.getElementById('dompetTableBody');
-      tbodyD.innerHTML = '';
-      appData.Dompet.forEach(d => {
-        let displaySaldo;
-        let fontColor = 'text-gray-800';
-        
-        if (d.Kategori === 'Kartu Kredit' || d.isCC) {
-            const limit = parseFloat(d.Limit || d.SaldoAwal || 0); // Di mock up SaldoAwal jadi Limit
-            const saldoSkrg = parseFloat(d.SaldoSaatIni); 
-            const terpakai = limit - saldoSkrg;
-            
-            fontColor = terpakai > 0 ? 'text-red-600' : 'text-gray-800';
-            displaySaldo = terpakai > 0 ? `(Tagihan) Rp ${formatRupiah(terpakai)}` : `Rp 0`;
-        } else {
-            displaySaldo = `Rp ${formatRupiah(d.SaldoSaatIni)}`;
-        }
-
-        tbodyD.innerHTML += `
-          <tr class="hover:bg-gray-50">
-            <td class="py-2 text-gray-800 font-medium">${d.Nama}</td>
-            <td class="py-2"><span class="px-2 py-1 text-[10px] bg-blue-100 text-blue-800 rounded">${d.Kategori}</span></td>
-            <td class="py-2 text-right font-bold ${fontColor}">${displaySaldo}</td>
-            <td class="py-2 text-center">
-              <button onclick="editDompet('${d.ID}')" class="text-blue-500 hover:text-blue-700 mx-1" title="Revisi/Edit"><i class="fas fa-edit"></i></button>
-              <button onclick="deleteDataFront('Dompet', '${d.ID}')" class="text-red-500 hover:text-red-700 mx-1" title="Hapus"><i class="fas fa-trash"></i></button>
-            </td>
-          </tr>
-        `;
-      });
-
-      // KATEGORI
-      const tbodyK = document.getElementById('kategoriTableBody');
-      tbodyK.innerHTML = '';
-      appData.Kategori.forEach(k => {
-        const color = k.Jenis === 'Pemasukan' ? 'text-green-600' : 'text-red-600';
-        tbodyK.innerHTML += `
-          <tr class="hover:bg-gray-50">
-            <td class="py-2 font-bold ${color}">${k.Jenis}</td>
-            <td class="py-2 text-gray-700">${k.Nama}</td>
-            <td class="py-2 text-center">
-              <button onclick="editKategori('${k.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>
-              <button onclick="deleteDataFront('Kategori', '${k.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
-            </td>
-          </tr>
-        `;
-      });
-    }
-
-    function editDompet(id) {
-      const data = appData.Dompet.find(x => x.ID === id);
-      if(!data) return;
-      document.getElementById('formDompetContainer').classList.remove('hidden');
-      document.getElementById('dompetID').value = data.ID;
-      document.getElementById('dompetNama').value = data.Nama;
-      document.getElementById('dompetKategori').value = data.Kategori;
-      
-      toggleKartuKredit();
-      if(data.Kategori === 'Kartu Kredit' || data.isCC) {
-          document.getElementById('dompetLimitCC').value = data.SaldoAwal;
-          document.getElementById('dompetTagihanCC').value = data.SaldoAwal - data.SaldoSaatIni;
-          // Hide input tagihan during edit to avoid complex reconciliation, just edit limit
-          document.getElementById('fieldTagihanCC').classList.add('hidden'); 
-      } else {
-          document.getElementById('fieldSaldoNormal').classList.add('hidden');
-          document.getElementById('fieldRevisiSaldo').classList.remove('hidden');
-          document.getElementById('dompetSaldoSaatIniEdit').value = data.SaldoSaatIni;
-      }
-      
-      document.getElementById('btnCancelDompet').classList.remove('hidden');
-    }
-
-    function editKategori(id) {
-      const data = appData.Kategori.find(x => x.ID === id);
-      if(!data) return;
-      document.getElementById('formKategoriContainer').classList.remove('hidden');
-      document.getElementById('kategoriID').value = data.ID;
-      document.getElementById('kategoriJenis').value = data.Jenis;
-      document.getElementById('kategoriNama').value = data.Nama;
-      document.getElementById('btnCancelKat').classList.remove('hidden');
-    }
-
-    function cancelEdit(tipe) {
-      if(tipe === 'Transaksi') {
-          document.getElementById('formCatat').reset();
-          document.getElementById('transaksiID').value = '';
-          document.getElementById('btnCancelTransaksi').classList.add('hidden');
-      } else if (tipe === 'Transfer') {
-          document.getElementById('formTransfer').reset();
-          document.getElementById('tfID').value = '';
-          document.getElementById('btnCancelTransfer').classList.add('hidden');
-      } else if (tipe === 'Investasi') {
-          document.getElementById('formInvestasi').reset();
-          document.getElementById('invID').value = '';
-          document.getElementById('titleFormInvestasi').innerText = 'Tambah Aset Baru';
-          document.getElementById('btnCancelInv').classList.add('hidden');
-          document.getElementById('invSumberDana').parentElement.classList.remove('hidden');
-          toggleInvestasiFields();
-      } else if (tipe === 'Dompet') {
-          document.getElementById('formDompet').reset();
-          document.getElementById('dompetID').value = '';
-          document.getElementById('btnCancelDompet').classList.add('hidden');
-          document.getElementById('fieldSaldoNormal').classList.remove('hidden');
-          document.getElementById('fieldRevisiSaldo').classList.add('hidden');
-          document.getElementById('fieldTagihanCC').classList.remove('hidden');
-          toggleKartuKredit();
-      } else if (tipe === 'Kategori') {
-          document.getElementById('formKategori').reset();
-          document.getElementById('kategoriID').value = '';
-          document.getElementById('btnCancelKat').classList.add('hidden');
-      }
-    }
-
-    // === IMPORT CSV LOGIC ===
-    function handleImportCSV() {
-        const fileInput = document.getElementById('csvFileInput');
-        if(!fileInput.files.length) return showAlert('Pilih file CSV terlebih dahulu', 'error');
-        
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const text = e.target.result;
-            processCSVData(text);
-        };
-        reader.readAsText(file);
-    }
-
-    function processCSVData(csvText) {
-        const lines = csvText.split('\n').filter(l => l.trim() !== '');
-        if(lines.length < 2) return showAlert('CSV Kosong atau format salah', 'error');
-        
-        // Asumsi baris 1 adalah header, mulai dari baris 2 (index 1)
-        importedDataTemp = [];
-        for(let i=1; i<lines.length; i++){
-            // Handle comma inside quotes if any, simple split for now
-            const cols = lines[i].split(','); 
-            if(cols.length >= 3) {
-                // Bersihkan quote
-                const tgl = cols[0].replace(/['"]+/g, '').trim();
-                const ket = cols[1].replace(/['"]+/g, '').trim();
-                let nom = cols[2].replace(/['"]+/g, '').trim();
-                
-                // bersihkan titik/koma ribuan di nominal
-                nom = parseFloat(nom.replace(/[^0-9.-]+/g,""));
-                if(isNaN(nom)) continue;
-
-                let jenis = 'Pengeluaran';
-                if(nom > 0 && ket.toLowerCase().includes('masuk') || ket.toLowerCase().includes('gaji') || ket.toLowerCase().includes('terima')) jenis = 'Pemasukan';
-                
-                importedDataTemp.push({
-                    idx: i,
-                    Tanggal: tgl.length > 8 ? tgl : new Date().toISOString().split('T')[0],
-                    Jenis: jenis,
-                    Keterangan: ket,
-                    Nominal: Math.abs(nom)
-                });
-            }
-        }
-        renderImportPreview();
-    }
-
-    function renderImportPreview() {
-        document.getElementById('importPreviewContainer').classList.remove('hidden');
-        const tbody = document.getElementById('importPreviewBody');
-        tbody.innerHTML = '';
-        
-        const optsDompet = appData.Dompet.map(d => `<option value="${d.Nama}">${d.Nama}</option>`).join('');
-        const katPengeluaran = appData.Kategori.filter(k => k.Jenis === 'Pengeluaran').map(k => `<option value="${k.Nama}">${k.Nama}</option>`).join('');
-        const katPemasukan = appData.Kategori.filter(k => k.Jenis === 'Pemasukan').map(k => `<option value="${k.Nama}">${k.Nama}</option>`).join('');
-
-        importedDataTemp.forEach(row => {
-            const optsKategori = row.Jenis === 'Pemasukan' ? katPemasukan : katPengeluaran;
-            tbody.innerHTML += `
-              <tr id="impRow_${row.idx}">
-                <td class="py-1 px-2"><input type="date" class="border p-1 text-xs w-full" value="${row.Tanggal}" id="impTgl_${row.idx}"></td>
-                <td class="py-1 px-2">
-                    <select class="border p-1 text-xs w-full" id="impJenis_${row.idx}" onchange="changeImportJenis(${row.idx})">
-                        <option value="Pengeluaran" ${row.Jenis==='Pengeluaran'?'selected':''}>Keluar</option>
-                        <option value="Pemasukan" ${row.Jenis==='Pemasukan'?'selected':''}>Masuk</option>
-                    </select>
-                </td>
-                <td class="py-1 px-2"><select class="border p-1 text-xs w-full" id="impDompet_${row.idx}">${optsDompet}</select></td>
-                <td class="py-1 px-2"><select class="border p-1 text-xs w-full" id="impKat_${row.idx}">${optsKategori}</select></td>
-                <td class="py-1 px-2"><input type="number" class="border p-1 text-xs w-full" value="${row.Nominal}" id="impNom_${row.idx}"></td>
-                <td class="py-1 px-2"><input type="text" class="border p-1 text-xs w-full" value="${row.Keterangan}" id="impKet_${row.idx}"></td>
-                <td class="py-1 px-2 text-center"><button class="text-red-500 hover:text-red-700" onclick="removeImportRow(${row.idx})"><i class="fas fa-times"></i></button></td>
-              </tr>
-            `;
-        });
-    }
-
-    function changeImportJenis(idx) {
-        const val = document.getElementById(`impJenis_${idx}`).value;
-        const selKat = document.getElementById(`impKat_${idx}`);
-        const opts = appData.Kategori.filter(k => k.Jenis === val).map(k => `<option value="${k.Nama}">${k.Nama}</option>`).join('');
-        selKat.innerHTML = opts;
-    }
-
-    function removeImportRow(idx) {
-        document.getElementById(`impRow_${idx}`).remove();
-        importedDataTemp = importedDataTemp.filter(r => r.idx !== idx);
-    }
-
-    function saveImportedData() {
-        if(importedDataTemp.length === 0) return showAlert('Tidak ada data untuk disimpan', 'error');
-        document.getElementById('loading').style.display = 'flex';
-        
-        setTimeout(() => {
-            importedDataTemp.forEach(row => {
-                const trElement = document.getElementById(`impRow_${row.idx}`);
-                if(trElement) {
-                    const tgl = document.getElementById(`impTgl_${row.idx}`).value;
-                    const jenis = document.getElementById(`impJenis_${row.idx}`).value;
-                    const dompet = document.getElementById(`impDompet_${row.idx}`).value;
-                    const kat = document.getElementById(`impKat_${row.idx}`).value;
-                    const nom = parseFloat(document.getElementById(`impNom_${row.idx}`).value);
-                    const ket = document.getElementById(`impKet_${row.idx}`).value;
-
-                    // Buat ID unik pseudo
-                    const newId = 't_' + Math.random().toString(36).substr(2, 9);
-                    appData.Transaksi.push({
-                        ID: newId, Tanggal: tgl, Jenis: jenis,
-                        Kategori: kat, Keterangan: ket, Nominal: nom, DompetAsal: dompet
-                    });
-
-                    // Update Saldo
-                    const domObj = appData.Dompet.find(d => d.Nama === dompet);
-                    if(domObj) {
-                        if(jenis === 'Pemasukan') domObj.SaldoSaatIni += nom;
-                        else domObj.SaldoSaatIni -= nom;
-                    }
-                }
-            });
-
-            document.getElementById('importPreviewContainer').classList.add('hidden');
-            document.getElementById('csvFileInput').value = '';
-            importedDataTemp = [];
-            
-            showAlert(`Berhasil mengimport data CSV`, 'success');
-            refreshUI();
-            document.getElementById('loading').style.display = 'none';
-        }, 1000);
-    }
-
-    // === FRONT-END MOCK LOGIC FOR SUBMIT & DELETE ===
-    function submitForm(event, tableName) {
-      event.preventDefault();
-      document.getElementById('loading').style.display = 'flex';
-      
-      setTimeout(() => {
-          let dataObj = {};
-          let isNew = false;
-          
-          if (tableName === 'Transaksi') {
-              const id = document.getElementById('transaksiID').value;
-              dataObj = {
-                  ID: id || 't_' + Math.floor(Math.random()*10000),
-                  Tanggal: document.getElementById('transaksiTanggal').value,
-                  Jenis: document.getElementById('transaksiJenis').value,
-                  Kategori: document.getElementById('transaksiKategori').value,
-                  Keterangan: document.getElementById('transaksiKeterangan').value,
-                  Nominal: parseFloat(document.getElementById('transaksiNominal').value),
-                  DompetAsal: document.getElementById('transaksiDompet').value
-              };
-              isNew = !id;
-              
-              // Potong/Tambah saldo dompet
-              if(isNew) {
-                  const dompet = appData.Dompet.find(d => d.Nama === dataObj.DompetAsal);
-                  if(dompet) {
-                      if(dataObj.Jenis === 'Pemasukan') dompet.SaldoSaatIni += dataObj.Nominal;
-                      else dompet.SaldoSaatIni -= dataObj.Nominal;
-                  }
-              }
-
-          } else if (tableName === 'Transfer') {
-              const id = document.getElementById('tfID').value;
-              dataObj = {
-                  ID: id || 'tr_' + Math.floor(Math.random()*10000),
-                  Tanggal: document.getElementById('tfTanggal').value,
-                  DariDompet: document.getElementById('tfDari').value,
-                  KeDompet: document.getElementById('tfKe').value,
-                  Jumlah: parseFloat(document.getElementById('tfJumlah').value),
-                  Biaya: parseFloat(document.getElementById('tfBiaya').value),
-                  Catatan: document.getElementById('tfCatatan').value
-              };
-              isNew = !id;
-
-              if(isNew) {
-                  const dari = appData.Dompet.find(d => d.Nama === dataObj.DariDompet);
-                  const ke = appData.Dompet.find(d => d.Nama === dataObj.KeDompet);
-                  if(dari) dari.SaldoSaatIni -= dataObj.Jumlah;
-                  if(ke) ke.SaldoSaatIni += dataObj.Jumlah;
-              }
-
-          } else if (tableName === 'Investasi') {
-              const id = document.getElementById('invID').value;
-              const jenis = document.getElementById('invJenis').value;
-              const isEmas = jenis.includes('Emas');
-              
-              dataObj = {
-                  ID: id || 'inv_' + Math.floor(Math.random()*10000),
-                  NamaInvestasi: document.getElementById('invNama').value,
-                  JenisInvestasi: jenis,
-                  TotalModal: parseFloat(document.getElementById('invModal').value),
-                  NilaiSaatIni: parseFloat(document.getElementById('invModal').value),
-                  ReturnRate: 0
-              };
-              if(isEmas) {
-                  dataObj.BeratGram = parseFloat(document.getElementById('invGram').value);
-                  dataObj.HargaBeliGram = parseFloat(document.getElementById('invHargaGram').value);
-              }
-              isNew = !id;
-              
-              // Auto potong dompet jika baru dan dipilih
-              const sumberDana = document.getElementById('invSumberDana').value;
-              if(isNew && sumberDana) {
-                  const dompet = appData.Dompet.find(d => d.Nama === sumberDana);
-                  if(dompet) {
-                      dompet.SaldoSaatIni -= dataObj.TotalModal;
-                      // Buat log transaksi
-                      appData.Transaksi.push({
-                          ID: 't_inv_' + Math.floor(Math.random()*10000), Tanggal: new Date().toISOString().split('T')[0],
-                          Jenis: 'Pengeluaran', Kategori: 'Investasi', Keterangan: `Beli Aset: ${dataObj.NamaInvestasi}`,
-                          Nominal: dataObj.TotalModal, DompetAsal: sumberDana
-                      });
-                  }
-              }
-
-          } else if (tableName === 'Dompet') {
-              const id = document.getElementById('dompetID').value;
-              const kat = document.getElementById('dompetKategori').value;
-              isNew = !id;
-              
-              dataObj = {
-                  ID: id || 'd_' + Math.floor(Math.random()*1000),
-                  Nama: document.getElementById('dompetNama').value,
-                  Kategori: kat,
-              };
-
-              if (kat === 'Kartu Kredit') {
-                  const limit = parseFloat(document.getElementById('dompetLimitCC').value);
-                  const tagihan = parseFloat(document.getElementById('dompetTagihanCC').value) || 0;
-                  dataObj.isCC = true;
-                  dataObj.SaldoAwal = limit; // mockup limit
-                  dataObj.SaldoSaatIni = limit - tagihan;
-              } else {
-                  dataObj.isCC = false;
-                  if(isNew) {
-                      dataObj.SaldoAwal = parseFloat(document.getElementById('dompetSaldoAwal').value);
-                      dataObj.SaldoSaatIni = dataObj.SaldoAwal;
-                  } else {
-                      // Rekonsiliasi Saldo Manual!
-                      const saldoBaru = parseFloat(document.getElementById('dompetSaldoSaatIniEdit').value);
-                      const oldData = appData.Dompet.find(d => d.ID === id);
-                      const selisih = saldoBaru - oldData.SaldoSaatIni;
-                      
-                      if (selisih !== 0) {
-                          const jenisKoreksi = selisih > 0 ? 'Pemasukan' : 'Pengeluaran';
-                          appData.Transaksi.push({
-                              ID: 't_koreksi_' + Math.floor(Math.random()*10000), Tanggal: new Date().toISOString().split('T')[0],
-                              Jenis: jenisKoreksi, Kategori: 'Penyesuaian Saldo', Keterangan: 'Koreksi sistem manual',
-                              Nominal: Math.abs(selisih), DompetAsal: oldData.Nama
-                          });
-                      }
-                      dataObj.SaldoAwal = oldData.SaldoAwal;
-                      dataObj.SaldoSaatIni = saldoBaru;
-                  }
-              }
-
-          } else if (tableName === 'Kategori') {
-              const id = document.getElementById('kategoriID').value;
-              dataObj = {
-                  ID: id || 'k_' + Math.floor(Math.random()*1000),
-                  Jenis: document.getElementById('kategoriJenis').value,
-                  Nama: document.getElementById('kategoriNama').value
-              };
-              isNew = !id;
-          }
-
-          if (isNew) {
-              appData[tableName].push(dataObj);
-          } else {
-             const idx = appData[tableName].findIndex(x => x.ID === dataObj.ID);
-             if (idx > -1) {
-                 // For update, just override object properties
-                 appData[tableName][idx] = {...appData[tableName][idx], ...dataObj};
-             }
-          }
-
-          showAlert(`[Preview] Data disimpan!`, 'success'); 
-          cancelEdit(tableName); 
-          refreshUI(); 
-          document.getElementById('loading').style.display = 'none'; 
-      }, 800);
-    }
-
-    function deleteDataFront(tableName, id) {
-      if(confirm('Yakin ingin menghapus data ini?')) {
-        document.getElementById('loading').style.display = 'flex';
-        setTimeout(() => {
-          if (tableName === 'Transaksi' || tableName === 'Transfer') {
-             // Revert saldo
-             const tb = tableName === 'Transaksi' ? appData.Transaksi : appData.Transfer;
-             const item = tb.find(x => x.ID === id);
-             if(item) {
-                 if(tableName === 'Transaksi') {
-                     const dompet = appData.Dompet.find(d => d.Nama === item.DompetAsal);
-                     if(dompet) {
-                         if(item.Jenis === 'Pemasukan') dompet.SaldoSaatIni -= item.Nominal;
-                         else dompet.SaldoSaatIni += item.Nominal;
-                     }
-                 } else { // Transfer
-                     const dari = appData.Dompet.find(d => d.Nama === item.DariDompet);
-                     const ke = appData.Dompet.find(d => d.Nama === item.KeDompet);
-                     if(dari) dari.SaldoSaatIni += item.Jumlah;
-                     if(ke) ke.SaldoSaatIni -= item.Jumlah;
-                 }
-             }
-          }
-          
-          appData[tableName] = appData[tableName].filter(x => x.ID !== id);
-          showAlert(`Data berhasil dihapus!`, 'success');
-          refreshUI();
-          document.getElementById('loading').style.display = 'none';
-        }, 500);
-      }
-    }
-
-    function formatRupiah(angka) { return Number(angka).toLocaleString('id-ID'); }
-    
-    function showAlert(msg, type) {
-      const box = document.getElementById('alertBox');
-      box.className = `p-4 mb-4 text-sm rounded-lg fixed top-6 right-6 z-50 shadow-lg w-80 block fade-in ${type === 'success' ? 'bg-green-100 border-l-4 border-green-500 text-green-800' : 'bg-red-100 border-l-4 border-red-500 text-red-800'}`;
-      box.innerHTML = `<div class="font-bold mb-1">${type === 'success' ? 'Berhasil' : 'Error'}</div>${msg}`;
-      setTimeout(() => { box.classList.add('hidden'); }, 3000);
-    }
-  </script>
+    google.script.run
+      .withSuccessHandler(() => { saved++; saveNext(i+1); })
+      .withFailureHandler(() => saveNext(i+1))
+      .saveRecord('Transaksi', batch[i]);
+  };
+  saveNext(0);
+}
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function fmt(n) { return Number(n||0).toLocaleString('id-ID'); }
+
+function showLoading(msg) {
+  document.getElementById('loadingMsg').innerText = msg || 'Memuat...';
+  document.getElementById('loadingOverlay').style.display = 'flex';
+}
+
+function hideLoading() { document.getElementById('loadingOverlay').style.display = 'none'; }
+
+function showAlert(msg, type) {
+  const box = document.getElementById('alertBox');
+  const isSuccess = type === 'success';
+  box.className = `p-4 rounded-xl shadow-lg text-sm font-medium fade-in block ${isSuccess?'bg-green-100 border-l-4 border-green-500 text-green-800':'bg-red-100 border-l-4 border-red-500 text-red-800'}`;
+  box.innerHTML = `<div class="font-bold mb-0.5"><i class="fas fa-${isSuccess?'check-circle':'exclamation-circle'} mr-1"></i>${isSuccess?'Berhasil':'Error'}</div>${msg}`;
+  box.style.display = 'block';
+  clearTimeout(box._timer);
+  box._timer = setTimeout(() => { box.style.display = 'none'; }, 4000);
+}
+</script>
 </body>
 </html>
