@@ -156,8 +156,8 @@
 <div id="alertBox" class="p-4 rounded-xl shadow-lg text-sm font-medium"></div>
 
 <!-- SIDEBAR -->
-<aside class="w-60 bg-white shadow-lg flex-col justify-between hidden md:flex z-10 flex-shrink-0">
-  <div>
+<aside class="w-60 bg-white shadow-lg flex-col justify-between hidden md:flex z-10 flex-shrink-0 overflow-hidden">
+  <div class="flex-1 min-h-0 overflow-y-auto">
     <div class="p-5 border-b bg-gradient-to-r from-blue-700 to-blue-500">
       <h1 class="text-xl font-bold text-white"><i class="fas fa-wallet mr-2"></i>KeuanganKu</h1>
       <p id="userEmail" class="text-blue-100 text-xs mt-1 truncate">Memuat...</p>
@@ -186,7 +186,7 @@
     <button onclick="doLogout()" class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition">
       <i class="fas fa-sign-out-alt w-4"></i> Keluar
     </button>
-    <p class="text-xs text-gray-400 text-center">v3.0 &bull; Google Sheets DB</p>
+    <p class="text-xs text-gray-400 text-center">v3.41 &bull; Google Sheets DB</p>
   </div>
 </aside>
 
@@ -489,6 +489,8 @@
         <tbody id="riwayatTableBody" class="divide-y divide-gray-100"></tbody>
       </table>
     </div>
+    <!-- Pagination -->
+    <div id="riwayatPagination" class="mt-4 px-1"></div>
   </div>
 </div>
 
@@ -1891,6 +1893,10 @@ function compileRiwayat() {
   combined.sort((a,b)=>new Date(b.Tanggal)-new Date(a.Tanggal));
   filteredRiwayat=combined; return combined;
 }
+let _riwayatAll = [];   // hasil filter penuh
+let _riwayatPage = 1;   // halaman aktif
+const _riwayatPerPage = 25;
+
 function renderRiwayatPage() { compileRiwayat(); applyFilter(); }
 function applyFilter() {
   const start=document.getElementById('filterStartDate').value;
@@ -1916,18 +1922,36 @@ function applyFilter() {
     if (sort==='nomDesc') return (parseFloat(b.Nominal)||0)-(parseFloat(a.Nominal)||0);
     if (sort==='nomAsc') return (parseFloat(a.Nominal)||0)-(parseFloat(b.Nominal)||0);
   });
-  renderRiwayatTable(res);
+  _riwayatAll = res;
+  _riwayatPage = 1;
+  renderRiwayatTable();
 }
 function resetFilter() {
   ['filterStartDate','filterEndDate','filterSearch'].forEach(id=>document.getElementById(id).value='');
   ['filterDompet','filterJenis'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('filterSort').value='dateDesc'; applyFilter();
 }
-function renderRiwayatTable(data) {
+function goRiwayatPage(p) {
+  const total = Math.ceil(_riwayatAll.length / _riwayatPerPage);
+  _riwayatPage = Math.max(1, Math.min(p, total));
+  renderRiwayatTable();
+  document.getElementById('riwayatPage')?.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function renderRiwayatTable() {
+  const data = _riwayatAll;
   const tbody=document.getElementById('riwayatTableBody');
   tbody.innerHTML='';
-  if (!data.length) { tbody.innerHTML='<tr><td colspan="7" class="py-6 text-center text-gray-400 text-sm">Tidak ada data yang sesuai filter.</td></tr>'; return; }
-  data.forEach(t => {
+  if (!data.length) {
+    tbody.innerHTML='<tr><td colspan="7" class="py-6 text-center text-gray-400 text-sm">Tidak ada data yang sesuai filter.</td></tr>';
+    document.getElementById('riwayatPagination').innerHTML='';
+    return;
+  }
+
+  const total = Math.ceil(data.length / _riwayatPerPage);
+  const start = (_riwayatPage-1)*_riwayatPerPage;
+  const pageData = data.slice(start, start+_riwayatPerPage);
+
+  pageData.forEach(t => {
     const color=t.Jenis==='Pemasukan'?'text-green-600':(t.Jenis==='Transfer'?'text-blue-600':'text-red-600');
     const badge=t.Jenis==='Pemasukan'?'bg-green-100 text-green-700':(t.Jenis==='Transfer'?'bg-blue-100 text-blue-700':'bg-red-100 text-red-700');
     const kategoriCell = t.isTransfer
@@ -1948,6 +1972,33 @@ function renderRiwayatTable(data) {
         <button onclick="deleteData('${t.isTransfer?'Transfer':'Transaksi'}','${t.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
       </td></tr>`;
   });
+
+  // Render pagination bar
+  const pEl = document.getElementById('riwayatPagination');
+  if (total <= 1) { pEl.innerHTML=''; return; }
+
+  const startIdx = start+1, endIdx = Math.min(start+_riwayatPerPage, data.length);
+  let pages = '';
+  // prev
+  pages += `<button onclick="goRiwayatPage(${_riwayatPage-1})" ${_riwayatPage===1?'disabled':''} class="px-3 py-1.5 rounded-lg border text-xs font-medium ${_riwayatPage===1?'text-gray-300 cursor-not-allowed':'text-gray-600 hover:bg-gray-100'}"><i class="fas fa-chevron-left"></i></button>`;
+  // page numbers — show up to 5 around current
+  const pageNums = [];
+  for (let i=1; i<=total; i++) {
+    if (i===1 || i===total || (i>=_riwayatPage-2 && i<=_riwayatPage+2)) pageNums.push(i);
+    else if (pageNums[pageNums.length-1] !== '...') pageNums.push('...');
+  }
+  pageNums.forEach(p => {
+    if (p==='...') pages += `<span class="px-2 text-gray-400 text-xs self-center">…</span>`;
+    else pages += `<button onclick="goRiwayatPage(${p})" class="px-3 py-1.5 rounded-lg border text-xs font-medium ${p===_riwayatPage?'bg-blue-600 text-white border-blue-600':'text-gray-600 hover:bg-gray-100'}">${p}</button>`;
+  });
+  // next
+  pages += `<button onclick="goRiwayatPage(${_riwayatPage+1})" ${_riwayatPage===total?'disabled':''} class="px-3 py-1.5 rounded-lg border text-xs font-medium ${_riwayatPage===total?'text-gray-300 cursor-not-allowed':'text-gray-600 hover:bg-gray-100'}"><i class="fas fa-chevron-right"></i></button>`;
+
+  pEl.innerHTML = `
+    <div class="flex items-center justify-between px-1">
+      <p class="text-xs text-gray-500">Menampilkan ${startIdx}–${endIdx} dari <b>${data.length}</b> transaksi</p>
+      <div class="flex items-center gap-1">${pages}</div>
+    </div>`;
 }
 function editTransaksi(id) {
   const data=appData.Transaksi.find(t=>t.ID===id); if (!data) return;
