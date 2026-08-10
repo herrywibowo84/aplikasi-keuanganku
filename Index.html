@@ -274,7 +274,7 @@
     <button onclick="doLogout()" class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition">
       <i class="fas fa-sign-out-alt w-4"></i> Keluar
     </button>
-    <p class="text-xs text-gray-400 text-center">v3.41 &bull; Google Sheets DB</p>
+    <p id="appVersionLabel" class="text-xs text-gray-400 text-center">v3.44 &bull; Google Sheets DB</p>
   </div>
 </aside>
 
@@ -1508,6 +1508,11 @@ function loadAllData(callback) {
   google.script.run
     .withSuccessHandler(data => {
       appData = data;
+      // Update label versi dari server (single source of truth)
+      if (data._version) {
+        const vEl = document.getElementById('appVersionLabel');
+        if (vEl) vEl.textContent = 'v' + data._version + ' • Google Sheets DB';
+      }
       refreshUI();
       hideLoading();
 
