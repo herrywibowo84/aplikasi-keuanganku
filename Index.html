@@ -3160,6 +3160,102 @@ function exportLaporanPDF() {
   const netColor = net >= 0 ? '#16a34a' : '#dc2626';
   const srColor = savingRate >= 20 ? '#16a34a' : savingRate > 0 ? '#d97706' : '#dc2626';
 
+  // ── Bangun insight analisis ──────────────────────────────
+  const insights = [];
+
+  // 1. Kesehatan tabungan
+  if (savingRate >= 20)
+    insights.push({ level:'good', icon:'✅', title:'Tingkat Tabungan Sehat',
+      body:`Saving rate Anda <strong>${savingRate}%</strong> — di atas ambang ideal 20%. Pertahankan kebiasaan ini dan pertimbangkan untuk menginvestasikan surplus.` });
+  else if (savingRate > 0)
+    insights.push({ level:'warn', icon:'⚠️', title:'Tingkat Tabungan Perlu Ditingkatkan',
+      body:`Saving rate Anda <strong>${savingRate}%</strong> — di bawah rekomendasi 20%. Coba kurangi pengeluaran tidak esensial untuk menambah tabungan.` });
+  else if (net < 0)
+    insights.push({ level:'bad', icon:'🔴', title:'Pengeluaran Melebihi Pemasukan',
+      body:`Defisit sebesar <strong>Rp ${Math.abs(net).toLocaleString('id-ID')}</strong>. Tinjau ulang pos pengeluaran terbesar dan cari cara menambah pemasukan.` });
+
+  // 2. Kategori pengeluaran terbesar
+  const topCat = expLabels[0];
+  if (topCat && totalKeluar > 0) {
+    const pct = Math.round((topCat[1] / totalKeluar) * 100);
+    const warn = pct > 40;
+    insights.push({ level: warn ? 'warn' : 'info', icon: warn ? '⚠️' : '📊',
+      title: `Pengeluaran Terbesar: ${topCat[0]}`,
+      body: `Kategori <strong>"${topCat[0]}"</strong> menyumbang <strong>${pct}%</strong> dari total pengeluaran (Rp ${topCat[1].toLocaleString('id-ID')}).${warn ? ' Pertimbangkan untuk membatasi pengeluaran ini.' : ''}` });
+  }
+
+  // 3. Anggaran vs realisasi
+  const violations = angBulan.filter(a => (catKeluar[a.Kategori]||0) > parseFloat(a.Nominal));
+  if (violations.length) {
+    violations.forEach(a => {
+      const over = (catKeluar[a.Kategori]||0) - parseFloat(a.Nominal);
+      insights.push({ level:'bad', icon:'❌', title:`Anggaran "${a.Kategori}" Terlampaui`,
+        body:`Melebihi batas sebesar <strong>Rp ${over.toLocaleString('id-ID')}</strong>. Anggaran: Rp ${parseFloat(a.Nominal).toLocaleString('id-ID')} — Realisasi: Rp ${(catKeluar[a.Kategori]||0).toLocaleString('id-ID')}.` });
+    });
+  } else if (angBulan.length) {
+    insights.push({ level:'good', icon:'✅', title:'Semua Anggaran Terkendali',
+      body:'Tidak ada kategori yang melampaui batas anggaran di periode ini. Disiplin anggaran yang baik!' });
+  }
+
+  // 4. Rasio pengeluaran
+  if (totalMasuk > 0) {
+    const ratio = Math.round((totalKeluar / totalMasuk) * 100);
+    if (ratio > 90)
+      insights.push({ level:'bad', icon:'🚨', title:'Rasio Pengeluaran Sangat Tinggi',
+        body:`<strong>${ratio}%</strong> dari pemasukan digunakan untuk pengeluaran — hanya tersisa ${100-ratio}%. Evaluasi pos-pos pengeluaran besar segera.` });
+    else if (ratio >= 70)
+      insights.push({ level:'warn', icon:'⚠️', title:'Rasio Pengeluaran Cukup Tinggi',
+        body:`<strong>${ratio}%</strong> dari pemasukan digunakan untuk pengeluaran. Masih aman, namun ada ruang untuk meningkatkan tabungan.` });
+  }
+
+  // 5. Rata-rata pengeluaran harian
+  const diffDays = Math.max(1, Math.round((new Date(range.end) - new Date(range.start)) / 86400000) + 1);
+  const avgDailyOut = Math.round(totalKeluar / diffDays);
+  if (avgDailyOut > 0)
+    insights.push({ level:'info', icon:'📅', title:'Rata-rata Pengeluaran Harian',
+      body:`Selama periode ini, rata-rata pengeluaran harian Anda adalah <strong>Rp ${avgDailyOut.toLocaleString('id-ID')}</strong> (${diffDays} hari, total Rp ${totalKeluar.toLocaleString('id-ID')}).` });
+
+  // 6. Transaksi terbesar
+  const biggestTrx = [...trx].filter(t => t.Jenis==='Pengeluaran').sort((a,b)=>(parseFloat(b.Nominal)||0)-(parseFloat(a.Nominal)||0))[0];
+  if (biggestTrx)
+    insights.push({ level:'info', icon:'💸', title:'Pengeluaran Terbesar',
+      body:`Transaksi pengeluaran terbesar: <strong>${biggestTrx.Kategori||biggestTrx.Keterangan||'—'}</strong> pada ${biggestTrx.Tanggal} sebesar <strong>Rp ${parseFloat(biggestTrx.Nominal).toLocaleString('id-ID')}</strong> (${biggestTrx.DompetAsal||'—'}).` });
+
+  // 7. Tren bulan-ke-bulan (jika ada ≥2 bulan)
+  if (months.length >= 2) {
+    const lastM = months[months.length-1];
+    const prevM = months[months.length-2];
+    const diff = byMonth[lastM].out - byMonth[prevM].out;
+    const diffPct = byMonth[prevM].out > 0 ? Math.round((diff/byMonth[prevM].out)*100) : 0;
+    if (Math.abs(diffPct) >= 5) {
+      const naik = diff > 0;
+      insights.push({ level: naik ? 'warn' : 'good', icon: naik ? '📈' : '📉',
+        title: `Tren Pengeluaran ${naik ? 'Naik' : 'Turun'} ${Math.abs(diffPct)}%`,
+        body: `Pengeluaran ${lastM} (Rp ${byMonth[lastM].out.toLocaleString('id-ID')}) ${naik?'lebih tinggi':'lebih rendah'} ${Math.abs(diffPct)}% dibanding ${prevM} (Rp ${byMonth[prevM].out.toLocaleString('id-ID')}).` });
+    }
+  }
+
+  if (!insights.length)
+    insights.push({ level:'info', icon:'📋', title:'Belum Ada Data Cukup',
+      body:'Tambahkan lebih banyak transaksi pada periode ini untuk mendapatkan analisis keuangan yang lebih akurat.' });
+
+  // Render insight ke HTML
+  const levelStyle = {
+    good: 'background:#f0fdf4;border-color:#86efac;',
+    warn: 'background:#fffbeb;border-color:#fde68a;',
+    bad:  'background:#fef2f2;border-color:#fca5a5;',
+    info: 'background:#eff6ff;border-color:#bfdbfe;',
+  };
+  const levelTitleColor = { good:'#15803d', warn:'#b45309', bad:'#b91c1c', info:'#1d4ed8' };
+  const insightRows = insights.map(i => `
+    <div style="display:flex;gap:12px;padding:12px 14px;border-radius:8px;border:1.5px solid;margin-bottom:8px;${levelStyle[i.level]}">
+      <span style="font-size:18px;flex-shrink:0;line-height:1.4">${i.icon}</span>
+      <div>
+        <p style="font-weight:700;font-size:11px;color:${levelTitleColor[i.level]};margin-bottom:3px">${i.title}</p>
+        <p style="font-size:11px;color:#374151;line-height:1.5">${i.body}</p>
+      </div>
+    </div>`).join('');
+
   const html = `<!DOCTYPE html>
 <html lang="id">
 <head>
@@ -3269,6 +3365,12 @@ function exportLaporanPDF() {
       <label>Tingkat Tabungan</label>
       <div class="val">${savingRate}%</div>
     </div>
+  </div>
+
+  <!-- ANALISIS KEUANGAN -->
+  <div class="section no-break">
+    <div class="section-title">Analisis & Rekomendasi Keuangan</div>
+    ${insightRows}
   </div>
 
   <!-- CASHFLOW PER BULAN -->
