@@ -38,15 +38,24 @@ function getUserProfile() {
 
 // ==================== DB SETUP ====================
 
+// Ambil email user aktif (sebagai identifier unik per user)
+function getUserEmail_() {
+  try {
+    const email = Session.getActiveUser().getEmail();
+    return email || 'anonymous';
+  } catch(e) { return 'anonymous'; }
+}
+
 function getDB() {
-  const dbId = PropertiesService.getScriptProperties().getProperty('DB_ID');
+  // getUserProperties() → terisolasi per-user, tidak bocor ke user lain
+  const dbId = PropertiesService.getUserProperties().getProperty('DB_ID');
   if (!dbId) return null;
   try { return SpreadsheetApp.openById(dbId); }
   catch(e) { return null; }
 }
 
 function setupDB() {
-  const props = PropertiesService.getScriptProperties();
+  const props = PropertiesService.getUserProperties(); // per-user isolation
   let dbId = props.getProperty('DB_ID');
   let ss;
 
@@ -56,7 +65,10 @@ function setupDB() {
   }
 
   if (!ss) {
-    ss = SpreadsheetApp.create(APP_NAME);
+    // Beri nama spreadsheet dengan email user agar mudah dikelola di Drive owner
+    const userEmail = getUserEmail_();
+    const sheetName = APP_NAME + (userEmail !== 'anonymous' ? '_' + userEmail.split('@')[0] : '');
+    ss = SpreadsheetApp.create(sheetName);
     dbId = ss.getId();
     props.setProperty('DB_ID', dbId);
   }
@@ -109,7 +121,7 @@ function setupDB() {
 }
 
 function resetAndSetupDB() {
-  const props = PropertiesService.getScriptProperties();
+  const props = PropertiesService.getUserProperties(); // per-user isolation
   const dbId = props.getProperty('DB_ID');
 
   if (dbId) {

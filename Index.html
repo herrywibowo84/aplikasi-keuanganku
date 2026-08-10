@@ -155,6 +155,94 @@
 </div>
 <div id="alertBox" class="p-4 rounded-xl shadow-lg text-sm font-medium"></div>
 
+<!-- ONBOARDING MODAL (muncul untuk user baru) -->
+<div id="onboardingModal" class="hidden fixed inset-0 z-50 flex items-center justify-center px-4" style="background:rgba(0,0,0,0.6)">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden" style="background:var(--bg-card)">
+    <!-- Progress bar -->
+    <div class="h-1 bg-gray-200">
+      <div id="onboardProgress" class="h-1 bg-blue-500 transition-all duration-500" style="width:33%"></div>
+    </div>
+    <!-- Steps -->
+    <div id="onboardStep1" class="p-8">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-wallet text-3xl text-blue-600"></i>
+        </div>
+        <h2 class="text-xl font-bold" style="color:var(--text-main)">Selamat Datang di KeuanganKu! 🎉</h2>
+        <p class="text-sm mt-2" style="color:var(--text-sec)">Aplikasi keuangan pribadi berbasis Google Sheets.<br>Data Anda aman di akun Google Anda sendiri.</p>
+      </div>
+      <div class="space-y-3 mb-8">
+        <div class="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
+          <i class="fas fa-edit text-blue-500 w-5 text-center"></i>
+          <span class="text-sm" style="color:var(--text-main)">Catat pemasukan & pengeluaran harian</span>
+        </div>
+        <div class="flex items-center gap-3 p-3 bg-green-50 rounded-xl">
+          <i class="fas fa-chart-pie text-green-500 w-5 text-center"></i>
+          <span class="text-sm" style="color:var(--text-main)">Lihat laporan & grafik keuangan bulanan</span>
+        </div>
+        <div class="flex items-center gap-3 p-3 bg-purple-50 rounded-xl">
+          <i class="fas fa-bullseye text-purple-500 w-5 text-center"></i>
+          <span class="text-sm" style="color:var(--text-main)">Kelola anggaran & pantau hutang piutang</span>
+        </div>
+      </div>
+      <button onclick="onboardNext(2)" class="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition">Mulai Setup <i class="fas fa-arrow-right ml-1"></i></button>
+    </div>
+
+    <div id="onboardStep2" class="p-8 hidden">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-piggy-bank text-3xl text-green-600"></i>
+        </div>
+        <h2 class="text-xl font-bold" style="color:var(--text-main)">Tambah Dompet Pertama Anda</h2>
+        <p class="text-sm mt-2" style="color:var(--text-sec)">Dompet = tempat penyimpanan uang Anda (rekening, e-wallet, tunai, dll)</p>
+      </div>
+      <div class="space-y-3 mb-6">
+        <div>
+          <label class="block text-xs font-semibold mb-1" style="color:var(--text-sec)">Nama Dompet</label>
+          <input id="obDompetNama" type="text" placeholder="cth: BCA Tabungan" class="w-full border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-300 focus:outline-none" style="background:var(--bg-input);color:var(--text-main);border-color:var(--border-in)">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1" style="color:var(--text-sec)">Jenis</label>
+          <select id="obDompetJenis" class="w-full border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-300 focus:outline-none" style="background:var(--bg-input);color:var(--text-main);border-color:var(--border-in)">
+            <option value="Bank">Bank</option>
+            <option value="E-Wallet">E-Wallet (GoPay, OVO, dll)</option>
+            <option value="Tunai">Tunai / Cash</option>
+            <option value="Kartu Kredit">Kartu Kredit</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1" style="color:var(--text-sec)">Saldo Saat Ini</label>
+          <input id="obDompetSaldo" type="number" placeholder="0" min="0" class="w-full border rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-300 focus:outline-none" style="background:var(--bg-input);color:var(--text-main);border-color:var(--border-in)">
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <button onclick="onboardNext(1)" class="flex-1 py-2.5 border rounded-xl text-sm text-gray-500 hover:bg-gray-50">← Kembali</button>
+        <button onclick="onboardSaveDompet()" class="flex-2 flex-grow py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition text-sm">Simpan & Lanjut <i class="fas fa-arrow-right ml-1"></i></button>
+      </div>
+      <button onclick="onboardSkip()" class="w-full mt-2 py-2 text-xs text-gray-400 hover:text-gray-600">Lewati, saya akan isi nanti</button>
+    </div>
+
+    <div id="onboardStep3" class="p-8 hidden">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-check-circle text-3xl text-yellow-500"></i>
+        </div>
+        <h2 class="text-xl font-bold" style="color:var(--text-main)">Siap! Anda Bisa Mulai 🚀</h2>
+        <p class="text-sm mt-2" style="color:var(--text-sec)">Google Sheet database Anda sudah dibuat otomatis.<br>Semua data hanya bisa diakses oleh Anda.</p>
+      </div>
+      <div class="bg-blue-50 rounded-xl p-4 mb-6 text-sm space-y-2">
+        <p class="font-semibold text-blue-800">💡 Tips cepat:</p>
+        <p class="text-blue-700">• Tap <b>Catat Transaksi</b> untuk mulai mencatat</p>
+        <p class="text-blue-700">• Cek <b>Dashboard</b> untuk ringkasan keuangan</p>
+        <p class="text-blue-700">• Gunakan <b>Anggaran</b> agar pengeluaran terkontrol</p>
+      </div>
+      <button onclick="onboardFinish()" class="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold rounded-xl hover:opacity-90 transition">
+        <i class="fas fa-rocket mr-2"></i>Masuk ke Dashboard
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- SIDEBAR -->
 <aside class="w-60 bg-white shadow-lg flex-col justify-between hidden md:flex z-10 flex-shrink-0 overflow-hidden">
   <div class="flex-1 min-h-0 overflow-y-auto">
@@ -1421,9 +1509,19 @@ function loadAllData(callback) {
     .withSuccessHandler(data => {
       appData = data;
       refreshUI();
+      hideLoading();
+
+      // Deteksi user baru: belum ada dompet sama sekali
+      const isNewUser = !localStorage.getItem('onboarded') &&
+                        (!data.Dompet || data.Dompet.length === 0) &&
+                        (!data.Transaksi || data.Transaksi.length === 0);
+      if (isNewUser && !callback) {
+        showOnboarding();
+        return;
+      }
+
       if (callback) callback();
       else renderDashboard();
-      hideLoading();
     })
     .withFailureHandler(err => { showAlert('Gagal memuat data: '+(err.message||err),'error'); hideLoading(); })
     .getAppData();
@@ -2908,6 +3006,48 @@ function triggerPWAInstall() {
   } else {
     showAlert('Instalasi otomatis tidak didukung di browser ini. Silakan tambahkan ke Home Screen secara manual dari menu browser.', 'info');
   }
+}
+
+// ============================================================
+// ONBOARDING
+// ============================================================
+function showOnboarding() {
+  document.getElementById('onboardingModal').classList.remove('hidden');
+  onboardNext(1);
+}
+
+function onboardNext(step) {
+  [1,2,3].forEach(s => document.getElementById('onboardStep'+s).classList.add('hidden'));
+  document.getElementById('onboardStep'+step).classList.remove('hidden');
+  const pct = { 1:33, 2:66, 3:100 };
+  document.getElementById('onboardProgress').style.width = pct[step] + '%';
+}
+
+function onboardSaveDompet() {
+  const nama = document.getElementById('obDompetNama').value.trim();
+  const jenis = document.getElementById('obDompetJenis').value;
+  const saldo = parseFloat(document.getElementById('obDompetSaldo').value) || 0;
+  if (!nama) { showAlert('Nama dompet tidak boleh kosong', 'error'); return; }
+
+  const obj = { ID:'', Nama:nama, Kategori:jenis, SaldoAwal:saldo, SaldoSaatIni:saldo, Limit:'', IsCC: jenis==='Kartu Kredit' };
+  showLoading('Menyimpan dompet...');
+  google.script.run
+    .withSuccessHandler(() => {
+      hideLoading();
+      loadAllData(() => { onboardNext(3); });
+    })
+    .withFailureHandler(e => { hideLoading(); showAlert('Gagal: '+e.message,'error'); })
+    .saveRecord('Dompet', obj);
+}
+
+function onboardSkip() {
+  onboardNext(3);
+}
+
+function onboardFinish() {
+  localStorage.setItem('onboarded', '1');
+  document.getElementById('onboardingModal').classList.add('hidden');
+  renderDashboard();
 }
 
 // ============================================================
