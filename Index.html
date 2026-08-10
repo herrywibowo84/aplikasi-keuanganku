@@ -161,6 +161,47 @@
   <i class="fas fa-circle-notch fa-spin text-5xl text-blue-600 mb-3"></i>
   <p id="loadingMsg" class="text-gray-600 font-medium">Memuat data...</p>
 </div>
+<!-- UPGRADE MODAL -->
+<div id="upgradeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center px-4" style="background:rgba(0,0,0,0.6)" onclick="if(event.target===this)closeUpgradeModal()">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden" style="background:var(--bg-card)">
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white text-center">
+      <div class="text-4xl mb-2">⚡</div>
+      <h2 class="text-xl font-bold">Upgrade ke Pro</h2>
+      <p class="text-blue-100 text-sm mt-1">Buka semua fitur tanpa batas</p>
+    </div>
+    <div class="p-6">
+      <div id="upgradeCurrentTier" class="mb-4 p-3 bg-gray-50 rounded-xl text-sm text-center text-gray-500" style="background:var(--bg-input)"></div>
+      <!-- Fitur Pro -->
+      <div class="space-y-2 mb-6">
+        <div class="flex items-center gap-2 text-sm"><span class="text-green-500 font-bold">✓</span><span style="color:var(--text-main)">Transaksi & dompet <b>tidak terbatas</b></span></div>
+        <div class="flex items-center gap-2 text-sm"><span class="text-green-500 font-bold">✓</span><span style="color:var(--text-main)">Export laporan <b>PDF & CSV</b></span></div>
+        <div class="flex items-center gap-2 text-sm"><span class="text-green-500 font-bold">✓</span><span style="color:var(--text-main)">Transaksi Berulang otomatis</span></div>
+        <div class="flex items-center gap-2 text-sm"><span class="text-green-500 font-bold">✓</span><span style="color:var(--text-main)">Portofolio Investasi</span></div>
+        <div class="flex items-center gap-2 text-sm"><span class="text-green-500 font-bold">✓</span><span style="color:var(--text-main)">Hutang & Piutang</span></div>
+        <div class="flex items-center gap-2 text-sm"><span class="text-green-500 font-bold">✓</span><span style="color:var(--text-main)">Analisis keuangan lengkap</span></div>
+      </div>
+      <!-- Harga -->
+      <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="border-2 border-blue-500 rounded-xl p-3 text-center cursor-pointer hover:bg-blue-50 transition" onclick="selectPlan('pro-monthly')">
+          <p class="text-xs text-gray-500 mb-1">Bulanan</p>
+          <p class="text-xl font-black text-blue-600">29rb</p>
+          <p class="text-xs text-gray-400">/bulan</p>
+        </div>
+        <div class="border-2 border-indigo-500 rounded-xl p-3 text-center cursor-pointer hover:bg-indigo-50 transition relative" onclick="selectPlan('lifetime')">
+          <span class="absolute -top-2 left-1/2 -translate-x-1/2 bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full">Terbaik</span>
+          <p class="text-xs text-gray-500 mb-1">Seumur Hidup</p>
+          <p class="text-xl font-black text-indigo-600">249rb</p>
+          <p class="text-xs text-gray-400">bayar sekali</p>
+        </div>
+      </div>
+      <a id="upgradeWABtn" href="#" target="_blank" class="block w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl text-center text-sm hover:opacity-90 transition">
+        <i class="fab fa-whatsapp mr-2"></i>Hubungi via WhatsApp
+      </a>
+      <button onclick="closeUpgradeModal()" class="w-full mt-2 py-2 text-xs text-gray-400 hover:text-gray-600">Tutup</button>
+    </div>
+  </div>
+</div>
+
 <!-- DEMO MODE BANNER -->
 <div id="demoBanner" class="hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-2 text-white text-sm font-semibold" style="background:linear-gradient(90deg,#f59e0b,#f97316);">
   <span><i class="fas fa-eye mr-2"></i>Mode Demo — Data tidak tersimpan. Fitur tulis dinonaktifkan.</span>
@@ -273,9 +314,9 @@
       <a href="#" onclick="switchPage('dompet')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-wallet w-5 mr-2"></i><span data-i18n="nav_dompet">Dompet</span></a>
       <a href="#" onclick="switchPage('anggaran')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-bullseye w-5 mr-2"></i><span data-i18n="nav_anggaran">Anggaran</span></a>
       <a href="#" onclick="switchPage('hutang')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-handshake w-5 mr-2"></i><span data-i18n="nav_hutang">Hutang & Piutang</span></a>
-      <a href="#" onclick="switchPage('investasi')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-chart-line w-5 mr-2"></i><span data-i18n="nav_investasi">Investasi</span></a>
+      <a id="investasiNav" href="#" onclick="switchPage('investasi')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition flex items-center"><i class="fas fa-chart-line w-5 mr-2"></i><span data-i18n="nav_investasi">Investasi</span></a>
       <a href="#" onclick="switchPage('laporan')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-file-invoice-dollar w-5 mr-2"></i><span data-i18n="nav_laporan">Laporan</span></a>
-      <a href="#" onclick="switchPage('recurring')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-redo w-5 mr-2"></i><span>Transaksi Berulang</span></a>
+      <a id="recurringNav" href="#" onclick="switchPage('recurring')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition flex items-center"><i class="fas fa-redo w-5 mr-2"></i><span>Transaksi Berulang</span></a>
       <a href="#" onclick="switchPage('pengaturan')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-cog w-5 mr-2"></i><span data-i18n="nav_pengaturan">Pengaturan</span></a>
     </nav>
     <!-- Search Global -->
@@ -287,10 +328,21 @@
     </div>
   </div>
   <div class="p-4 border-t space-y-2">
+    <!-- Tier badge -->
+    <div id="licenseBadge" onclick="showUpgradeModal()" class="cursor-pointer w-full flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 hover:bg-blue-50 transition" style="background:var(--bg-input)">
+      <div class="flex items-center gap-2">
+        <span id="licenseIcon" class="text-sm">🆓</span>
+        <div>
+          <p id="licenseTierLabel" class="text-xs font-bold text-gray-700" style="color:var(--text-main)">Paket Gratis</p>
+          <p id="licenseSubLabel" class="text-xs text-gray-400">Klik untuk upgrade</p>
+        </div>
+      </div>
+      <i class="fas fa-chevron-right text-xs text-gray-400"></i>
+    </div>
     <button onclick="doLogout()" class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition">
       <i class="fas fa-sign-out-alt w-4"></i> Keluar
     </button>
-    <p id="appVersionLabel" class="text-xs text-gray-400 text-center">v3.44 &bull; Google Sheets DB</p>
+    <p id="appVersionLabel" class="text-xs text-gray-400 text-center">v3.48 &bull; Google Sheets DB</p>
   </div>
 </aside>
 
@@ -1371,6 +1423,7 @@ let selectedDompet = null;
 let dbUrl = null;
 let deferredPrompt = null;
 let isDemoMode = false;
+let userLicense = { tier: 'free', expired: false, daysLeft: null };
 
 // ============================================================
 // DATA DEMO — data contoh realistis untuk mode demo
@@ -1615,11 +1668,11 @@ function loadAllData(callback) {
   google.script.run
     .withSuccessHandler(data => {
       appData = data;
-      // Update label versi dari server (single source of truth)
       if (data._version) {
         const vEl = document.getElementById('appVersionLabel');
         if (vEl) vEl.textContent = 'v' + data._version + ' • Google Sheets DB';
       }
+      if (data._license) applyLicense(data._license);
       refreshUI();
       hideLoading();
 
@@ -1774,6 +1827,7 @@ function setCatatTab(tab) {
 function submitTransaksi(e) {
   e.preventDefault();
   if (demoGuard()) return;
+  if (requireTrxQuota()) return;
   const id = document.getElementById('transaksiID').value;
   const obj = {
     ID:id||'',
@@ -1821,6 +1875,7 @@ function submitQuickTransfer(e) {
 function submitDompet(e) {
   e.preventDefault();
   if (demoGuard()) return;
+  if (requireDompetQuota()) return;
   const id = document.getElementById('dompetID').value;
   const kat = document.getElementById('dompetKategori').value;
   const isCC = kat==='Kartu Kredit';
@@ -1880,6 +1935,7 @@ function submitHP(e) {
 function submitInvestasi(e) {
   e.preventDefault();
   if (demoGuard()) return;
+  if (requirePro('investasi')) return;
   const id = document.getElementById('invID').value;
   const jenis = document.getElementById('invJenis').value;
   const isEmas = jenis.includes('Emas');
@@ -3075,6 +3131,8 @@ function exportLaporanCSV() {
 }
 
 function exportLaporanPDF() {
+  if (demoGuard()) return;
+  if (requirePro('pdf')) return;
   const range = getLaporanRange();
   const trx = appData.Transaksi.filter(t => t.Tanggal >= range.start && t.Tanggal <= range.end);
   const transfers = (appData.Transfer||[]).filter(t => t.Tanggal >= range.start && t.Tanggal <= range.end);
@@ -3513,6 +3571,119 @@ function triggerPWAInstall() {
 }
 
 // ============================================================
+// SISTEM LISENSI
+// ============================================================
+const LICENSE_LIMITS = {
+  free:     { maxTrx: 50, maxDompet: 2, pdf: false, recurring: false, investasi: false },
+  pro:      { maxTrx: Infinity, maxDompet: Infinity, pdf: true, recurring: true, investasi: true },
+  lifetime: { maxTrx: Infinity, maxDompet: Infinity, pdf: true, recurring: true, investasi: true },
+};
+const WHATSAPP_ADMIN = '6281234567890'; // ← ganti dengan nomor WA Anda
+
+function applyLicense(lic) {
+  if (!lic) return;
+  userLicense = lic;
+  const isPro = lic.tier === 'pro' || lic.tier === 'lifetime';
+  const badge   = document.getElementById('licenseBadge');
+  const icon    = document.getElementById('licenseIcon');
+  const tierLbl = document.getElementById('licenseTierLabel');
+  const subLbl  = document.getElementById('licenseSubLabel');
+  if (!badge) return;
+
+  if (lic.tier === 'lifetime') {
+    icon.textContent    = '♾️';
+    tierLbl.textContent = 'Paket Lifetime';
+    tierLbl.style.color = '#6366f1';
+    subLbl.textContent  = 'Semua fitur aktif';
+    badge.onclick       = null;
+    badge.style.cursor  = 'default';
+  } else if (lic.tier === 'pro') {
+    icon.textContent    = '⚡';
+    tierLbl.textContent = 'Paket Pro';
+    tierLbl.style.color = '#2563eb';
+    subLbl.textContent  = lic.daysLeft != null ? `${lic.daysLeft} hari tersisa` : 'Aktif';
+  } else {
+    icon.textContent    = '🆓';
+    tierLbl.textContent = 'Paket Gratis';
+    tierLbl.style.color = '';
+    subLbl.textContent  = 'Klik untuk upgrade ke Pro';
+  }
+
+  // Tampilkan/sembunyikan nav item yang dibatasi
+  ['investasiNav','recurringNav'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.opacity = isPro ? '' : '0.45';
+      const lock = el.querySelector('.lock-icon');
+      if (!lock && !isPro) {
+        const i = document.createElement('i');
+        i.className = 'fas fa-lock text-xs ml-auto text-gray-400 lock-icon';
+        el.appendChild(i);
+      }
+    }
+  });
+}
+
+// Tampilkan modal upgrade — bisa dipanggil dengan pesan konteks
+function showUpgradeModal(featureName) {
+  if (isDemoMode) { showAlert('Login untuk upgrade ke Pro', 'error'); return; }
+  const tierEl = document.getElementById('upgradeCurrentTier');
+  if (tierEl) {
+    tierEl.textContent = featureName
+      ? `Fitur "${featureName}" memerlukan Paket Pro.`
+      : `Anda saat ini menggunakan Paket Gratis (${(appData.Transaksi||[]).length}/${LICENSE_LIMITS.free.maxTrx} transaksi).`;
+  }
+  // Tombol WA default ke bulanan
+  selectPlan('pro-monthly');
+  document.getElementById('upgradeModal').classList.remove('hidden');
+}
+
+function closeUpgradeModal() {
+  document.getElementById('upgradeModal').classList.add('hidden');
+}
+
+function selectPlan(plan) {
+  const email   = document.getElementById('userEmail')?.textContent || '';
+  const isPlan  = plan === 'lifetime';
+  const prodStr = isPlan ? 'Lifetime (Rp249.000)' : 'Pro Bulanan (Rp29.000/bln)';
+  const msg     = encodeURIComponent(`Halo, saya ingin upgrade KeuanganKu ke *${prodStr}*.\nEmail saya: ${email}`);
+  const btn     = document.getElementById('upgradeWABtn');
+  if (btn) btn.href = `https://wa.me/${WHATSAPP_ADMIN}?text=${msg}`;
+}
+
+// Guard: kembalikan true jika fitur diblokir, false jika boleh lanjut
+function requirePro(featureName) {
+  if (isDemoMode) return false; // demo tidak diblock di sini, demoGuard yg handle
+  const limits = LICENSE_LIMITS[userLicense.tier] || LICENSE_LIMITS.free;
+  if (featureName === 'pdf'       && !limits.pdf)       { showUpgradeModal('Export PDF');            return true; }
+  if (featureName === 'recurring' && !limits.recurring) { showUpgradeModal('Transaksi Berulang');    return true; }
+  if (featureName === 'investasi' && !limits.investasi) { showUpgradeModal('Portofolio Investasi');  return true; }
+  return false;
+}
+
+// Guard transaksi: cek apakah sudah mencapai limit free
+function requireTrxQuota() {
+  if (isDemoMode) return false;
+  const limits = LICENSE_LIMITS[userLicense.tier] || LICENSE_LIMITS.free;
+  if ((appData.Transaksi||[]).length >= limits.maxTrx) {
+    showUpgradeModal(`Batas ${limits.maxTrx} transaksi tercapai`);
+    return true;
+  }
+  return false;
+}
+
+// Guard dompet
+function requireDompetQuota() {
+  if (isDemoMode) return false;
+  const limits = LICENSE_LIMITS[userLicense.tier] || LICENSE_LIMITS.free;
+  if ((appData.Dompet||[]).length >= limits.maxDompet) {
+    showUpgradeModal(`Batas ${limits.maxDompet} dompet tercapai`);
+    return true;
+  }
+  return false;
+}
+
+// ============================================================
 // DEMO MODE
 // ============================================================
 function enterDemoMode() {
@@ -3611,6 +3782,7 @@ function onboardFinish() {
 // TRANSAKSI BERULANG
 // ============================================================
 function renderRecurringPage() {
+  if (requirePro('recurring')) { switchPage('dashboard'); return; }
   updateRecKategori();
   // populate dompet
   const dompetSel = document.getElementById('recDompet');

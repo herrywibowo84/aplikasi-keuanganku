@@ -3,8 +3,97 @@
  * Google Apps Script + Google Sheets Database
  */
 
-const APP_NAME = 'DB_KeuanganKu';
-const APP_VERSION = '3.48'; // AUTO-UPDATED by deploy.sh — jangan edit manual
+const APP_NAME    = 'DB_KeuanganKu';
+const APP_VERSION = '3.49'; // AUTO-UPDATED by deploy.sh — jangan edit manual
+
+// ── LISENSI ──────────────────────────────────────────────────
+// Ganti dengan email pemilik aplikasi — selalu Pro secara otomatis
+const OWNER_EMAIL = 'herry.wibowo84@gmail.com';
+
+// Ambil/buat spreadsheet admin lisensi (1 sheet untuk semua user)
+function getAdminDB_() {
+  const props = PropertiesService.getScriptProperties(); // admin = script-level, bukan per-user
+  let id = props.getProperty('ADMIN_DB_ID');
+  if (id) {
+    try { return SpreadsheetApp.openById(id); } catch(e) {}
+  }
+  // Buat baru jika belum ada
+  const ss = SpreadsheetApp.create('KeuanganKu_AdminLisensi');
+  id = ss.getId();
+  props.setProperty('ADMIN_DB_ID', id);
+  const sheet = ss.getSheets()[0];
+  sheet.setName('Lisensi');
+  const headers = ['Email','Tier','TanggalMulai','TanggalExpired','Catatan'];
+  sheet.getRange(1,1,1,headers.length).setValues([headers])
+       .setFontWeight('bold').setBackground('#1e40af').setFontColor('#fff');
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidth(1, 220);
+  // Tambah owner sebagai lifetime otomatis
+  sheet.appendRow([OWNER_EMAIL,'lifetime',new Date().toISOString().split('T')[0],'9999-12-31','Owner otomatis']);
+  return ss;
+}
+
+function getLicenseInfo() {
+  const email = getUserEmail_();
+  if (!email || email === 'anonymous') return { tier:'free', expired:false, daysLeft:null, email:'' };
+  if (email === OWNER_EMAIL) return { tier:'lifetime', expired:false, daysLeft:null, email };
+
+  try {
+    const ss = getAdminDB_();
+    const sheet = ss.getSheetByName('Lisensi');
+    if (!sheet || sheet.getLastRow() <= 1) return { tier:'free', expired:false, daysLeft:null, email };
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const idxEmail   = headers.indexOf('Email');
+    const idxTier    = headers.indexOf('Tier');
+    const idxExpired = headers.indexOf('TanggalExpired');
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][idxEmail]).toLowerCase() === email.toLowerCase()) {
+        const tier = data[i][idxTier] || 'free';
+        const expStr = data[i][idxExpired];
+        if (tier === 'lifetime') return { tier, expired:false, daysLeft:null, email };
+        const expDate = new Date(expStr);
+        const now = new Date();
+        const expired = expDate < now;
+        const daysLeft = Math.ceil((expDate - now) / 86400000);
+        return { tier: expired ? 'free' : tier, expired, daysLeft: expired ? 0 : daysLeft, email };
+      }
+    }
+  } catch(e) {}
+  return { tier:'free', expired:false, daysLeft:null, email };
+}
+
+// Dipanggil admin dari GAS editor: activateLicense('user@gmail.com','pro',30)
+function activateLicense(email, tier, durationDays) {
+  const ss = getAdminDB_();
+  const sheet = ss.getSheetByName('Lisensi');
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idxEmail = headers.indexOf('Email');
+  const start = new Date();
+  const end   = new Date(start); end.setDate(end.getDate() + (durationDays || 30));
+  const endStr = end.toISOString().split('T')[0];
+  const startStr = start.toISOString().split('T')[0];
+  // Update jika sudah ada
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][idxEmail]).toLowerCase() === email.toLowerCase()) {
+      sheet.getRange(i+1, 1, 1, 5).setValues([[email, tier, startStr, endStr, 'Updated '+startStr]]);
+      return 'Updated: '+email+' → '+tier+' s/d '+endStr;
+    }
+  }
+  // Tambah baru
+  sheet.appendRow([email, tier, startStr, endStr, 'Activated '+startStr]);
+  return 'Activated: '+email+' → '+tier+' s/d '+endStr;
+}
+
+function getLicenseList() {
+  try {
+    const ss = getAdminDB_();
+    const sheet = ss.getSheetByName('Lisensi');
+    const data = sheet.getDataRange().getValues();
+    return data;
+  } catch(e) { return []; }
+}
 
 // Schema spreadsheet
 const SCHEMAS = {
@@ -166,7 +255,8 @@ function getAppData() {
         return obj;
       });
   }
-  result._version = APP_VERSION; // kirim versi ke frontend
+  result._version = APP_VERSION;
+  result._license = getLicenseInfo(); // tier, expired, daysLeft
   return result;
 }
 
