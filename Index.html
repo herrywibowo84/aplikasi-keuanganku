@@ -142,7 +142,15 @@
 
     <p id="loginStatus" style="color:rgba(255,255,255,.6);font-size:12px;margin-top:16px;min-height:18px;"></p>
 
-    <div style="margin-top:32px;padding-top:20px;border-top:1px solid rgba(255,255,255,.1);">
+    <!-- Tombol Demo -->
+    <div style="margin-top:16px;">
+      <button onclick="enterDemoMode()" style="background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.3);color:#fff;padding:11px 24px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;width:100%;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,.2)'" onmouseout="this.style.background='rgba(255,255,255,.12)'">
+        👀 Coba Demo (tanpa login)
+      </button>
+      <p style="color:rgba(255,255,255,.4);font-size:11px;margin-top:8px;">Lihat semua fitur dengan data contoh</p>
+    </div>
+
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,.1);">
       <p style="color:rgba(255,255,255,.4);font-size:11px;">🔒 Data tersimpan aman di Google Sheets Anda</p>
     </div>
   </div>
@@ -153,6 +161,14 @@
   <i class="fas fa-circle-notch fa-spin text-5xl text-blue-600 mb-3"></i>
   <p id="loadingMsg" class="text-gray-600 font-medium">Memuat data...</p>
 </div>
+<!-- DEMO MODE BANNER -->
+<div id="demoBanner" class="hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-2 text-white text-sm font-semibold" style="background:linear-gradient(90deg,#f59e0b,#f97316);">
+  <span><i class="fas fa-eye mr-2"></i>Mode Demo — Data tidak tersimpan. Fitur tulis dinonaktifkan.</span>
+  <button onclick="exitDemoMode()" class="ml-4 px-3 py-1 bg-white text-orange-600 rounded-lg text-xs font-bold hover:bg-orange-50 flex-shrink-0">
+    <i class="fas fa-sign-in-alt mr-1"></i>Login Sungguhan
+  </button>
+</div>
+
 <div id="alertBox" class="p-4 rounded-xl shadow-lg text-sm font-medium"></div>
 
 <!-- ONBOARDING MODAL (muncul untuk user baru) -->
@@ -1353,6 +1369,96 @@ let hpFilterMode = 'all';
 let selectedDompet = null;
 let dbUrl = null;
 let deferredPrompt = null;
+let isDemoMode = false;
+
+// ============================================================
+// DATA DEMO — data contoh realistis untuk mode demo
+// ============================================================
+const DEMO_DATA = (function() {
+  const today = new Date();
+  const d = (offsetDays) => {
+    const dt = new Date(today); dt.setDate(dt.getDate()+offsetDays);
+    return dt.toISOString().split('T')[0];
+  };
+  const uid = (n) => 'demo-'+n;
+  const thisMonth = today.toISOString().substring(0,7);
+  return {
+    _version: 'DEMO',
+    Dompet: [
+      { ID:uid('d1'), Nama:'BCA Tabungan',  Kategori:'Bank',         SaldoAwal:'8000000', SaldoSaatIni:'9250000', Limit:'',         IsCC:'false' },
+      { ID:uid('d2'), Nama:'GoPay',          Kategori:'E-Wallet',     SaldoAwal:'500000',  SaldoSaatIni:'320000',  Limit:'',         IsCC:'false' },
+      { ID:uid('d3'), Nama:'Tunai',           Kategori:'Tunai',        SaldoAwal:'300000',  SaldoSaatIni:'185000',  Limit:'',         IsCC:'false' },
+      { ID:uid('d4'), Nama:'BCA Kredit',      Kategori:'Kartu Kredit', SaldoAwal:'0',       SaldoSaatIni:'0',       Limit:'15000000', IsCC:'true'  },
+    ],
+    Kategori: [
+      { ID:uid('k1'),  Jenis:'Pemasukan',   Nama:'Gaji / Upah',        ParentID:'' },
+      { ID:uid('k2'),  Jenis:'Pemasukan',   Nama:'Bonus / THR',        ParentID:'' },
+      { ID:uid('k3'),  Jenis:'Pemasukan',   Nama:'Usaha / Bisnis',     ParentID:'' },
+      { ID:uid('k4'),  Jenis:'Pemasukan',   Nama:'Investasi',          ParentID:'' },
+      { ID:uid('k5'),  Jenis:'Pemasukan',   Nama:'Lainnya',            ParentID:'' },
+      { ID:uid('k6'),  Jenis:'Pengeluaran', Nama:'Makanan & Minuman',  ParentID:'' },
+      { ID:uid('k7'),  Jenis:'Pengeluaran', Nama:'Belanja Dapur',      ParentID:'' },
+      { ID:uid('k8'),  Jenis:'Pengeluaran', Nama:'Transportasi',       ParentID:'' },
+      { ID:uid('k9'),  Jenis:'Pengeluaran', Nama:'Tagihan & Utilitas', ParentID:'' },
+      { ID:uid('k10'), Jenis:'Pengeluaran', Nama:'Kesehatan',          ParentID:'' },
+      { ID:uid('k11'), Jenis:'Pengeluaran', Nama:'Pendidikan',         ParentID:'' },
+      { ID:uid('k12'), Jenis:'Pengeluaran', Nama:'Hiburan',            ParentID:'' },
+      { ID:uid('k13'), Jenis:'Pengeluaran', Nama:'Pakaian & Fashion',  ParentID:'' },
+      { ID:uid('k14'), Jenis:'Pengeluaran', Nama:'Penyesuaian Saldo',  ParentID:'' },
+      { ID:uid('k15'), Jenis:'Pengeluaran', Nama:'Lainnya',            ParentID:'' },
+    ],
+    Transaksi: [
+      { ID:uid('t1'),  Tanggal:d(-1),  Waktu:'08:00', Jenis:'Pemasukan',   Kategori:'Gaji / Upah',       Nominal:'7500000', Biaya:'0', KategoriBiaya:'', Keterangan:'Gaji bulan ini',      DompetAsal:'BCA Tabungan' },
+      { ID:uid('t2'),  Tanggal:d(-2),  Waktu:'12:30', Jenis:'Pengeluaran', Kategori:'Makanan & Minuman', Nominal:'45000',   Biaya:'0', KategoriBiaya:'', Keterangan:'Makan siang kantor',  DompetAsal:'GoPay' },
+      { ID:uid('t3'),  Tanggal:d(-2),  Waktu:'19:00', Jenis:'Pengeluaran', Kategori:'Makanan & Minuman', Nominal:'85000',   Biaya:'0', KategoriBiaya:'', Keterangan:'Makan malam keluarga',DompetAsal:'BCA Tabungan' },
+      { ID:uid('t4'),  Tanggal:d(-3),  Waktu:'07:15', Jenis:'Pengeluaran', Kategori:'Transportasi',      Nominal:'35000',   Biaya:'0', KategoriBiaya:'', Keterangan:'Grab ke kantor',      DompetAsal:'GoPay' },
+      { ID:uid('t5'),  Tanggal:d(-3),  Waktu:'09:00', Jenis:'Pengeluaran', Kategori:'Tagihan & Utilitas',Nominal:'350000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Listrik PLN',         DompetAsal:'BCA Tabungan' },
+      { ID:uid('t6'),  Tanggal:d(-4),  Waktu:'20:00', Jenis:'Pengeluaran', Kategori:'Hiburan',           Nominal:'120000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Netflix + Spotify',   DompetAsal:'BCA Tabungan' },
+      { ID:uid('t7'),  Tanggal:d(-5),  Waktu:'11:00', Jenis:'Pengeluaran', Kategori:'Belanja Dapur',     Nominal:'425000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Belanja bulanan Indomaret', DompetAsal:'BCA Tabungan' },
+      { ID:uid('t8'),  Tanggal:d(-6),  Waktu:'13:00', Jenis:'Pengeluaran', Kategori:'Makanan & Minuman', Nominal:'28000',   Biaya:'0', KategoriBiaya:'', Keterangan:'Kopi & snack',        DompetAsal:'Tunai' },
+      { ID:uid('t9'),  Tanggal:d(-7),  Waktu:'17:30', Jenis:'Pengeluaran', Kategori:'Transportasi',      Nominal:'55000',   Biaya:'0', KategoriBiaya:'', Keterangan:'Bensin motor',        DompetAsal:'Tunai' },
+      { ID:uid('t10'), Tanggal:d(-8),  Waktu:'10:00', Jenis:'Pengeluaran', Kategori:'Tagihan & Utilitas',Nominal:'250000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Internet IndiHome',   DompetAsal:'BCA Tabungan' },
+      { ID:uid('t11'), Tanggal:d(-10), Waktu:'14:00', Jenis:'Pemasukan',   Kategori:'Usaha / Bisnis',    Nominal:'850000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Jasa freelance web',  DompetAsal:'BCA Tabungan' },
+      { ID:uid('t12'), Tanggal:d(-12), Waktu:'09:00', Jenis:'Pengeluaran', Kategori:'Kesehatan',         Nominal:'185000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Apotek + vitamin',    DompetAsal:'BCA Tabungan' },
+      { ID:uid('t13'), Tanggal:d(-14), Waktu:'12:00', Jenis:'Pengeluaran', Kategori:'Makanan & Minuman', Nominal:'65000',   Biaya:'0', KategoriBiaya:'', Keterangan:'Lunch dengan klien',  DompetAsal:'GoPay' },
+      { ID:uid('t14'), Tanggal:d(-15), Waktu:'20:30', Jenis:'Pengeluaran', Kategori:'Hiburan',           Nominal:'95000',   Biaya:'0', KategoriBiaya:'', Keterangan:'Bioskop berdua',      DompetAsal:'GoPay' },
+      { ID:uid('t15'), Tanggal:d(-32), Waktu:'08:00', Jenis:'Pemasukan',   Kategori:'Gaji / Upah',       Nominal:'7500000', Biaya:'0', KategoriBiaya:'', Keterangan:'Gaji bulan lalu',     DompetAsal:'BCA Tabungan' },
+      { ID:uid('t16'), Tanggal:d(-33), Waktu:'11:00', Jenis:'Pengeluaran', Kategori:'Belanja Dapur',     Nominal:'380000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Belanja bulanan',     DompetAsal:'BCA Tabungan' },
+      { ID:uid('t17'), Tanggal:d(-35), Waktu:'09:00', Jenis:'Pengeluaran', Kategori:'Tagihan & Utilitas',Nominal:'350000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Listrik PLN',         DompetAsal:'BCA Tabungan' },
+      { ID:uid('t18'), Tanggal:d(-36), Waktu:'09:00', Jenis:'Pengeluaran', Kategori:'Tagihan & Utilitas',Nominal:'250000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Internet IndiHome',   DompetAsal:'BCA Tabungan' },
+      { ID:uid('t19'), Tanggal:d(-38), Waktu:'16:00', Jenis:'Pengeluaran', Kategori:'Pakaian & Fashion', Nominal:'320000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Baju kerja',          DompetAsal:'BCA Tabungan' },
+      { ID:uid('t20'), Tanggal:d(-40), Waktu:'12:30', Jenis:'Pemasukan',   Kategori:'Bonus / THR',       Nominal:'3500000', Biaya:'0', KategoriBiaya:'', Keterangan:'Bonus kinerja Q2',    DompetAsal:'BCA Tabungan' },
+      { ID:uid('t21'), Tanggal:d(-42), Waktu:'10:00', Jenis:'Pengeluaran', Kategori:'Pendidikan',        Nominal:'500000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Kursus online',       DompetAsal:'BCA Tabungan' },
+      { ID:uid('t22'), Tanggal:d(-44), Waktu:'19:00', Jenis:'Pengeluaran', Kategori:'Makanan & Minuman', Nominal:'210000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Makan keluarga restoran', DompetAsal:'BCA Tabungan' },
+      { ID:uid('t23'), Tanggal:d(-62), Waktu:'08:00', Jenis:'Pemasukan',   Kategori:'Gaji / Upah',       Nominal:'7500000', Biaya:'0', KategoriBiaya:'', Keterangan:'Gaji 2 bulan lalu',   DompetAsal:'BCA Tabungan' },
+      { ID:uid('t24'), Tanggal:d(-65), Waktu:'11:00', Jenis:'Pengeluaran', Kategori:'Belanja Dapur',     Nominal:'410000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Belanja bulanan',     DompetAsal:'BCA Tabungan' },
+      { ID:uid('t25'), Tanggal:d(-67), Waktu:'09:00', Jenis:'Pengeluaran', Kategori:'Tagihan & Utilitas',Nominal:'350000',  Biaya:'0', KategoriBiaya:'', Keterangan:'Listrik PLN',         DompetAsal:'BCA Tabungan' },
+    ],
+    Transfer: [
+      { ID:uid('tf1'), Tanggal:d(-5), DariDompet:'BCA Tabungan', KeDompet:'GoPay', Jumlah:'200000', Biaya:'0', Catatan:'Top up GoPay' },
+      { ID:uid('tf2'), Tanggal:d(-5), DariDompet:'BCA Tabungan', KeDompet:'Tunai', Jumlah:'100000', Biaya:'0', Catatan:'Ambil tunai' },
+    ],
+    Anggaran: [
+      { ID:uid('a1'), BulanTahun:thisMonth, Kategori:'Makanan & Minuman',  Nominal:'1500000' },
+      { ID:uid('a2'), BulanTahun:thisMonth, Kategori:'Transportasi',       Nominal:'500000'  },
+      { ID:uid('a3'), BulanTahun:thisMonth, Kategori:'Belanja Dapur',      Nominal:'1000000' },
+      { ID:uid('a4'), BulanTahun:thisMonth, Kategori:'Tagihan & Utilitas', Nominal:'700000'  },
+      { ID:uid('a5'), BulanTahun:thisMonth, Kategori:'Hiburan',            Nominal:'400000'  },
+    ],
+    HutangPiutang: [
+      { ID:uid('hp1'), Jenis:'Piutang', Nama:'Budi Santoso',    Nominal:'500000',  Tanggal:d(-20), JatuhTempo:d(10),  Status:'Aktif', Keterangan:'Pinjaman uang makan'   },
+      { ID:uid('hp2'), Jenis:'Hutang',  Nama:'Kartu Kredit BCA',Nominal:'750000',  Tanggal:d(-15), JatuhTempo:d(15),  Status:'Aktif', Keterangan:'Tagihan belanja online' },
+    ],
+    Investasi: [
+      { ID:uid('i1'), NamaInvestasi:'Emas Antam', JenisInvestasi:'Emas', BeratGram:'5', HargaBeliGram:'1050000', TotalModal:'5250000', NilaiSaatIni:'5750000', ReturnRate:'9.52', Tanggal:d(-180) },
+    ],
+    Recurring: [
+      { ID:uid('r1'), Nama:'Listrik PLN',       Jenis:'Pengeluaran', Kategori:'Tagihan & Utilitas', Nominal:'350000', DompetAsal:'BCA Tabungan', Frekuensi:'bulanan', TanggalMulai:d(-90), Aktif:'true', TerakhirDijalankan:d(-35) },
+      { ID:uid('r2'), Nama:'Internet IndiHome', Jenis:'Pengeluaran', Kategori:'Tagihan & Utilitas', Nominal:'250000', DompetAsal:'BCA Tabungan', Frekuensi:'bulanan', TanggalMulai:d(-90), Aktif:'true', TerakhirDijalankan:d(-36) },
+      { ID:uid('r3'), Nama:'Netflix + Spotify', Jenis:'Pengeluaran', Kategori:'Hiburan',           Nominal:'120000', DompetAsal:'BCA Tabungan', Frekuensi:'bulanan', TanggalMulai:d(-60), Aktif:'true', TerakhirDijalankan:d(-6)  },
+    ],
+  };
+})();
 
 // ============================================================
 // PWA SETUP
@@ -1536,6 +1642,7 @@ function loadAllData(callback) {
 // GAS RUN
 // ============================================================
 function gasRun(fnName, args, onSuccess) {
+  if (demoGuard()) return; // blokir semua write di demo mode
   showLoading(t('msg_saving'));
   const runner = google.script.run
     .withSuccessHandler(result => {
@@ -1550,6 +1657,7 @@ function gasRun(fnName, args, onSuccess) {
 }
 
 function deleteData(tableName, id) {
+  if (demoGuard()) return;
   if (!confirm('Yakin ingin menghapus data ini?')) return;
   showLoading('Menghapus...');
   google.script.run
@@ -1664,6 +1772,7 @@ function setCatatTab(tab) {
 // ============================================================
 function submitTransaksi(e) {
   e.preventDefault();
+  if (demoGuard()) return;
   const id = document.getElementById('transaksiID').value;
   const obj = {
     ID:id||'',
@@ -1681,6 +1790,7 @@ function submitTransaksi(e) {
 }
 function submitTransfer(e) {
   e.preventDefault();
+  if (demoGuard()) return;
   const dari = document.getElementById('tfDari').value;
   const ke = document.getElementById('tfKe').value;
   if (dari===ke) { showAlert('Dompet asal dan tujuan tidak boleh sama!','error'); return; }
@@ -1695,6 +1805,7 @@ function submitTransfer(e) {
 }
 function submitQuickTransfer(e) {
   e.preventDefault();
+  if (demoGuard()) return;
   const dari = document.getElementById('qtDari').value;
   const ke = document.getElementById('qtKe').value;
   if (!ke || dari===ke) { showAlert('Pilih dompet tujuan yang berbeda!','error'); return; }
@@ -1708,6 +1819,7 @@ function submitQuickTransfer(e) {
 }
 function submitDompet(e) {
   e.preventDefault();
+  if (demoGuard()) return;
   const id = document.getElementById('dompetID').value;
   const kat = document.getElementById('dompetKategori').value;
   const isCC = kat==='Kartu Kredit';
@@ -1753,6 +1865,7 @@ function submitAnggaran(e) {
 }
 function submitHP(e) {
   e.preventDefault();
+  if (demoGuard()) return;
   const id = document.getElementById('hpID').value;
   const obj = {
     ID:id||'', Jenis:document.querySelector('input[name="hpJenis"]:checked').value,
@@ -1765,6 +1878,7 @@ function submitHP(e) {
 }
 function submitInvestasi(e) {
   e.preventDefault();
+  if (demoGuard()) return;
   const id = document.getElementById('invID').value;
   const jenis = document.getElementById('invJenis').value;
   const isEmas = jenis.includes('Emas');
@@ -2653,6 +2767,7 @@ function removeImportRow(idx) {
   importedDataTemp=importedDataTemp.filter(r=>r.idx!==idx);
 }
 async function saveImportedData() {
+  if (demoGuard()) return;
   if (!importedDataTemp.length) { showAlert('Tidak ada data untuk disimpan.','error'); return; }
   showLoading(`Menyimpan ${importedDataTemp.length} transaksi...`);
   const batch=importedDataTemp.filter(row=>document.getElementById(`impRow_${row.idx}`)).map(row=>({
@@ -2727,6 +2842,7 @@ function updateBatchKat(id) {
 }
 function removeBatchRow(id) { document.getElementById(`batchRow_${id}`)?.remove(); }
 async function submitBatch() {
+  if (demoGuard()) return;
   const rows = document.querySelectorAll('#batchBody tr');
   const batch = [];
   rows.forEach(tr => {
@@ -3014,6 +3130,59 @@ function triggerPWAInstall() {
 }
 
 // ============================================================
+// DEMO MODE
+// ============================================================
+function enterDemoMode() {
+  isDemoMode = true;
+
+  // Sembunyikan login page, tampilkan app
+  const lp = document.getElementById('loginPage');
+  lp.classList.add('fade-out');
+  setTimeout(() => { lp.style.display = 'none'; }, 400);
+
+  // Tampilkan banner demo
+  document.getElementById('demoBanner').classList.remove('hidden');
+
+  // Geser konten utama agar tidak tertutup banner
+  const main = document.querySelector('main') || document.querySelector('.flex-1.flex');
+  if (main) main.style.paddingTop = '40px';
+
+  // Set sidebar info
+  const emailEl = document.getElementById('userEmail');
+  if (emailEl) emailEl.textContent = 'demo@keuanganku.app';
+
+  // Isi appData dengan data demo
+  appData = JSON.parse(JSON.stringify(DEMO_DATA));
+
+  // Update label versi
+  const vEl = document.getElementById('appVersionLabel');
+  if (vEl) vEl.textContent = 'DEMO • Google Sheets DB';
+
+  // Render semua UI
+  refreshUI();
+  renderDashboard();
+}
+
+function exitDemoMode() {
+  isDemoMode = false;
+  document.getElementById('demoBanner').classList.add('hidden');
+  const main = document.querySelector('main') || document.querySelector('.flex-1.flex');
+  if (main) main.style.paddingTop = '';
+
+  // Kembali ke login page
+  const lp = document.getElementById('loginPage');
+  lp.style.display = 'flex';
+  lp.classList.remove('fade-out');
+}
+
+// Cek apakah dalam demo mode sebelum operasi tulis
+function demoGuard() {
+  if (!isDemoMode) return false; // tidak demo, lanjut normal
+  showAlert('⚠️ Mode Demo — Perubahan tidak dapat disimpan. Silakan login untuk menggunakan fitur ini.', 'error');
+  return true; // blokir
+}
+
+// ============================================================
 // ONBOARDING
 // ============================================================
 function showOnboarding() {
@@ -3108,6 +3277,7 @@ function updateRecKategori() {
 }
 
 function submitRecurring() {
+  if (demoGuard()) return;
   const nama = document.getElementById('recNama').value.trim();
   const nominal = parseFloat(document.getElementById('recNominal').value)||0;
   if (!nama) { showAlert('Nama tidak boleh kosong','error'); return; }
@@ -3131,6 +3301,7 @@ function submitRecurring() {
 }
 
 function toggleRecurring(id, aktif) {
+  if (demoGuard()) return;
   const rec = (appData.Recurring||[]).find(r=>r.ID===id);
   if (!rec) return;
   const updated = {...rec, Aktif: aktif};
@@ -3141,6 +3312,7 @@ function toggleRecurring(id, aktif) {
 }
 
 function deleteRecurring(id) {
+  if (demoGuard()) return;
   if (!confirm('Hapus transaksi berulang ini?')) return;
   showLoading('Menghapus...');
   google.script.run
