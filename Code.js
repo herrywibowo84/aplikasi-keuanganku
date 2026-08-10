@@ -4,7 +4,7 @@
  */
 
 const APP_NAME    = 'DB_KeuanganKu';
-const APP_VERSION = '3.49'; // AUTO-UPDATED by deploy.sh — jangan edit manual
+const APP_VERSION = '3.50'; // AUTO-UPDATED by deploy.sh — jangan edit manual
 
 // ── LISENSI ──────────────────────────────────────────────────
 // Ganti dengan email pemilik aplikasi — selalu Pro secara otomatis
