@@ -4,7 +4,7 @@
  */
 
 const APP_NAME = 'DB_KeuanganKu';
-const APP_VERSION = '3.46'; // AUTO-UPDATED by deploy.sh — jangan edit manual
+const APP_VERSION = '3.47'; // AUTO-UPDATED by deploy.sh — jangan edit manual
 
 // Schema spreadsheet
 const SCHEMAS = {
