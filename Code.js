@@ -4,95 +4,69 @@
  */
 
 const APP_NAME    = 'DB_KeuanganKu';
-const APP_VERSION = '3.51'; // AUTO-UPDATED by deploy.sh — jangan edit manual
+const APP_VERSION = '3.53'; // AUTO-UPDATED by deploy.sh — jangan edit manual
 
 // ── LISENSI ──────────────────────────────────────────────────
-// Ganti dengan email pemilik aplikasi — selalu Pro secara otomatis
+// Ganti dengan email pemilik aplikasi — selalu Lifetime secara otomatis
 const OWNER_EMAIL = 'herry.wibowo84@gmail.com';
 
-// Ambil/buat spreadsheet admin lisensi (1 sheet untuk semua user)
-function getAdminDB_() {
-  const props = PropertiesService.getScriptProperties(); // admin = script-level, bukan per-user
-  let id = props.getProperty('ADMIN_DB_ID');
-  if (id) {
-    try { return SpreadsheetApp.openById(id); } catch(e) {}
-  }
-  // Buat baru jika belum ada
-  const ss = SpreadsheetApp.create('KeuanganKu_AdminLisensi');
-  id = ss.getId();
-  props.setProperty('ADMIN_DB_ID', id);
-  const sheet = ss.getSheets()[0];
-  sheet.setName('Lisensi');
-  const headers = ['Email','Tier','TanggalMulai','TanggalExpired','Catatan'];
-  sheet.getRange(1,1,1,headers.length).setValues([headers])
-       .setFontWeight('bold').setBackground('#1e40af').setFontColor('#fff');
-  sheet.setFrozenRows(1);
-  sheet.setColumnWidth(1, 220);
-  // Tambah owner sebagai lifetime otomatis
-  sheet.appendRow([OWNER_EMAIL,'lifetime',new Date().toISOString().split('T')[0],'9999-12-31','Owner otomatis']);
-  return ss;
-}
+// Lisensi disimpan di ScriptProperties (bukan Google Sheet)
+// agar bisa dibaca semua user tanpa perlu akses spreadsheet pemilik.
+// Key: 'LIC_email@domain.com'  Value: JSON {tier, expiresAt, activatedAt}
 
 function getLicenseInfo() {
   const email = getUserEmail_();
   if (!email || email === 'anonymous') return { tier:'free', expired:false, daysLeft:null, email:'' };
-  if (email === OWNER_EMAIL) return { tier:'lifetime', expired:false, daysLeft:null, email };
+  if (email.toLowerCase() === OWNER_EMAIL.toLowerCase())
+    return { tier:'lifetime', expired:false, daysLeft:null, email };
 
   try {
-    const ss = getAdminDB_();
-    const sheet = ss.getSheetByName('Lisensi');
-    if (!sheet || sheet.getLastRow() <= 1) return { tier:'free', expired:false, daysLeft:null, email };
-    const data = sheet.getDataRange().getValues();
-    const headers = data[0];
-    const idxEmail   = headers.indexOf('Email');
-    const idxTier    = headers.indexOf('Tier');
-    const idxExpired = headers.indexOf('TanggalExpired');
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][idxEmail]).toLowerCase() === email.toLowerCase()) {
-        const tier = data[i][idxTier] || 'free';
-        const expStr = data[i][idxExpired];
-        if (tier === 'lifetime') return { tier, expired:false, daysLeft:null, email };
-        const expDate = new Date(expStr);
-        const now = new Date();
-        const expired = expDate < now;
-        const daysLeft = Math.ceil((expDate - now) / 86400000);
-        return { tier: expired ? 'free' : tier, expired, daysLeft: expired ? 0 : daysLeft, email };
-      }
-    }
+    const raw = PropertiesService.getScriptProperties().getProperty('LIC_' + email.toLowerCase());
+    if (!raw) return { tier:'free', expired:false, daysLeft:null, email };
+    const lic = JSON.parse(raw);
+    if (lic.tier === 'lifetime') return { tier:'lifetime', expired:false, daysLeft:null, email };
+    const expDate = new Date(lic.expiresAt);
+    const now = new Date();
+    const expired = expDate < now;
+    const daysLeft = Math.ceil((expDate - now) / 86400000);
+    return { tier: expired ? 'free' : lic.tier, expired, daysLeft: expired ? 0 : daysLeft, email };
   } catch(e) {}
   return { tier:'free', expired:false, daysLeft:null, email };
 }
 
 // Dipanggil admin dari GAS editor: activateLicense('user@gmail.com','pro',30)
+// Untuk lifetime: activateLicense('user@gmail.com','lifetime',0)
 function activateLicense(email, tier, durationDays) {
-  const ss = getAdminDB_();
-  const sheet = ss.getSheetByName('Lisensi');
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  const idxEmail = headers.indexOf('Email');
-  const start = new Date();
-  const end   = new Date(start); end.setDate(end.getDate() + (durationDays || 30));
-  const endStr = end.toISOString().split('T')[0];
-  const startStr = start.toISOString().split('T')[0];
-  // Update jika sudah ada
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][idxEmail]).toLowerCase() === email.toLowerCase()) {
-      sheet.getRange(i+1, 1, 1, 5).setValues([[email, tier, startStr, endStr, 'Updated '+startStr]]);
-      return 'Updated: '+email+' → '+tier+' s/d '+endStr;
-    }
-  }
-  // Tambah baru
-  sheet.appendRow([email, tier, startStr, endStr, 'Activated '+startStr]);
-  return 'Activated: '+email+' → '+tier+' s/d '+endStr;
+  const sp = PropertiesService.getScriptProperties();
+  const today = new Date().toISOString().split('T')[0];
+  const expiresAt = tier === 'lifetime' ? '9999-12-31'
+    : new Date(Date.now() + (durationDays || 30) * 86400000).toISOString().split('T')[0];
+  sp.setProperty('LIC_' + email.toLowerCase(), JSON.stringify({ tier, expiresAt, activatedAt: today }));
+  Logger.log('✅ Lisensi ' + tier + ' untuk ' + email + ' aktif sampai ' + expiresAt);
+  return 'OK: ' + email + ' → ' + tier + ' s/d ' + expiresAt;
 }
 
+// Dipanggil admin untuk melihat daftar lisensi
 function getLicenseList() {
-  try {
-    const ss = getAdminDB_();
-    const sheet = ss.getSheetByName('Lisensi');
-    const data = sheet.getDataRange().getValues();
-    return data;
-  } catch(e) { return []; }
+  const sp = PropertiesService.getScriptProperties();
+  const all = sp.getProperties();
+  const list = [['Email','Tier','Aktif Sampai','Tanggal Aktifasi']];
+  Object.entries(all)
+    .filter(([k]) => k.startsWith('LIC_'))
+    .forEach(([k, v]) => {
+      try {
+        const lic = JSON.parse(v);
+        list.push([k.replace('LIC_',''), lic.tier, lic.expiresAt, lic.activatedAt||'-']);
+      } catch(e) {}
+    });
+  Logger.log(JSON.stringify(list));
+  return list;
+}
+
+// Hapus lisensi: revokeLicense('user@gmail.com')
+function revokeLicense(email) {
+  PropertiesService.getScriptProperties().deleteProperty('LIC_' + email.toLowerCase());
+  Logger.log('❌ Lisensi ' + email + ' dicabut');
 }
 
 // Schema spreadsheet
