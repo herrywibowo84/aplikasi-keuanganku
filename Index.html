@@ -1902,6 +1902,7 @@ function submitDompet(e) {
 }
 function submitKategori(e) {
   e.preventDefault();
+  if (demoGuard()) return;
   const id = document.getElementById('kategoriID').value;
   gasRun('saveRecord',['Kategori',{
     ID:id||'',
@@ -1912,6 +1913,7 @@ function submitKategori(e) {
 }
 function submitAnggaran(e) {
   e.preventDefault();
+  if (demoGuard()) return;
   gasRun('saveRecord',['Anggaran',{
     ID:document.getElementById('anggaranID').value||'',
     BulanTahun:document.getElementById('anggaranBulanForm').value,
@@ -2826,6 +2828,14 @@ function removeImportRow(idx) {
 async function saveImportedData() {
   if (demoGuard()) return;
   if (!importedDataTemp.length) { showAlert('Tidak ada data untuk disimpan.','error'); return; }
+  // Cek quota batch: hitung total setelah import
+  const limits = LICENSE_LIMITS[userLicense.tier] || LICENSE_LIMITS.free;
+  const currentTrx = (appData.Transaksi||[]).length;
+  if (currentTrx + importedDataTemp.length > limits.maxTrx) {
+    const sisa = Math.max(0, limits.maxTrx - currentTrx);
+    showUpgradeModal(`Batas ${limits.maxTrx} transaksi tercapai. Hanya ${sisa} slot tersisa.`);
+    return;
+  }
   showLoading(`Menyimpan ${importedDataTemp.length} transaksi...`);
   const batch=importedDataTemp.filter(row=>document.getElementById(`impRow_${row.idx}`)).map(row=>({
     ID:'', Tanggal:document.getElementById(`impTgl_${row.idx}`).value,
@@ -2917,6 +2927,14 @@ async function submitBatch() {
     });
   });
   if (!batch.length) { showAlert('Tidak ada baris yang terisi nominal.','error'); return; }
+  // Cek quota batch
+  const limits = LICENSE_LIMITS[userLicense.tier] || LICENSE_LIMITS.free;
+  const currentTrx = (appData.Transaksi||[]).length;
+  if (currentTrx + batch.length > limits.maxTrx) {
+    const sisa = Math.max(0, limits.maxTrx - currentTrx);
+    showUpgradeModal(`Batas ${limits.maxTrx} transaksi tercapai. Hanya ${sisa} slot tersisa.`);
+    return;
+  }
   const prog = document.getElementById('batchProgress');
   prog.classList.remove('hidden');
   let saved=0;
@@ -2963,6 +2981,7 @@ function copyAnggaranBulanLalu() {
   document.getElementById('modalSalinAnggaran').classList.remove('hidden');
 }
 async function simpanSalinanAnggaran() {
+  if (demoGuard()) return;
   const inputs = document.querySelectorAll('#salinAnggaranBody input[data-kat]');
   const batch = Array.from(inputs).map(inp=>({
     ID:'', BulanTahun:inp.dataset.bulan, Kategori:inp.dataset.kat, Nominal:parseFloat(inp.value)||0
