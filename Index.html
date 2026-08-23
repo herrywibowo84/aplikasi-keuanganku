@@ -634,8 +634,12 @@
           <option value="__kosong__">⚠️ Dompet Kosong</option>
         </select></div>
       <div><label class="block text-xs font-medium text-gray-700 mb-1">Jenis</label>
-        <select id="filterJenis" class="border rounded-lg p-2 text-sm focus:ring focus:ring-blue-200">
+        <select id="filterJenis" onchange="filterJenisChange()" class="border rounded-lg p-2 text-sm focus:ring focus:ring-blue-200">
           <option value="">Semua</option><option>Pemasukan</option><option>Pengeluaran</option><option>Transfer</option>
+        </select></div>
+      <div><label class="block text-xs font-medium text-gray-700 mb-1">Kategori</label>
+        <select id="filterKategori" class="border rounded-lg p-2 text-sm focus:ring focus:ring-blue-200">
+          <option value="">Semua Kategori</option>
         </select></div>
       <div><label class="block text-xs font-medium text-gray-700 mb-1">Urutkan</label>
         <select id="filterSort" class="border rounded-lg p-2 text-sm focus:ring focus:ring-blue-200">
@@ -1829,7 +1833,22 @@ function refreshUI() {
   populateSelect('invSumberDana', dompetNames, '-- Hanya catat aset (jangan potong saldo) --');
   populateKategoriDropdown();
   renderAnggaranKategoriSelect();
+  filterJenisChange(); // isi dropdown kategori filter riwayat
   compileRiwayat();
+}
+
+function filterJenisChange() {
+  const jenis = document.getElementById('filterJenis')?.value || '';
+  const sel = document.getElementById('filterKategori');
+  if (!sel) return;
+  const prev = sel.value;
+  const cats = jenis
+    ? appData.Kategori.filter(k => k.Jenis === jenis)
+    : appData.Kategori;
+  sel.innerHTML = `<option value="">Semua Kategori</option>` +
+    cats.map(k => `<option value="${k.Nama}">${k.Nama}</option>`).join('');
+  // Pertahankan pilihan sebelumnya jika masih relevan
+  if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
 }
 function populateSelect(id, items, defaultText=null) {
   const el = document.getElementById(id); if (!el) return;
@@ -2270,6 +2289,8 @@ function applyFilter() {
   if (dompet === '__kosong__') res=res.filter(t=>!t.isTransfer && (!t.DompetAsal||t.DompetAsal.trim()===''));
   else if (dompet) res=res.filter(t=>t.DompetAsal===dompet||(t.isTransfer&&t.KeDompet===dompet));
   if (jenis) res=res.filter(t=>t.Jenis===jenis);
+  const kategori = document.getElementById('filterKategori').value;
+  if (kategori) res=res.filter(t=>t.Kategori===kategori);
   if (search) {
     res=res.filter(t=>{
       const str = [t.Keterangan||'', t.Kategori||'', t.DompetAsal||'', t.KeDompet||'', t.Nominal||''].join(' ').toLowerCase();
@@ -2289,8 +2310,10 @@ function applyFilter() {
 }
 function resetFilter() {
   ['filterStartDate','filterEndDate','filterSearch'].forEach(id=>document.getElementById(id).value='');
-  ['filterDompet','filterJenis'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('filterSort').value='dateDesc'; applyFilter();
+  ['filterDompet','filterJenis','filterKategori'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('filterSort').value='dateDesc';
+  filterJenisChange();
+  applyFilter();
 }
 function goRiwayatPage(p) {
   const total = Math.ceil(_riwayatAll.length / _riwayatPerPage);
