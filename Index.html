@@ -3125,16 +3125,18 @@ function renderPengaturan() {
   };
 
   [...new Set([...jenisOrder, ...Object.keys(byJenis)])].forEach(jenis => {
-    const list = byJenis[jenis];
-    if (!list || !list.length) return;
-    const meta = jenisMeta[jenis] || { badge:'bg-gray-100 text-gray-700', section:'bg-gray-50 border-gray-200', dot:'bg-gray-400' };
+    const list = byJenis[jenis] || [];
+    const meta = jenisMeta[jenis] || { badge:'bg-gray-100 text-gray-700', section:'bg-gray-50 border-gray-200', dot:'bg-gray-400', addBtn:'bg-gray-100 hover:bg-gray-200 text-gray-600' };
+    const addBtnCls = jenis==='Pemasukan'   ? 'text-emerald-600 hover:bg-emerald-50 border-emerald-200'
+                    : jenis==='Pengeluaran' ? 'text-rose-600 hover:bg-rose-50 border-rose-200'
+                    : 'text-amber-600 hover:bg-amber-50 border-amber-200';
 
     const section = document.createElement('div');
-    section.className = 'mb-3';
+    section.className = 'mb-4';
 
-    // Section header (Jenis group label)
+    // Section header
     const header = document.createElement('div');
-    header.className = `flex items-center gap-2 px-3 py-1.5 mb-1`;
+    header.className = 'flex items-center gap-2 px-1 py-1 mb-1.5';
     header.innerHTML = `<span class="w-2 h-2 rounded-full ${meta.dot}"></span>
       <span class="text-xs font-bold uppercase tracking-wider text-gray-500">${jenis}</span>
       <span class="text-xs text-gray-400">${list.length} kategori</span>`;
@@ -3145,44 +3147,87 @@ function renderPengaturan() {
       const children = subs.filter(s => s.ParentID === k.ID);
       const isOpen = _katOpen.has(k.ID);
       const hasChildren = children.length > 0;
+      const shouldOpen = isOpen || _katOpen.has(k.ID);
 
       const card = document.createElement('div');
-      card.className = `border rounded-xl mb-1.5 overflow-hidden border-gray-200`;
+      card.className = 'border rounded-xl mb-1.5 overflow-hidden border-gray-200 bg-white';
       card.id = `katCard_${k.ID}`;
 
       // Parent row
       const parentRow = document.createElement('div');
-      parentRow.className = `flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50 group transition-colors`;
+      parentRow.className = 'flex items-center gap-2 px-3 py-2.5 group transition-colors';
       parentRow.innerHTML = `
-        <div class="flex-1 min-w-0 flex items-center gap-2" id="katName_${k.ID}">
-          <span class="text-sm font-medium text-gray-800 cursor-pointer hover:text-blue-600 hover:underline"
-            onclick="event.stopPropagation();inlineEditKategori('${k.ID}')" title="Klik untuk edit nama">${k.Nama}</span>
-          ${hasChildren ? `<span class="text-xs text-gray-400">(${children.length} sub)</span>` : ''}
+        <div class="flex-1 min-w-0 flex items-center gap-1.5 cursor-pointer hover:opacity-80" onclick="toggleKatAccordion('${k.ID}')" id="katName_${k.ID}">
+          <span class="text-sm font-medium text-gray-800 hover:text-blue-600 hover:underline"
+            onclick="event.stopPropagation();inlineEditKategori('${k.ID}')" title="Klik teks untuk edit nama">${k.Nama}</span>
+          ${children.length ? `<span class="text-xs text-gray-400 font-normal">(${children.length})</span>` : ''}
         </div>
         <div class="flex items-center gap-1 shrink-0">
+          <button onclick="event.stopPropagation();quickAddSub('${k.ID}','${jenis}')"
+            class="opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded text-xs border ${addBtnCls} transition-all font-medium" title="Tambah sub-kategori">
+            + Sub
+          </button>
           <button onclick="event.stopPropagation();deleteData('Kategori','${k.ID}')"
             class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-rose-50 text-gray-300 hover:text-rose-400 transition-all" title="Hapus">
             <i class="fas fa-trash text-xs"></i>
           </button>
-          ${hasChildren ? `<i class="fas fa-chevron-${isOpen?'up':'down'} text-xs text-gray-400 transition-transform" id="katChev_${k.ID}"></i>` : '<span class="w-4"></span>'}
+          <i class="fas fa-chevron-${shouldOpen?'up':'down'} text-xs text-gray-300 ml-0.5 cursor-pointer" id="katChev_${k.ID}"
+            onclick="toggleKatAccordion('${k.ID}')"></i>
         </div>`;
-
-      if (hasChildren) {
-        parentRow.addEventListener('click', () => toggleKatAccordion(k.ID));
-      }
       card.appendChild(parentRow);
 
-      // Sub-category panel
-      if (hasChildren) {
-        const subPanel = document.createElement('div');
-        subPanel.id = `katSub_${k.ID}`;
-        subPanel.className = `border-t border-gray-100 bg-gray-50/60 px-1 py-1 ${isOpen ? '' : 'hidden'}`;
-        subPanel.innerHTML = children.map(renderSubRow).join('');
-        card.appendChild(subPanel);
-      }
+      // Sub-category panel (always rendered, shown/hidden)
+      const subPanel = document.createElement('div');
+      subPanel.id = `katSub_${k.ID}`;
+      subPanel.className = `border-t border-gray-100 bg-gray-50/50 ${shouldOpen ? '' : 'hidden'}`;
 
+      const subList = document.createElement('div');
+      subList.id = `katSubList_${k.ID}`;
+      subList.className = 'px-1 py-1';
+      subList.innerHTML = children.length ? children.map(renderSubRow).join('') : `<p class="text-xs text-gray-400 px-4 py-2 italic">Belum ada sub-kategori</p>`;
+      subPanel.appendChild(subList);
+
+      // Inline add row (hidden by default)
+      const addRow = document.createElement('div');
+      addRow.id = `katAddRow_${k.ID}`;
+      addRow.className = 'hidden px-3 py-2 border-t border-gray-100';
+      addRow.innerHTML = `
+        <div class="flex items-center gap-2">
+          <span class="text-gray-300 text-xs ml-2">└</span>
+          <input type="text" id="katAddInput_${k.ID}" placeholder="Nama sub-kategori..."
+            class="flex-1 border border-blue-300 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            onkeydown="if(event.key==='Enter'){saveQuickSub('${k.ID}','${jenis}');}else if(event.key==='Escape'){hideQuickAdd('${k.ID}');}">
+          <button onclick="saveQuickSub('${k.ID}','${jenis}')"
+            class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs rounded-lg font-semibold transition-colors">Simpan</button>
+          <button onclick="hideQuickAdd('${k.ID}')"
+            class="px-2 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-500 text-xs rounded-lg transition-colors">Batal</button>
+        </div>`;
+      subPanel.appendChild(addRow);
+
+      card.appendChild(subPanel);
       section.appendChild(card);
     });
+
+    // "+ Tambah Kategori" button at bottom of each Jenis group
+    const addParentBtn = document.createElement('div');
+    addParentBtn.id = `katAddParent_${jenis}`;
+    addParentBtn.innerHTML = `
+      <button onclick="quickAddParent('${jenis}')"
+        class="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-gray-200 text-xs text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:bg-gray-50 transition-all group">
+        <i class="fas fa-plus text-xs"></i> Tambah kategori ${jenis.toLowerCase()}
+      </button>
+      <div id="katAddParentRow_${jenis}" class="hidden mt-1 border border-blue-200 rounded-xl px-3 py-2.5 bg-blue-50">
+        <div class="flex items-center gap-2">
+          <input type="text" id="katAddParentInput_${jenis}" placeholder="Nama kategori baru..."
+            class="flex-1 border border-blue-300 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
+            onkeydown="if(event.key==='Enter'){saveQuickParent('${jenis}');}else if(event.key==='Escape'){hideQuickParent('${jenis}');}">
+          <button onclick="saveQuickParent('${jenis}')"
+            class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg font-semibold transition-colors">Simpan</button>
+          <button onclick="hideQuickParent('${jenis}')"
+            class="px-2 py-1.5 bg-white hover:bg-gray-50 text-gray-500 text-xs rounded-lg border border-gray-200 transition-colors">Batal</button>
+        </div>
+      </div>`;
+    section.appendChild(addParentBtn);
 
     container.appendChild(section);
   });
@@ -3219,6 +3264,74 @@ function toggleKatAccordion(id) {
     panel.classList.add('hidden');
     if (chev) { chev.classList.remove('fa-chevron-up'); chev.classList.add('fa-chevron-down'); }
   }
+}
+
+// ── Quick add sub-kategori inline ──
+function quickAddSub(parentId, jenis) {
+  if (demoGuard()) return;
+  _katOpen.add(parentId);
+  const panel = document.getElementById(`katSub_${parentId}`);
+  if (panel) panel.classList.remove('hidden');
+  const chev = document.getElementById(`katChev_${parentId}`);
+  if (chev) { chev.classList.remove('fa-chevron-down'); chev.classList.add('fa-chevron-up'); }
+  const row = document.getElementById(`katAddRow_${parentId}`);
+  if (row) row.classList.remove('hidden');
+  document.getElementById(`katAddInput_${parentId}`)?.focus();
+}
+function hideQuickAdd(parentId) {
+  const row = document.getElementById(`katAddRow_${parentId}`);
+  if (row) row.classList.add('hidden');
+  const inp = document.getElementById(`katAddInput_${parentId}`);
+  if (inp) inp.value = '';
+}
+function saveQuickSub(parentId, jenis) {
+  if (demoGuard()) return;
+  const nama = document.getElementById(`katAddInput_${parentId}`)?.value.trim();
+  if (!nama) { showAlert('Nama tidak boleh kosong.','error'); return; }
+  showLoading('Menyimpan...');
+  google.script.run
+    .withSuccessHandler(res => {
+      hideLoading();
+      if (res && res.success) {
+        hideQuickAdd(parentId);
+        showAlert('Sub-kategori ditambahkan!','success');
+        _katOpen.add(parentId); // jaga tetap terbuka
+        loadAllData();
+      } else { showAlert('Gagal: '+(res?.error||'Error'),'error'); }
+    })
+    .withFailureHandler(err => { hideLoading(); showAlert('Gagal: '+(err.message||'Error'),'error'); })
+    .saveKategoriBatch([{ ID:'', Jenis: jenis, Nama: nama, ParentID: parentId }]);
+}
+
+// ── Quick add kategori utama per Jenis ──
+function quickAddParent(jenis) {
+  if (demoGuard()) return;
+  const row = document.getElementById(`katAddParentRow_${jenis}`);
+  if (row) row.classList.remove('hidden');
+  document.getElementById(`katAddParentInput_${jenis}`)?.focus();
+}
+function hideQuickParent(jenis) {
+  const row = document.getElementById(`katAddParentRow_${jenis}`);
+  if (row) row.classList.add('hidden');
+  const inp = document.getElementById(`katAddParentInput_${jenis}`);
+  if (inp) inp.value = '';
+}
+function saveQuickParent(jenis) {
+  if (demoGuard()) return;
+  const nama = document.getElementById(`katAddParentInput_${jenis}`)?.value.trim();
+  if (!nama) { showAlert('Nama tidak boleh kosong.','error'); return; }
+  showLoading('Menyimpan...');
+  google.script.run
+    .withSuccessHandler(res => {
+      hideLoading();
+      if (res && res.success) {
+        hideQuickParent(jenis);
+        showAlert('Kategori ditambahkan!','success');
+        loadAllData();
+      } else { showAlert('Gagal: '+(res?.error||'Error'),'error'); }
+    })
+    .withFailureHandler(err => { hideLoading(); showAlert('Gagal: '+(err.message||'Error'),'error'); })
+    .saveKategoriBatch([{ ID:'', Jenis: jenis, Nama: nama, ParentID: '' }]);
 }
 function editDompet(id) {
   const data=appData.Dompet.find(d=>d.ID===id); if (!data) return;
