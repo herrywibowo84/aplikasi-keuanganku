@@ -2291,19 +2291,21 @@ function renderRiwayatTable() {
       : emptyDompet
         ? `<span class="text-xs text-amber-500 font-medium"><i class="fas fa-exclamation-triangle mr-1"></i>Kosong</span>`
         : `<span class="text-xs">${t.DompetAsal}</span>`;
-    const editBtn=t.isTransfer?`<button onclick="editTransfer('${t.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>`:`<button onclick="editTransaksi('${t.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>`;
+    const editBtn = t.isTransfer
+      ? `<button onclick="editTransfer('${t.ID}')" class="text-blue-500 hover:text-blue-700 mx-1" title="Edit"><i class="fas fa-edit"></i></button>`
+      : `<button onclick="inlineEditRow('${t.ID}')" class="text-blue-500 hover:text-blue-700 mx-1" title="Edit inline"><i class="fas fa-edit"></i></button>`;
     const chkCell = t.isTransfer ? `<td class="py-3 px-3"></td>` :
       `<td class="py-3 px-3 text-center"><input type="checkbox" class="trx-chk w-4 h-4 rounded accent-indigo-600" data-id="${t.ID}" onchange="updateBulkToolbar()"></td>`;
     tbody.innerHTML+=`<tr class="hover:bg-gray-50 text-sm" id="trxRow_${t.ID}">
       ${chkCell}
-      <td class="py-3 px-4">${t.Tanggal}</td>
-      <td class="py-3 px-4"><span class="px-2 py-0.5 text-xs font-bold rounded ${badge}">${t.Jenis}</span></td>
-      <td class="py-3 px-4">${kategoriCell}</td>
-      <td class="py-3 px-4">${dompetCell}</td>
-      <td class="py-3 px-4 text-gray-500">${t.Keterangan||'-'}</td>
-      <td class="py-3 px-4 text-right font-bold ${color}">Rp ${fmt(t.Nominal)}</td>
-      <td class="py-3 px-4 text-center">${editBtn}
-        <button onclick="deleteData('${t.isTransfer?'Transfer':'Transaksi'}','${t.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
+      <td class="py-3 px-4" id="rTgl_${t.ID}">${t.Tanggal}</td>
+      <td class="py-3 px-4" id="rJenis_${t.ID}"><span class="px-2 py-0.5 text-xs font-bold rounded ${badge}">${t.Jenis}</span></td>
+      <td class="py-3 px-4" id="rKat_${t.ID}">${kategoriCell}</td>
+      <td class="py-3 px-4" id="rDompet_${t.ID}">${dompetCell}</td>
+      <td class="py-3 px-4 text-gray-500" id="rKet_${t.ID}">${t.Keterangan||'-'}</td>
+      <td class="py-3 px-4 text-right font-bold ${color}" id="rNom_${t.ID}">Rp ${fmt(t.Nominal)}</td>
+      <td class="py-3 px-4 text-center" id="rAksi_${t.ID}">${editBtn}
+        <button onclick="deleteData('${t.isTransfer?'Transfer':'Transaksi'}','${t.ID}')" class="text-red-500 hover:text-red-700 mx-1" title="Hapus"><i class="fas fa-trash"></i></button>
       </td></tr>`;
   });
   // Restore centang untuk ID yang sudah ada di _bulkSelectedIds
@@ -2410,6 +2412,105 @@ function applyBulkDompet() {
     .updateTransaksiField(ids, 'DompetAsal', dompet);
 }
 // ──────────────────────────────────────────────────────────────
+
+// ── INLINE EDIT ───────────────────────────────────────────────
+let _inlineEditingId = null;
+
+function inlineEditRow(id) {
+  // Batalkan edit sebelumnya jika ada
+  if (_inlineEditingId && _inlineEditingId !== id) cancelInlineEdit(_inlineEditingId);
+
+  const t = appData.Transaksi.find(x => x.ID === id);
+  if (!t) return;
+  _inlineEditingId = id;
+
+  const dompetOpts = appData.Dompet.map(d =>
+    `<option value="${d.Nama}" ${d.Nama===t.DompetAsal?'selected':''}>${d.Nama}</option>`).join('');
+  const katOut = appData.Kategori.filter(k=>k.Jenis==='Pengeluaran').map(k =>
+    `<option value="${k.Nama}" ${k.Nama===t.Kategori?'selected':''}>${k.Nama}</option>`).join('');
+  const katIn  = appData.Kategori.filter(k=>k.Jenis==='Pemasukan').map(k =>
+    `<option value="${k.Nama}" ${k.Nama===t.Kategori?'selected':''}>${k.Nama}</option>`).join('');
+
+  const row = document.getElementById(`trxRow_${id}`);
+  if (row) row.classList.add('bg-blue-50');
+
+  // Ganti setiap cell jadi input/select
+  document.getElementById(`rTgl_${id}`).innerHTML =
+    `<input type="date" id="ie_tgl_${id}" value="${t.Tanggal}" class="border rounded p-1 text-xs w-28 focus:ring focus:ring-blue-200">`;
+
+  document.getElementById(`rJenis_${id}`).innerHTML =
+    `<select id="ie_jenis_${id}" onchange="ieUpdateKat('${id}')" class="border rounded p-1 text-xs focus:ring focus:ring-blue-200">
+      <option value="Pengeluaran" ${t.Jenis==='Pengeluaran'?'selected':''}>Pengeluaran</option>
+      <option value="Pemasukan"   ${t.Jenis==='Pemasukan'?'selected':''}>Pemasukan</option>
+    </select>`;
+
+  document.getElementById(`rKat_${id}`).innerHTML =
+    `<select id="ie_kat_${id}" class="border rounded p-1 text-xs w-32 focus:ring focus:ring-blue-200">
+      ${t.Jenis==='Pemasukan' ? katIn : katOut}
+    </select>`;
+
+  document.getElementById(`rDompet_${id}`).innerHTML =
+    `<select id="ie_dompet_${id}" class="border rounded p-1 text-xs w-28 focus:ring focus:ring-blue-200">${dompetOpts}</select>`;
+
+  document.getElementById(`rKet_${id}`).innerHTML =
+    `<input type="text" id="ie_ket_${id}" value="${(t.Keterangan||'').replace(/"/g,'&quot;')}"
+      class="border rounded p-1 text-xs w-36 focus:ring focus:ring-blue-200">`;
+
+  document.getElementById(`rNom_${id}`).innerHTML =
+    `<input type="number" id="ie_nom_${id}" value="${t.Nominal}"
+      class="border rounded p-1 text-xs w-24 text-right focus:ring focus:ring-blue-200">`;
+
+  document.getElementById(`rAksi_${id}`).innerHTML =
+    `<button onclick="saveInlineEdit('${id}')" class="text-green-600 hover:text-green-800 mx-1 font-bold text-base" title="Simpan"><i class="fas fa-check"></i></button>
+     <button onclick="cancelInlineEdit('${id}')" class="text-gray-400 hover:text-gray-600 mx-1 text-base" title="Batal"><i class="fas fa-times"></i></button>`;
+
+  // Fokus ke field keterangan
+  setTimeout(() => document.getElementById(`ie_ket_${id}`)?.focus(), 50);
+}
+
+function ieUpdateKat(id) {
+  const jenis = document.getElementById(`ie_jenis_${id}`).value;
+  const katEl = document.getElementById(`ie_kat_${id}`);
+  const opts = appData.Kategori.filter(k=>k.Jenis===jenis)
+    .map(k=>`<option value="${k.Nama}">${k.Nama}</option>`).join('');
+  if (katEl) katEl.innerHTML = opts;
+}
+
+function saveInlineEdit(id) {
+  if (demoGuard()) return;
+  const t = appData.Transaksi.find(x => x.ID === id);
+  if (!t) return;
+  const updated = {
+    ...t,
+    Tanggal:  document.getElementById(`ie_tgl_${id}`).value,
+    Jenis:    document.getElementById(`ie_jenis_${id}`).value,
+    Kategori: document.getElementById(`ie_kat_${id}`).value,
+    DompetAsal: document.getElementById(`ie_dompet_${id}`).value,
+    Keterangan: document.getElementById(`ie_ket_${id}`).value,
+    Nominal:  parseFloat(document.getElementById(`ie_nom_${id}`).value) || 0,
+  };
+  showLoading('Menyimpan...');
+  google.script.run
+    .withSuccessHandler(() => {
+      hideLoading();
+      _inlineEditingId = null;
+      showAlert('Transaksi diperbarui.', 'success');
+      loadAllData();
+    })
+    .withFailureHandler(err => {
+      hideLoading();
+      showAlert('Gagal simpan: ' + (err.message||'Error'), 'error');
+    })
+    .saveRecord('Transaksi', updated);
+}
+
+function cancelInlineEdit(id) {
+  _inlineEditingId = null;
+  // Re-render tabel untuk kembalikan tampilan normal
+  renderRiwayatTable();
+}
+// ──────────────────────────────────────────────────────────────
+
 function editTransaksi(id) {
   const data=appData.Transaksi.find(t=>t.ID===id); if (!data) return;
   switchPage('catat'); setCatatTab(data.Jenis.toLowerCase()==='pemasukan'?'pemasukan':'pengeluaran');
