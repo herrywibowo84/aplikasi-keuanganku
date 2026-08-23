@@ -711,7 +711,8 @@
             </th>
             <th class="py-3 px-4 text-left whitespace-nowrap">Tanggal</th>
             <th class="py-3 px-4 text-left">Jenis</th>
-            <th class="py-3 px-4 text-left">Kategori</th>
+            <th class="py-3 px-4 text-left whitespace-nowrap">Kategori</th>
+            <th class="py-3 px-4 text-left whitespace-nowrap">Sub Kategori</th>
             <th class="py-3 px-4 text-left whitespace-nowrap">Dompet</th>
             <th class="py-3 px-4 text-left w-full">Keterangan</th>
             <th class="py-3 px-4 text-right whitespace-nowrap">Nominal</th>
@@ -2370,7 +2371,7 @@ function renderRiwayatTable() {
   const tbody=document.getElementById('riwayatTableBody');
   tbody.innerHTML='';
   if (!data.length) {
-    tbody.innerHTML='<tr><td colspan="8" class="py-10 text-center text-gray-400 text-sm"><i class="fas fa-inbox text-2xl mb-2 block"></i>Tidak ada data yang sesuai filter.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="9" class="py-10 text-center text-gray-400 text-sm"><i class="fas fa-inbox text-2xl mb-2 block"></i>Tidak ada data yang sesuai filter.</td></tr>';
     document.getElementById('riwayatPagination').innerHTML='';
     return;
   }
@@ -2395,9 +2396,21 @@ function renderRiwayatTable() {
         : 'bg-rose-50 text-rose-700 border border-rose-200');
     const sign = t.Jenis==='Pemasukan' ? '+' : (t.Jenis==='Transfer' ? '' : '-');
 
+    // Resolve parent/sub hierarchy
+    const _katObj    = t.isTransfer ? null : appData.Kategori.find(k => k.Nama === t.Kategori && k.Jenis === t.Jenis);
+    const _katParent = _katObj?.ParentID ? appData.Kategori.find(k => k.ID === _katObj.ParentID) : null;
+    const katLabel    = _katParent ? _katParent.Nama : (t.Kategori || '—');
+    const subKatLabel = _katParent ? t.Kategori : '—';
+
     const kategoriCell = t.isTransfer
       ? `<span class="inline-flex items-center gap-1 text-xs text-blue-600"><i class="fas fa-exchange-alt text-[10px]"></i>${t.DariDompet} → ${t.KeDompet}</span>`
-      : `<span class="text-xs text-gray-700">${t.Kategori||'—'}</span>`;
+      : `<span class="text-xs text-gray-700">${katLabel}</span>`;
+
+    const subKatCell = t.isTransfer
+      ? `<span class="text-xs text-gray-300">—</span>`
+      : subKatLabel === '—'
+        ? `<span class="text-xs text-gray-300">—</span>`
+        : `<span class="text-xs text-indigo-600">${subKatLabel}</span>`;
 
     const emptyDompet = !t.isTransfer && (!t.DompetAsal || t.DompetAsal.trim()==='');
     const dompetCell = t.isTransfer
@@ -2432,7 +2445,8 @@ function renderRiwayatTable() {
       <td class="py-3 px-4 whitespace-nowrap" id="rJenis_${t.ID}">
         <span class="px-2 py-1 text-xs font-semibold rounded-full ${badgeCls}">${t.Jenis}</span>
       </td>
-      <td class="py-3 px-4" id="rKat_${t.ID}">${kategoriCell}</td>
+      <td class="py-3 px-4 whitespace-nowrap" id="rKat_${t.ID}">${kategoriCell}</td>
+      <td class="py-3 px-4 whitespace-nowrap" id="rSubKat_${t.ID}">${subKatCell}</td>
       <td class="py-3 px-4 whitespace-nowrap" id="rDompet_${t.ID}">${dompetCell}</td>
       <td class="py-3 px-4 max-w-xs" id="rKet_${t.ID}">
         <span class="text-xs text-gray-600 line-clamp-2">${t.Keterangan||'<span class="text-gray-300 italic">—</span>'}</span>
@@ -2595,10 +2609,20 @@ function inlineEditRow(id) {
 
   const dompetOpts = appData.Dompet.map(d =>
     `<option value="${d.Nama}" ${d.Nama===t.DompetAsal?'selected':''}>${d.Nama}</option>`).join('');
-  const katOut = appData.Kategori.filter(k=>k.Jenis==='Pengeluaran').map(k =>
-    `<option value="${k.Nama}" ${k.Nama===t.Kategori?'selected':''}>${k.Nama}</option>`).join('');
-  const katIn  = appData.Kategori.filter(k=>k.Jenis==='Pemasukan').map(k =>
-    `<option value="${k.Nama}" ${k.Nama===t.Kategori?'selected':''}>${k.Nama}</option>`).join('');
+
+  // Build kategori opts with hierarchy: parent bold, subs indented
+  const buildKatOpts = (jenis, selectedNama) => {
+    const parents = appData.Kategori.filter(k => k.Jenis === jenis && !k.ParentID);
+    const subs    = appData.Kategori.filter(k => k.Jenis === jenis && k.ParentID);
+    let opts = '';
+    parents.forEach(p => {
+      opts += `<option value="${p.Nama}" ${p.Nama===selectedNama?'selected':''}>${p.Nama}</option>`;
+      subs.filter(s => s.ParentID === p.ID).forEach(s => {
+        opts += `<option value="${s.Nama}" ${s.Nama===selectedNama?'selected':''}>　└ ${s.Nama}</option>`;
+      });
+    });
+    return opts;
+  };
 
   const row = document.getElementById(`trxRow_${id}`);
   if (row) row.className = 'border-b border-indigo-200 bg-indigo-50/60 ring-1 ring-inset ring-indigo-200';
@@ -2615,9 +2639,18 @@ function inlineEditRow(id) {
     </select>`;
 
   document.getElementById(`rKat_${id}`).innerHTML =
-    `<select id="ie_kat_${id}" class="${ieCls} min-w-[8rem]">
-      ${t.Jenis==='Pemasukan' ? katIn : katOut}
+    `<select id="ie_kat_${id}" onchange="ieUpdateSubKat('${id}')" class="${ieCls} min-w-[8rem]">
+      ${buildKatOpts(t.Jenis, t.Kategori)}
     </select>`;
+
+  // Sub-kategori cell: readonly, derived dari Kategori select
+  const _initSubKat = (() => {
+    const obj = appData.Kategori.find(k => k.Nama === t.Kategori && k.Jenis === t.Jenis);
+    const par = obj?.ParentID ? appData.Kategori.find(k => k.ID === obj.ParentID) : null;
+    return par ? t.Kategori : '—';
+  })();
+  document.getElementById(`rSubKat_${id}`).innerHTML =
+    `<span id="ie_subkat_${id}" class="text-xs ${_initSubKat==='—'?'text-gray-300':'text-indigo-600'}">${_initSubKat}</span>`;
 
   document.getElementById(`rDompet_${id}`).innerHTML =
     `<select id="ie_dompet_${id}" class="${ieCls} min-w-[7rem]">${dompetOpts}</select>`;
@@ -2651,12 +2684,32 @@ function inlineEditRow(id) {
   setTimeout(() => document.getElementById(`ie_ket_${id}`)?.focus(), 50);
 }
 
+function ieUpdateSubKat(id) {
+  const katNama = document.getElementById(`ie_kat_${id}`)?.value;
+  const jenis   = document.getElementById(`ie_jenis_${id}`)?.value;
+  const obj = appData.Kategori.find(k => k.Nama === katNama && k.Jenis === jenis);
+  const par = obj?.ParentID ? appData.Kategori.find(k => k.ID === obj.ParentID) : null;
+  const subEl = document.getElementById(`ie_subkat_${id}`);
+  if (subEl) {
+    subEl.textContent = par ? katNama : '—';
+    subEl.className = `text-xs ${par ? 'text-indigo-600' : 'text-gray-300'}`;
+  }
+}
+
 function ieUpdateKat(id) {
   const jenis = document.getElementById(`ie_jenis_${id}`).value;
   const katEl = document.getElementById(`ie_kat_${id}`);
-  const opts = appData.Kategori.filter(k=>k.Jenis===jenis)
-    .map(k=>`<option value="${k.Nama}">${k.Nama}</option>`).join('');
+  const parents = appData.Kategori.filter(k => k.Jenis === jenis && !k.ParentID);
+  const subs    = appData.Kategori.filter(k => k.Jenis === jenis && k.ParentID);
+  let opts = '';
+  parents.forEach(p => {
+    opts += `<option value="${p.Nama}">${p.Nama}</option>`;
+    subs.filter(s => s.ParentID === p.ID).forEach(s => {
+      opts += `<option value="${s.Nama}">　└ ${s.Nama}</option>`;
+    });
+  });
   if (katEl) katEl.innerHTML = opts;
+  ieUpdateSubKat(id);
 }
 
 function saveInlineEdit(id) {
