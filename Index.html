@@ -1256,33 +1256,78 @@
         <h3 class="font-bold text-gray-800"><i class="fas fa-tags mr-2 text-green-500"></i>Daftar Kategori</h3>
         <button onclick="toggleForm('formKategoriContainer')" class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"><i class="fas fa-plus mr-1"></i>Tambah</button>
       </div>
-      <div id="formKategoriContainer" class="p-4 bg-blue-50 border-b hidden">
-        <form id="formKategori" onsubmit="submitKategori(event)" class="space-y-3">
-          <input type="hidden" id="kategoriID">
-          <div class="grid grid-cols-2 gap-3">
+      <!-- Tab: Tambah Satu / Tambah Banyak -->
+      <div id="formKategoriContainer" class="border-b hidden">
+        <!-- Tab header -->
+        <div class="flex border-b bg-gray-50">
+          <button id="katTabSatu" onclick="switchKatTab('satu')"
+            class="px-4 py-2 text-xs font-semibold border-b-2 border-blue-500 text-blue-600">
+            <i class="fas fa-plus mr-1"></i>Tambah Satu
+          </button>
+          <button id="katTabBanyak" onclick="switchKatTab('banyak')"
+            class="px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+            <i class="fas fa-list mr-1"></i>Tambah Banyak
+          </button>
+        </div>
+        <!-- Panel: Tambah Satu -->
+        <div id="katPanelSatu" class="p-4 bg-blue-50">
+          <form id="formKategori" onsubmit="submitKategori(event)" class="space-y-3">
+            <input type="hidden" id="kategoriID">
+            <div class="grid grid-cols-2 gap-3">
+              <div><label class="block text-xs font-medium text-gray-700 mb-1">Jenis</label>
+                <select id="kategoriJenis" required class="w-full border rounded p-2 text-sm">
+                  <option value="Pengeluaran">Pengeluaran</option><option value="Pemasukan">Pemasukan</option><option value="Biaya">Biaya</option>
+                </select></div>
+              <div><label class="block text-xs font-medium text-gray-700 mb-1">Induk (opsional)</label>
+                <select id="kategoriParent" class="w-full border rounded p-2 text-sm">
+                  <option value="">— Kategori Utama —</option>
+                </select></div>
+            </div>
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">Nama Kategori</label>
+              <input type="text" id="kategoriNama" required placeholder="mis. Transportasi Online" class="w-full border rounded p-2 text-sm"></div>
+            <div class="flex justify-end gap-2 pt-1">
+              <button type="button" onclick="cancelEdit('Kategori')" id="btnCancelKat" class="hidden px-3 py-1 bg-gray-200 text-sm rounded">Batal</button>
+              <button type="submit" class="px-4 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Simpan</button>
+            </div>
+          </form>
+        </div>
+        <!-- Panel: Tambah Banyak -->
+        <div id="katPanelBanyak" class="p-4 bg-green-50 hidden">
+          <div class="grid grid-cols-2 gap-3 mb-3">
             <div><label class="block text-xs font-medium text-gray-700 mb-1">Jenis</label>
-              <select id="kategoriJenis" required class="w-full border rounded p-2 text-sm">
-                <option value="Pengeluaran">Pengeluaran</option><option value="Pemasukan">Pemasukan</option><option value="Biaya">Biaya</option>
+              <select id="katBanyakJenis" class="w-full border rounded p-2 text-sm">
+                <option value="Pengeluaran">Pengeluaran</option>
+                <option value="Pemasukan">Pemasukan</option>
+                <option value="Biaya">Biaya</option>
               </select></div>
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">Induk (sub-kategori dari)</label>
-              <select id="kategoriParent" class="w-full border rounded p-2 text-sm">
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">Induk (opsional)</label>
+              <select id="katBanyakParent" class="w-full border rounded p-2 text-sm">
                 <option value="">— Kategori Utama —</option>
               </select></div>
           </div>
-          <div><label class="block text-xs font-medium text-gray-700 mb-1">Nama Kategori</label>
-            <input type="text" id="kategoriNama" required class="w-full border rounded p-2 text-sm"></div>
-          <div class="flex justify-end gap-2 pt-1">
-            <button type="button" onclick="cancelEdit('Kategori')" id="btnCancelKat" class="hidden px-3 py-1 bg-gray-200 text-sm rounded">Batal</button>
-            <button type="submit" class="px-4 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Simpan</button>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">
+              Nama Kategori <span class="text-gray-400 font-normal">(satu per baris)</span>
+            </label>
+            <textarea id="katBanyakNama" rows="5" placeholder="Makanan & Minuman&#10;Transportasi&#10;Belanja Online&#10;Hiburan&#10;Kesehatan"
+              class="w-full border rounded p-2 text-sm font-mono resize-y focus:ring focus:ring-green-200"></textarea>
           </div>
-        </form>
+          <div class="flex items-center justify-between mt-3">
+            <span id="katBanyakCount" class="text-xs text-gray-500"></span>
+            <button onclick="submitKategoriBanyak()" class="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 font-medium">
+              <i class="fas fa-save mr-1"></i>Simpan Semua
+            </button>
+          </div>
+        </div>
       </div>
       <div class="overflow-x-auto p-4">
-        <table class="min-w-full text-sm">
-          <thead><tr class="text-left text-gray-500 border-b text-xs">
-            <th class="pb-2">Jenis</th><th class="pb-2">Kategori</th><th class="pb-2 text-center">Aksi</th>
+        <table class="min-w-full text-sm border-collapse">
+          <thead><tr class="text-left text-gray-500 border-b-2 border-gray-100 text-xs font-semibold uppercase tracking-wide">
+            <th class="pb-2 pr-3 w-24">Jenis</th>
+            <th class="pb-2">Nama Kategori <span class="font-normal text-gray-400 normal-case tracking-normal">(klik nama untuk edit)</span></th>
+            <th class="pb-2 text-center w-16">Aksi</th>
           </tr></thead>
-          <tbody id="kategoriTableBody" class="divide-y"></tbody>
+          <tbody id="kategoriTableBody" class="divide-y divide-gray-100"></tbody>
         </table>
       </div>
     </div>
@@ -3048,37 +3093,46 @@ function renderPengaturan() {
   // Render hierarchy
   const parents = appData.Kategori.filter(k => !k.ParentID);
   const subs = appData.Kategori.filter(k => k.ParentID);
+  const renderKatRow = (k, isChild) => {
+    const color = k.Jenis==='Pemasukan' ? 'text-emerald-600' : k.Jenis==='Biaya' ? 'text-amber-600' : 'text-rose-600';
+    const badgeCls = k.Jenis==='Pemasukan' ? 'bg-emerald-50 text-emerald-700' : k.Jenis==='Biaya' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700';
+    const indent = isChild ? 'pl-6' : '';
+    const prefix = isChild ? '<i class="fas fa-corner-down-right text-gray-300 mr-1 text-xs"></i>' : '';
+    tbodyK.innerHTML += `<tr class="hover:bg-gray-50" id="katRow_${k.ID}">
+      <td class="py-2 pr-3">
+        <span class="px-2 py-0.5 text-xs font-semibold rounded ${badgeCls}">${k.Jenis}</span>
+      </td>
+      <td class="py-2 ${indent}" id="katName_${k.ID}">
+        <span class="text-sm ${isChild?'text-gray-600':''} cursor-pointer hover:text-blue-600 hover:underline"
+          onclick="inlineEditKategori('${k.ID}')" title="Klik untuk edit">${prefix}${k.Nama}</span>
+      </td>
+      <td class="py-2 text-center whitespace-nowrap">
+        <button onclick="deleteData('Kategori','${k.ID}')" class="p-1 rounded hover:bg-rose-50 text-gray-300 hover:text-rose-500 transition-colors" title="Hapus">
+          <i class="fas fa-trash text-xs"></i>
+        </button>
+      </td>
+    </tr>`;
+  };
+
   parents.forEach(k => {
-    const color=k.Jenis==='Pemasukan'?'text-green-600':k.Jenis==='Biaya'?'text-yellow-600':'text-red-600';
-    tbodyK.innerHTML+=`<tr class="hover:bg-gray-50 text-sm bg-gray-50">
-      <td class="py-2 font-bold ${color} text-xs">${k.Jenis}</td>
-      <td class="py-2 font-semibold">${k.Nama}</td>
-      <td class="py-2 text-center">
-        <button onclick="editKategori('${k.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>
-        <button onclick="deleteData('Kategori','${k.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
-      </td></tr>`;
-    subs.filter(s => s.ParentID === k.ID).forEach(s => {
-      const sc=s.Jenis==='Pemasukan'?'text-green-500':s.Jenis==='Biaya'?'text-yellow-500':'text-red-500';
-      tbodyK.innerHTML+=`<tr class="hover:bg-gray-50 text-sm">
-        <td class="py-1.5 text-xs ${sc} pl-4"><i class="fas fa-level-up-alt fa-rotate-90 mr-1 text-gray-300"></i>${s.Jenis}</td>
-        <td class="py-1.5 pl-6 text-gray-600">${s.Nama}</td>
-        <td class="py-1.5 text-center">
-          <button onclick="editKategori('${s.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>
-          <button onclick="deleteData('Kategori','${s.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
-        </td></tr>`;
-    });
+    renderKatRow(k, false);
+    subs.filter(s => s.ParentID === k.ID).forEach(s => renderKatRow(s, true));
   });
-  // Show orphan subs (if any)
   const parentIds = parents.map(p => p.ID);
-  subs.filter(s => !parentIds.includes(s.ParentID)).forEach(s => {
-    const sc=s.Jenis==='Pemasukan'?'text-green-500':s.Jenis==='Biaya'?'text-yellow-500':'text-red-500';
-    tbodyK.innerHTML+=`<tr class="hover:bg-gray-50 text-sm">
-      <td class="py-1.5 text-xs ${sc}">${s.Jenis}</td>
-      <td class="py-1.5 text-gray-600">${s.Nama}</td>
-      <td class="py-1.5 text-center">
-        <button onclick="editKategori('${s.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>
-        <button onclick="deleteData('Kategori','${s.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
-      </td></tr>`;
+  subs.filter(s => !parentIds.includes(s.ParentID)).forEach(s => renderKatRow(s, false));
+
+  // Isi parent dropdown untuk form tambah banyak
+  const banyakParent = document.getElementById('katBanyakParent');
+  if (banyakParent) {
+    banyakParent.innerHTML = '<option value="">— Kategori Utama —</option>' +
+      appData.Kategori.map(k => `<option value="${k.ID}">${k.Jenis} — ${k.Nama}</option>`).join('');
+  }
+  // Live count untuk textarea tambah banyak
+  const ta = document.getElementById('katBanyakNama');
+  if (ta) ta.addEventListener('input', () => {
+    const n = ta.value.split('\n').filter(l=>l.trim()).length;
+    const el = document.getElementById('katBanyakCount');
+    if (el) el.textContent = n ? `${n} kategori akan ditambahkan` : '';
   });
 }
 function editDompet(id) {
@@ -3101,14 +3155,97 @@ function editDompet(id) {
 }
 function editKategori(id) {
   const data=appData.Kategori.find(k=>k.ID===id); if (!data) return;
+  switchKatTab('satu');
   document.getElementById('formKategoriContainer').classList.remove('hidden');
   document.getElementById('kategoriID').value=data.ID;
   document.getElementById('kategoriJenis').value=data.Jenis;
   document.getElementById('kategoriNama').value=data.Nama;
-  // Set parent dropdown
   const parentSel = document.getElementById('kategoriParent');
   if (parentSel) parentSel.value = data.ParentID||'';
   document.getElementById('btnCancelKat').classList.remove('hidden');
+  document.getElementById('kategoriNama').focus();
+}
+
+// ── Tab switcher ──
+function switchKatTab(tab) {
+  document.getElementById('katPanelSatu').classList.toggle('hidden', tab !== 'satu');
+  document.getElementById('katPanelBanyak').classList.toggle('hidden', tab !== 'banyak');
+  document.getElementById('katTabSatu').className = tab === 'satu'
+    ? 'px-4 py-2 text-xs font-semibold border-b-2 border-blue-500 text-blue-600'
+    : 'px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+  document.getElementById('katTabBanyak').className = tab === 'banyak'
+    ? 'px-4 py-2 text-xs font-semibold border-b-2 border-green-500 text-green-600'
+    : 'px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700';
+}
+
+// ── Inline edit nama kategori di tabel ──
+let _katEditingId = null;
+function inlineEditKategori(id) {
+  if (_katEditingId && _katEditingId !== id) cancelKatInline(_katEditingId);
+  const k = appData.Kategori.find(x => x.ID === id); if (!k) return;
+  _katEditingId = id;
+  const cell = document.getElementById(`katName_${id}`);
+  if (!cell) return;
+  cell.innerHTML = `
+    <div class="flex items-center gap-1.5">
+      <input type="text" id="katIE_${id}" value="${k.Nama.replace(/"/g,'&quot;')}"
+        class="border border-blue-300 rounded px-2 py-1 text-sm flex-1 focus:ring-2 focus:ring-blue-200 min-w-[10rem]"
+        onkeydown="if(event.key==='Enter'){saveKatInline('${id}');}else if(event.key==='Escape'){cancelKatInline('${id}');}">
+      <button onclick="saveKatInline('${id}')" class="px-2 py-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-xs font-semibold">✓</button>
+      <button onclick="cancelKatInline('${id}')" class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded text-xs">✕</button>
+    </div>`;
+  document.getElementById(`katIE_${id}`)?.focus();
+  document.getElementById(`katRow_${id}`)?.classList.add('bg-blue-50');
+}
+function saveKatInline(id) {
+  const k = appData.Kategori.find(x => x.ID === id); if (!k) return;
+  const nama = document.getElementById(`katIE_${id}`)?.value.trim();
+  if (!nama) { showAlert('Nama tidak boleh kosong.','error'); return; }
+  const updated = {...k, Nama: nama};
+  showLoading('Menyimpan...');
+  google.script.run
+    .withSuccessHandler(() => {
+      hideLoading();
+      _katEditingId = null;
+      const idx = appData.Kategori.findIndex(x=>x.ID===id);
+      if (idx>=0) appData.Kategori[idx].Nama = nama;
+      showAlert('Kategori diperbarui.','success');
+      renderPengaturan();
+    })
+    .withFailureHandler(err => { hideLoading(); showAlert('Gagal: '+(err.message||'Error'),'error'); })
+    .saveRecord('Kategori', updated);
+}
+function cancelKatInline(id) {
+  _katEditingId = null;
+  renderPengaturan();
+}
+
+// ── Tambah banyak sekaligus ──
+function submitKategoriBanyak() {
+  if (demoGuard()) return;
+  const jenis  = document.getElementById('katBanyakJenis').value;
+  const parent = document.getElementById('katBanyakParent').value;
+  const raw    = document.getElementById('katBanyakNama').value;
+  const names  = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  if (!names.length) { showAlert('Masukkan minimal satu nama kategori.','error'); return; }
+  const records = names.map(nama => ({
+    ID: '', Jenis: jenis, Nama: nama, ParentID: parent
+  }));
+  showLoading(`Menyimpan ${names.length} kategori...`);
+  google.script.run
+    .withSuccessHandler(res => {
+      hideLoading();
+      if (res && res.success) {
+        showAlert(`✅ ${res.saved} kategori berhasil ditambahkan!`, 'success');
+        document.getElementById('katBanyakNama').value = '';
+        document.getElementById('katBanyakCount').textContent = '';
+        loadAllData();
+      } else {
+        showAlert('Gagal: '+(res?.error||'Error'),'error');
+      }
+    })
+    .withFailureHandler(err => { hideLoading(); showAlert('Gagal: '+(err.message||'Error'),'error'); })
+    .saveKategoriBatch(records);
 }
 function toggleKartuKredit() {
   const isCC=document.getElementById('dompetKategori').value==='Kartu Kredit';

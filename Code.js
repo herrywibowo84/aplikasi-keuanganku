@@ -4,7 +4,7 @@
  */
 
 const APP_NAME    = 'DB_KeuanganKu';
-const APP_VERSION = '3.66'; // AUTO-UPDATED by deploy.sh — jangan edit manual
+const APP_VERSION = '3.67'; // AUTO-UPDATED by deploy.sh — jangan edit manual
 
 // ── LISENSI ──────────────────────────────────────────────────
 // Ganti dengan email pemilik aplikasi — selalu Lifetime secara otomatis
@@ -427,6 +427,34 @@ function updateTransaksiFields(ids, changes) {
   if (updated > 0) range.setValues(data);
   Logger.log('updateTransaksiFields: ' + JSON.stringify(changes) + ' → ' + updated + ' baris');
   return { success: true, updated };
+}
+
+// ==================== BATCH SAVE KATEGORI ====================
+
+// Simpan banyak kategori sekaligus dalam 1 GAS call.
+// items: [{ID:'', Jenis, Nama, ParentID}, ...]
+function saveKategoriBatch(items) {
+  if (!items || !items.length) return { success: false, error: 'Tidak ada data' };
+  const ss = getDB();
+  if (!ss) return { success: false, error: 'DB tidak ditemukan' };
+  const sheet = ss.getSheetByName('Kategori');
+  if (!sheet) return { success: false, error: 'Sheet Kategori tidak ditemukan' };
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const rows = items.map(item => {
+    const id = Utilities.getUuid();
+    return headers.map(h => {
+      if (h === 'ID') return id;
+      return item[h] !== undefined ? item[h] : '';
+    });
+  });
+
+  if (rows.length > 0) {
+    const lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow + 1, 1, rows.length, headers.length).setValues(rows);
+  }
+
+  return { success: true, saved: rows.length };
 }
 
 // ==================== DATA DELETE ====================
