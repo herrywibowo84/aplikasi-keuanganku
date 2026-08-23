@@ -2187,21 +2187,32 @@ function renderNetWorth(totalSaldoKas) {
 function renderCashFlowChart() {
   const ctxCF=document.getElementById('cashflowChart');
   if (cfChartInstance) cfChartInstance.destroy();
+
+  // Hanya tampilkan bulan berjalan
+  const period = getCurrentPeriod();
   const map={};
   appData.Transaksi.forEach(t => {
+    if (t.Tanggal < period.start || t.Tanggal > period.end) return;
     if (!map[t.Tanggal]) map[t.Tanggal]={in:0,out:0};
     const nom=parseFloat(t.Nominal)||0;
     if (t.Jenis==='Pemasukan') map[t.Tanggal].in+=nom;
     if (t.Jenis==='Pengeluaran') map[t.Tanggal].out+=nom;
   });
+
+  // Isi hari-hari yang tidak ada transaksi dengan 0 agar grafik rapi
   const dates=Object.keys(map).sort();
+  const labelDates = dates.length ? dates : [period.start];
+
   cfChartInstance=new Chart(ctxCF, {
     type:'line',
-    data:{labels:dates,datasets:[
-      {label:'Pemasukan',data:dates.map(d=>map[d].in),borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,.08)',tension:.4,fill:true,pointRadius:3},
-      {label:'Pengeluaran',data:dates.map(d=>map[d].out),borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.08)',tension:.4,fill:true,pointRadius:3}
+    data:{labels:labelDates,datasets:[
+      {label:'Pemasukan',data:labelDates.map(d=>(map[d]||{in:0}).in),borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,.08)',tension:.4,fill:true,pointRadius:3},
+      {label:'Pengeluaran',data:labelDates.map(d=>(map[d]||{out:0}).out),borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.08)',tension:.4,fill:true,pointRadius:3}
     ]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true,ticks:{callback:v=>fmtAxis(v)}}}}
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top'},
+        title:{display:true,text:`Arus Kas — ${period.start.substring(0,7).replace('-','/')}`,font:{size:11},color:'#6b7280'}},
+      scales:{y:{beginAtZero:true,ticks:{callback:v=>fmtAxis(v)}}}}
   });
 }
 
