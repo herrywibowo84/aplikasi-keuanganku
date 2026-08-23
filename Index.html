@@ -1320,16 +1320,7 @@
           </div>
         </div>
       </div>
-      <div class="overflow-x-auto p-4">
-        <table class="min-w-full text-sm border-collapse">
-          <thead><tr class="text-left text-gray-500 border-b-2 border-gray-100 text-xs font-semibold uppercase tracking-wide">
-            <th class="pb-2 pr-3 w-24">Jenis</th>
-            <th class="pb-2">Nama Kategori <span class="font-normal text-gray-400 normal-case tracking-normal">(klik nama untuk edit)</span></th>
-            <th class="pb-2 text-center w-16">Aksi</th>
-          </tr></thead>
-          <tbody id="kategoriTableBody" class="divide-y divide-gray-100"></tbody>
-        </table>
-      </div>
+      <div class="p-4" id="kategoriTableBody"></div>
     </div>
   </div>
   <!-- Reset DB -->
@@ -3080,8 +3071,13 @@ function renderDompetTable() {
       </td></tr>`;
   });
 }
+// State accordion kategori: Set of IDs yang sedang terbuka
+const _katOpen = new Set();
+
 function renderPengaturan() {
-  const tbodyK=document.getElementById('kategoriTableBody'); tbodyK.innerHTML='';
+  const container = document.getElementById('kategoriTableBody');
+  container.innerHTML = '';
+
   // Build parent dropdown for form
   const parentSel = document.getElementById('kategoriParent');
   if (parentSel) {
@@ -3090,36 +3086,106 @@ function renderPengaturan() {
       parentSel.innerHTML += `<option value="${k.ID}">${k.Jenis} — ${k.Nama}</option>`;
     });
   }
-  // Render hierarchy
+
   const parents = appData.Kategori.filter(k => !k.ParentID);
-  const subs = appData.Kategori.filter(k => k.ParentID);
-  const renderKatRow = (k, isChild) => {
-    const color = k.Jenis==='Pemasukan' ? 'text-emerald-600' : k.Jenis==='Biaya' ? 'text-amber-600' : 'text-rose-600';
-    const badgeCls = k.Jenis==='Pemasukan' ? 'bg-emerald-50 text-emerald-700' : k.Jenis==='Biaya' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700';
-    const indent = isChild ? 'pl-6' : '';
-    const prefix = isChild ? '<i class="fas fa-corner-down-right text-gray-300 mr-1 text-xs"></i>' : '';
-    tbodyK.innerHTML += `<tr class="hover:bg-gray-50" id="katRow_${k.ID}">
-      <td class="py-2 pr-3">
-        <span class="px-2 py-0.5 text-xs font-semibold rounded ${badgeCls}">${k.Jenis}</span>
-      </td>
-      <td class="py-2 ${indent}" id="katName_${k.ID}">
-        <span class="text-sm ${isChild?'text-gray-600':''} cursor-pointer hover:text-blue-600 hover:underline"
-          onclick="inlineEditKategori('${k.ID}')" title="Klik untuk edit">${prefix}${k.Nama}</span>
-      </td>
-      <td class="py-2 text-center whitespace-nowrap">
-        <button onclick="deleteData('Kategori','${k.ID}')" class="p-1 rounded hover:bg-rose-50 text-gray-300 hover:text-rose-500 transition-colors" title="Hapus">
-          <i class="fas fa-trash text-xs"></i>
-        </button>
-      </td>
-    </tr>`;
+  const subs    = appData.Kategori.filter(k => !!k.ParentID);
+  const parentIds = new Set(parents.map(p => p.ID));
+
+  // Orphan subs (ParentID tidak ada di parents) → tampilkan sebagai parent
+  const orphans = subs.filter(s => !parentIds.has(s.ParentID));
+  const allParents = [...parents, ...orphans];
+
+  // Group by Jenis
+  const byJenis = {};
+  allParents.forEach(k => {
+    if (!byJenis[k.Jenis]) byJenis[k.Jenis] = [];
+    byJenis[k.Jenis].push(k);
+  });
+
+  const jenisOrder = ['Pemasukan','Pengeluaran','Biaya'];
+  const jenisMeta = {
+    'Pemasukan':   { badge:'bg-emerald-100 text-emerald-700', section:'bg-emerald-50 border-emerald-200', dot:'bg-emerald-400' },
+    'Pengeluaran': { badge:'bg-rose-100 text-rose-700',       section:'bg-rose-50 border-rose-200',       dot:'bg-rose-400' },
+    'Biaya':       { badge:'bg-amber-100 text-amber-700',     section:'bg-amber-50 border-amber-200',     dot:'bg-amber-400' },
   };
 
-  parents.forEach(k => {
-    renderKatRow(k, false);
-    subs.filter(s => s.ParentID === k.ID).forEach(s => renderKatRow(s, true));
+  const renderSubRow = (s) => {
+    const id = s.ID;
+    return `<div class="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 group rounded-lg" id="katRow_${id}">
+      <span class="text-gray-300 text-xs ml-2">└</span>
+      <div class="flex-1 min-w-0" id="katName_${id}">
+        <span class="text-sm text-gray-600 cursor-pointer hover:text-blue-600 hover:underline"
+          onclick="inlineEditKategori('${id}')" title="Klik untuk edit nama">${s.Nama}</span>
+      </div>
+      <button onclick="deleteData('Kategori','${id}')"
+        class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-rose-50 text-gray-300 hover:text-rose-400 transition-all" title="Hapus">
+        <i class="fas fa-trash text-xs"></i>
+      </button>
+    </div>`;
+  };
+
+  [...new Set([...jenisOrder, ...Object.keys(byJenis)])].forEach(jenis => {
+    const list = byJenis[jenis];
+    if (!list || !list.length) return;
+    const meta = jenisMeta[jenis] || { badge:'bg-gray-100 text-gray-700', section:'bg-gray-50 border-gray-200', dot:'bg-gray-400' };
+
+    const section = document.createElement('div');
+    section.className = 'mb-3';
+
+    // Section header (Jenis group label)
+    const header = document.createElement('div');
+    header.className = `flex items-center gap-2 px-3 py-1.5 mb-1`;
+    header.innerHTML = `<span class="w-2 h-2 rounded-full ${meta.dot}"></span>
+      <span class="text-xs font-bold uppercase tracking-wider text-gray-500">${jenis}</span>
+      <span class="text-xs text-gray-400">${list.length} kategori</span>`;
+    section.appendChild(header);
+
+    // Each parent category as accordion item
+    list.forEach(k => {
+      const children = subs.filter(s => s.ParentID === k.ID);
+      const isOpen = _katOpen.has(k.ID);
+      const hasChildren = children.length > 0;
+
+      const card = document.createElement('div');
+      card.className = `border rounded-xl mb-1.5 overflow-hidden border-gray-200`;
+      card.id = `katCard_${k.ID}`;
+
+      // Parent row
+      const parentRow = document.createElement('div');
+      parentRow.className = `flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-gray-50 group transition-colors`;
+      parentRow.innerHTML = `
+        <div class="flex-1 min-w-0 flex items-center gap-2" id="katName_${k.ID}">
+          <span class="text-sm font-medium text-gray-800 cursor-pointer hover:text-blue-600 hover:underline"
+            onclick="event.stopPropagation();inlineEditKategori('${k.ID}')" title="Klik untuk edit nama">${k.Nama}</span>
+          ${hasChildren ? `<span class="text-xs text-gray-400">(${children.length} sub)</span>` : ''}
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button onclick="event.stopPropagation();deleteData('Kategori','${k.ID}')"
+            class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-rose-50 text-gray-300 hover:text-rose-400 transition-all" title="Hapus">
+            <i class="fas fa-trash text-xs"></i>
+          </button>
+          ${hasChildren ? `<i class="fas fa-chevron-${isOpen?'up':'down'} text-xs text-gray-400 transition-transform" id="katChev_${k.ID}"></i>` : '<span class="w-4"></span>'}
+        </div>`;
+
+      if (hasChildren) {
+        parentRow.addEventListener('click', () => toggleKatAccordion(k.ID));
+      }
+      card.appendChild(parentRow);
+
+      // Sub-category panel
+      if (hasChildren) {
+        const subPanel = document.createElement('div');
+        subPanel.id = `katSub_${k.ID}`;
+        subPanel.className = `border-t border-gray-100 bg-gray-50/60 px-1 py-1 ${isOpen ? '' : 'hidden'}`;
+        subPanel.innerHTML = children.map(renderSubRow).join('');
+        card.appendChild(subPanel);
+      }
+
+      section.appendChild(card);
+    });
+
+    container.appendChild(section);
   });
-  const parentIds = parents.map(p => p.ID);
-  subs.filter(s => !parentIds.includes(s.ParentID)).forEach(s => renderKatRow(s, false));
 
   // Isi parent dropdown untuk form tambah banyak
   const banyakParent = document.getElementById('katBanyakParent');
@@ -3127,13 +3193,32 @@ function renderPengaturan() {
     banyakParent.innerHTML = '<option value="">— Kategori Utama —</option>' +
       appData.Kategori.map(k => `<option value="${k.ID}">${k.Jenis} — ${k.Nama}</option>`).join('');
   }
-  // Live count untuk textarea tambah banyak
+  // Live count textarea
   const ta = document.getElementById('katBanyakNama');
-  if (ta) ta.addEventListener('input', () => {
-    const n = ta.value.split('\n').filter(l=>l.trim()).length;
-    const el = document.getElementById('katBanyakCount');
-    if (el) el.textContent = n ? `${n} kategori akan ditambahkan` : '';
-  });
+  if (ta && !ta._countBound) {
+    ta._countBound = true;
+    ta.addEventListener('input', () => {
+      const n = ta.value.split('\n').filter(l=>l.trim()).length;
+      const el = document.getElementById('katBanyakCount');
+      if (el) el.textContent = n ? `${n} kategori akan ditambahkan` : '';
+    });
+  }
+}
+
+function toggleKatAccordion(id) {
+  const panel = document.getElementById(`katSub_${id}`);
+  const chev  = document.getElementById(`katChev_${id}`);
+  if (!panel) return;
+  const opening = panel.classList.contains('hidden');
+  if (opening) {
+    _katOpen.add(id);
+    panel.classList.remove('hidden');
+    if (chev) { chev.classList.remove('fa-chevron-down'); chev.classList.add('fa-chevron-up'); }
+  } else {
+    _katOpen.delete(id);
+    panel.classList.add('hidden');
+    if (chev) { chev.classList.remove('fa-chevron-up'); chev.classList.add('fa-chevron-down'); }
+  }
 }
 function editDompet(id) {
   const data=appData.Dompet.find(d=>d.ID===id); if (!data) return;
