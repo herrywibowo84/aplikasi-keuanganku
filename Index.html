@@ -648,20 +648,46 @@
       </div>
     </div>
     <!-- Bulk action toolbar (muncul saat ada yang dicentang) -->
-    <div id="bulkToolbar" class="hidden px-4 py-3 bg-indigo-50 border-b border-indigo-200 flex flex-wrap items-center gap-3">
-      <div class="flex flex-col gap-0.5">
-        <span class="text-sm font-medium text-indigo-700"><span id="bulkCount">0</span> transaksi dipilih</span>
-        <span id="bulkScopeNote" class="text-xs text-indigo-500"></span>
-      </div>
-      <div class="flex items-center gap-2 ml-auto flex-wrap">
-        <label class="text-xs text-indigo-700 font-medium">Ubah Dompet ke:</label>
-        <select id="bulkDompetSelect" class="border border-indigo-300 rounded-lg p-1.5 text-sm focus:ring focus:ring-indigo-200 bg-white"></select>
-        <button onclick="applyBulkDompet()" class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
-          <i class="fas fa-check mr-1"></i>Terapkan
-        </button>
-        <button onclick="clearBulkSelection()" class="px-3 py-1.5 bg-white text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 text-sm">
-          Batal
-        </button>
+    <div id="bulkToolbar" class="hidden px-4 py-3 bg-indigo-50 border-b border-indigo-200">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <!-- Info pilihan -->
+        <div class="flex flex-col gap-0.5 shrink-0">
+          <span class="text-sm font-semibold text-indigo-700"><span id="bulkCount">0</span> transaksi dipilih</span>
+          <span id="bulkScopeNote" class="text-xs text-indigo-400"></span>
+        </div>
+        <div class="w-px h-8 bg-indigo-200 hidden sm:block"></div>
+        <!-- Field: Dompet -->
+        <div class="flex flex-col gap-0.5">
+          <label class="text-xs font-medium text-indigo-600">Dompet</label>
+          <select id="bulkDompetSelect" class="border border-indigo-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-indigo-300 min-w-[9rem]">
+            <option value="">— tidak diubah —</option>
+          </select>
+        </div>
+        <!-- Field: Jenis -->
+        <div class="flex flex-col gap-0.5">
+          <label class="text-xs font-medium text-indigo-600">Jenis</label>
+          <select id="bulkJenisSelect" onchange="bulkJenisChange()" class="border border-indigo-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-indigo-300 min-w-[8rem]">
+            <option value="">— tidak diubah —</option>
+            <option value="Pengeluaran">Pengeluaran</option>
+            <option value="Pemasukan">Pemasukan</option>
+          </select>
+        </div>
+        <!-- Field: Kategori -->
+        <div class="flex flex-col gap-0.5">
+          <label class="text-xs font-medium text-indigo-600">Kategori</label>
+          <select id="bulkKategoriSelect" class="border border-indigo-200 rounded-lg px-2 py-1.5 text-xs bg-white focus:ring-2 focus:ring-indigo-300 min-w-[10rem]">
+            <option value="">— tidak diubah —</option>
+          </select>
+        </div>
+        <!-- Aksi -->
+        <div class="flex items-end gap-2 ml-auto">
+          <button onclick="applyBulkEdit()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors">
+            <i class="fas fa-check mr-1"></i>Terapkan
+          </button>
+          <button onclick="clearBulkSelection()" class="px-3 py-2 bg-white text-indigo-500 border border-indigo-200 rounded-lg text-xs hover:bg-indigo-50 transition-colors">
+            Batal
+          </button>
+        </div>
       </div>
     </div>
     <div class="overflow-x-auto">
@@ -2286,9 +2312,11 @@ function renderRiwayatTable() {
   const start = (_riwayatPage-1)*_riwayatPerPage;
   const pageData = data.slice(start, start+_riwayatPerPage);
 
-  // Isi selector dompet di bulk toolbar
+  // Isi selector dompet di bulk toolbar (preserve default "tidak diubah")
   const bulkDompetSel = document.getElementById('bulkDompetSelect');
-  if (bulkDompetSel) bulkDompetSel.innerHTML = appData.Dompet.map(d=>`<option value="${d.Nama}">${d.Nama}</option>`).join('');
+  if (bulkDompetSel) bulkDompetSel.innerHTML =
+    `<option value="">— tidak diubah —</option>` +
+    appData.Dompet.map(d=>`<option value="${d.Nama}">${d.Nama}</option>`).join('');
 
   const rowBase = 'border-b border-gray-100 transition-colors duration-100';
   pageData.forEach((t, idx) => {
@@ -2428,19 +2456,49 @@ function clearBulkSelection() {
   if (sal) sal.checked = false;
   document.getElementById('bulkToolbar').classList.add('hidden');
 }
-function applyBulkDompet() {
+function bulkJenisChange() {
+  const jenis = document.getElementById('bulkJenisSelect').value;
+  const katSel = document.getElementById('bulkKategoriSelect');
+  if (!katSel) return;
+  const filtered = jenis
+    ? appData.Kategori.filter(k => k.Jenis === jenis)
+    : appData.Kategori;
+  katSel.innerHTML = `<option value="">— tidak diubah —</option>` +
+    filtered.map(k => `<option value="${k.Nama}">${k.Nama}</option>`).join('');
+}
+
+function applyBulkEdit() {
   if (demoGuard()) return;
   const ids = [..._bulkSelectedIds];
   if (!ids.length) { showAlert('Pilih minimal 1 transaksi.', 'error'); return; }
-  const dompet = document.getElementById('bulkDompetSelect').value;
-  if (!dompet) { showAlert('Pilih dompet tujuan.', 'error'); return; }
-  if (!confirm(`Ubah dompet ${ids.length} transaksi menjadi "${dompet}"?`)) return;
+
+  const dompet   = document.getElementById('bulkDompetSelect').value;
+  const jenis    = document.getElementById('bulkJenisSelect').value;
+  const kategori = document.getElementById('bulkKategoriSelect').value;
+
+  const changes = {};
+  if (dompet)   changes['DompetAsal'] = dompet;
+  if (jenis)    changes['Jenis']      = jenis;
+  if (kategori) changes['Kategori']   = kategori;
+
+  if (!Object.keys(changes).length) {
+    showAlert('Pilih minimal satu field yang ingin diubah.', 'error'); return;
+  }
+
+  const fieldNames = Object.entries(changes)
+    .map(([k,v]) => `${k === 'DompetAsal' ? 'Dompet' : k} → "${v}"`).join(', ');
+  if (!confirm(`Ubah ${ids.length} transaksi:\n${fieldNames}`)) return;
+
   showLoading(`Memperbarui ${ids.length} transaksi...`);
   google.script.run
     .withSuccessHandler(res => {
       hideLoading();
       if (res && res.success) {
         showAlert(`✅ ${res.updated} transaksi berhasil diperbarui!`, 'success');
+        // Reset toolbar selects
+        ['bulkDompetSelect','bulkJenisSelect','bulkKategoriSelect'].forEach(id => {
+          const el = document.getElementById(id); if (el) el.value = '';
+        });
         clearBulkSelection();
         loadAllData();
       } else {
@@ -2451,8 +2509,10 @@ function applyBulkDompet() {
       hideLoading();
       showAlert('Gagal: ' + (err.message||'Error'), 'error');
     })
-    .updateTransaksiField(ids, 'DompetAsal', dompet);
+    .updateTransaksiFields(ids, changes);
 }
+// alias lama (dipakai di beberapa tempat) — arahkan ke applyBulkEdit
+function applyBulkDompet() { applyBulkEdit(); }
 // ──────────────────────────────────────────────────────────────
 
 // ── INLINE EDIT ───────────────────────────────────────────────

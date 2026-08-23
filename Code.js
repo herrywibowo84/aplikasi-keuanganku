@@ -4,7 +4,7 @@
  */
 
 const APP_NAME    = 'DB_KeuanganKu';
-const APP_VERSION = '3.63'; // AUTO-UPDATED by deploy.sh — jangan edit manual
+const APP_VERSION = '3.64'; // AUTO-UPDATED by deploy.sh — jangan edit manual
 
 // ── LISENSI ──────────────────────────────────────────────────
 // Ganti dengan email pemilik aplikasi — selalu Lifetime secara otomatis
@@ -388,6 +388,44 @@ function updateTransaksiField(ids, field, value) {
   }
   if (updated > 0) range.setValues(data);
   Logger.log('updateTransaksiField: ' + field + '=' + value + ' → ' + updated + ' baris diperbarui');
+  return { success: true, updated };
+}
+
+// Bulk-update beberapa field sekaligus untuk banyak baris.
+// changes = { DompetAsal: 'Jago', Jenis: 'Pemasukan', Kategori: 'Gaji / Upah' }
+// Hanya field yang ada di object changes yang diupdate.
+function updateTransaksiFields(ids, changes) {
+  if (!ids || !ids.length || !changes || !Object.keys(changes).length)
+    return { success: false, error: 'Parameter tidak valid' };
+  const ss = getDB();
+  if (!ss) return { success: false, error: 'DB tidak ditemukan' };
+  const sheet = ss.getSheetByName('Transaksi');
+  if (!sheet || sheet.getLastRow() < 2) return { success: true, updated: 0 };
+
+  const range   = sheet.getDataRange();
+  const data    = range.getValues();
+  const headers = data[0];
+  const iID     = headers.indexOf('ID');
+  if (iID < 0) return { success: false, error: 'Kolom ID tidak ditemukan' };
+
+  // Petakan field name → index kolom
+  const fieldIdx = {};
+  for (const field of Object.keys(changes)) {
+    const i = headers.indexOf(field);
+    if (i >= 0) fieldIdx[field] = i;
+  }
+
+  const idSet = new Set(ids);
+  let updated = 0;
+  for (let i = 1; i < data.length; i++) {
+    if (!idSet.has(data[i][iID])) continue;
+    for (const [field, val] of Object.entries(changes)) {
+      if (fieldIdx[field] !== undefined) data[i][fieldIdx[field]] = val;
+    }
+    updated++;
+  }
+  if (updated > 0) range.setValues(data);
+  Logger.log('updateTransaksiFields: ' + JSON.stringify(changes) + ' → ' + updated + ' baris');
   return { success: true, updated };
 }
 
