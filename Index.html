@@ -2531,20 +2531,25 @@ function saveInlineEdit(id) {
   if (!t) return;
   const updated = {
     ...t,
-    Tanggal:  document.getElementById(`ie_tgl_${id}`).value,
-    Jenis:    document.getElementById(`ie_jenis_${id}`).value,
-    Kategori: document.getElementById(`ie_kat_${id}`).value,
+    Tanggal:    document.getElementById(`ie_tgl_${id}`).value,
+    Jenis:      document.getElementById(`ie_jenis_${id}`).value,
+    Kategori:   document.getElementById(`ie_kat_${id}`).value,
     DompetAsal: document.getElementById(`ie_dompet_${id}`).value,
     Keterangan: document.getElementById(`ie_ket_${id}`).value,
-    Nominal:  parseFloat(document.getElementById(`ie_nom_${id}`).value) || 0,
+    Nominal:    parseFloat(document.getElementById(`ie_nom_${id}`).value) || 0,
   };
   showLoading('Menyimpan...');
   google.script.run
     .withSuccessHandler(() => {
       hideLoading();
       _inlineEditingId = null;
+      // Perbarui appData lokal agar tidak perlu reload penuh
+      const idx = appData.Transaksi.findIndex(x => x.ID === id);
+      if (idx >= 0) appData.Transaksi[idx] = updated;
       showAlert('Transaksi diperbarui.', 'success');
-      loadAllData();
+      // Re-render tabel saja (tanpa reload GAS)
+      compileRiwayat();
+      applyFilter();
     })
     .withFailureHandler(err => {
       hideLoading();
