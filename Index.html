@@ -2779,20 +2779,73 @@ function handleImportCSV() {
   reader.onload=e=>processCSV(e.target.result);
   reader.readAsText(file);
 }
-function processCSV(text) {
-  const lines=text.split('\n').filter(l=>l.trim());
-  if (lines.length<2) { showAlert('CSV kosong atau format salah.','error'); return; }
-  importedDataTemp=[];
-  for (let i=1;i<lines.length;i++) {
-    const cols=lines[i].split(',');
-    if (cols.length<3) continue;
-    const tgl=cols[0].replace(/['"]/g,'').trim();
-    const ket=cols[1].replace(/['"]/g,'').trim();
-    let nom=parseFloat(cols[2].replace(/[^0-9.-]/g,''));
-    if (isNaN(nom)) continue;
-    const jenis=nom>0&&/masuk|gaji|terima|kredit/i.test(ket)?'Pemasukan':'Pengeluaran';
-    importedDataTemp.push({idx:i,Tanggal:tgl.length>=8?tgl:new Date().toISOString().split('T')[0],Jenis:jenis,Keterangan:ket,Nominal:Math.abs(nom)});
+// Parse satu baris CSV yang mungkin ada koma di dalam tanda kutip
+function parseCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+    else { cur += c; }
   }
+  result.push(cur.trim());
+  return result;
+}
+
+function processCSV(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length < 2) { showAlert('CSV kosong atau format salah.', 'error'); return; }
+  importedDataTemp = [];
+
+  // Baca header untuk deteksi format otomatis
+  const headers = parseCSVLine(lines[0]).map(h => h.replace(/['"]/g,'').trim().toLowerCase());
+
+  // Deteksi format Bank Jago: Tanggal,Waktu,Sumber/Tujuan,Rincian Transaksi,Referensi,Catatan,Jumlah,Saldo
+  const isJago = headers.includes('jumlah') && headers.includes('saldo') && headers.includes('waktu');
+
+  // Indeks kolom
+  const iDate = headers.findIndex(h => h.includes('tanggal') || h.includes('date'));
+  const iNom  = isJago ? headers.findIndex(h => h === 'jumlah') : headers.findIndex(h => h.includes('nominal') || h.includes('jumlah') || h.includes('amount'));
+  const iKet  = isJago
+    ? headers.findIndex(h => h.includes('catatan'))          // kolom Catatan
+    : headers.findIndex(h => h.includes('keterangan') || h.includes('ket') || h.includes('desc'));
+  const iKet2 = isJago ? headers.findIndex(h => h.includes('rincian') || h.includes('sumber')) : -1; // fallback
+
+  if (iDate < 0 || iNom < 0) { showAlert('Format CSV tidak dikenali. Pastikan ada kolom Tanggal dan Jumlah/Nominal.', 'error'); return; }
+
+  const today = new Date().toISOString().split('T')[0];
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
+    if (cols.length < 3) continue;
+
+    const tgl = cols[iDate]?.replace(/['"]/g,'').trim() || today;
+    let nom   = parseFloat((cols[iNom] || '').replace(/[^0-9.-]/g,''));
+    if (isNaN(nom) || nom === 0) continue;
+
+    // Keterangan: prioritaskan Catatan jika tidak kosong, fallback ke Rincian/Sumber
+    let ket = (iKet >= 0 ? cols[iKet] : '') || '';
+    ket = ket.replace(/['"]/g,'').trim();
+    if (!ket && iKet2 >= 0) ket = (cols[iKet2] || '').replace(/['"]/g,'').trim();
+    if (!ket) ket = 'Transaksi ' + tgl;
+
+    // Jenis: Bank Jago — positif = Pemasukan, negatif = Pengeluaran
+    // Format lain: cek tanda atau kata kunci
+    const jenis = isJago
+      ? (nom > 0 ? 'Pemasukan' : 'Pengeluaran')
+      : (nom > 0 && /masuk|gaji|terima|kredit|bonus|income/i.test(ket) ? 'Pemasukan' : 'Pengeluaran');
+
+    importedDataTemp.push({
+      idx: i,
+      Tanggal: tgl.length >= 8 ? tgl : today,
+      Jenis: jenis,
+      Keterangan: ket.substring(0, 100), // batasi panjang
+      Nominal: Math.abs(nom)
+    });
+  }
+
+  if (!importedDataTemp.length) { showAlert('Tidak ada data valid yang dapat diimpor.', 'error'); return; }
+  showAlert(`${importedDataTemp.length} transaksi siap diimport. Periksa dan sesuaikan sebelum menyimpan.`, 'success');
   renderImportPreview();
 }
 function renderImportPreview() {
@@ -2836,30 +2889,39 @@ async function saveImportedData() {
     showUpgradeModal(`Batas ${limits.maxTrx} transaksi tercapai. Hanya ${sisa} slot tersisa.`);
     return;
   }
-  showLoading(`Menyimpan ${importedDataTemp.length} transaksi...`);
-  const batch=importedDataTemp.filter(row=>document.getElementById(`impRow_${row.idx}`)).map(row=>({
-    ID:'', Tanggal:document.getElementById(`impTgl_${row.idx}`).value,
-    Jenis:document.getElementById(`impJenis_${row.idx}`).value,
-    Kategori:document.getElementById(`impKat_${row.idx}`).value,
-    Nominal:parseFloat(document.getElementById(`impNom_${row.idx}`).value)||0,
-    Biaya:0, Keterangan:document.getElementById(`impKet_${row.idx}`).value,
-    DompetAsal:document.getElementById(`impDompet_${row.idx}`).value
-  }));
-  let saved=0;
-  const saveNext=(i)=>{
-    if (i>=batch.length) {
+
+  // Kumpulkan semua baris yang masih ada di preview
+  const batch = importedDataTemp
+    .filter(row => document.getElementById(`impRow_${row.idx}`))
+    .map(row => ({
+      ID:'', Tanggal:document.getElementById(`impTgl_${row.idx}`).value,
+      Jenis:document.getElementById(`impJenis_${row.idx}`).value,
+      Kategori:document.getElementById(`impKat_${row.idx}`).value,
+      Nominal:parseFloat(document.getElementById(`impNom_${row.idx}`).value)||0,
+      Biaya:0, Keterangan:document.getElementById(`impKet_${row.idx}`).value,
+      DompetAsal:document.getElementById(`impDompet_${row.idx}`).value,
+      KodeUnik:'', Waktu:''
+    }));
+
+  if (!batch.length) { showAlert('Tidak ada data untuk disimpan.','error'); return; }
+
+  showLoading(`Menyimpan ${batch.length} transaksi sekaligus...`);
+
+  // Kirim semua dalam 1 GAS call — jauh lebih cepat
+  google.script.run
+    .withSuccessHandler(res => {
+      hideLoading();
       document.getElementById('importPreviewContainer').classList.add('hidden');
       document.getElementById('csvFileInput').value='';
       importedDataTemp=[];
-      showAlert(`Berhasil import ${saved} transaksi!`,'success');
-      loadAllData(); return;
-    }
-    google.script.run
-      .withSuccessHandler(()=>{saved++;saveNext(i+1);})
-      .withFailureHandler(()=>saveNext(i+1))
-      .saveRecord('Transaksi',batch[i]);
-  };
-  saveNext(0);
+      showAlert(`Berhasil import ${res.saved} transaksi!`,'success');
+      loadAllData();
+    })
+    .withFailureHandler(err => {
+      hideLoading();
+      showAlert('Gagal import: ' + (err.message||'Error tidak diketahui'), 'error');
+    })
+    .saveTransaksiBatch(batch);
 }
 
 // ============================================================

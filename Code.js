@@ -4,7 +4,7 @@
  */
 
 const APP_NAME    = 'DB_KeuanganKu';
-const APP_VERSION = '3.53'; // AUTO-UPDATED by deploy.sh — jangan edit manual
+const APP_VERSION = '3.54'; // AUTO-UPDATED by deploy.sh — jangan edit manual
 
 // ── LISENSI ──────────────────────────────────────────────────
 // Ganti dengan email pemilik aplikasi — selalu Lifetime secara otomatis
@@ -306,6 +306,58 @@ function saveRecord(tableName, recordObj) {
   }
 
   return { success: true };
+}
+
+// ==================== BATCH SAVE (untuk import CSV) ====================
+
+// Simpan banyak transaksi sekaligus dalam 1 GAS call — jauh lebih cepat dari satu-per-satu
+function saveTransaksiBatch(records) {
+  const ss = getDB();
+  if (!ss) {
+    setupDB();
+    return saveTransaksiBatch(records); // retry setelah setup
+  }
+  const sheet = ss.getSheetByName('Transaksi');
+  if (!sheet) return { success: false, saved: 0 };
+
+  const schema = SCHEMAS['Transaksi'];
+  const rows = records.map(rec => {
+    if (!rec.ID) rec.ID = Utilities.getUuid();
+    return schema.map(col => rec[col] !== undefined ? rec[col] : '');
+  });
+
+  if (rows.length === 0) return { success: true, saved: 0 };
+
+  // Tulis semua baris sekaligus
+  const startRow = sheet.getLastRow() + 1;
+  sheet.getRange(startRow, 1, rows.length, schema.length).setValues(rows);
+
+  // Update saldo dompet: hitung net per dompet lalu apply sekali
+  const netPerDompet = {};
+  records.forEach(rec => {
+    const dompet = rec.DompetAsal;
+    if (!dompet) return;
+    const nom = parseFloat(rec.Nominal) || 0;
+    const sign = rec.Jenis === 'Pemasukan' ? 1 : -1;
+    netPerDompet[dompet] = (netPerDompet[dompet] || 0) + sign * nom;
+  });
+
+  const dompetSheet = ss.getSheetByName('Dompet');
+  if (dompetSheet && dompetSheet.getLastRow() > 1) {
+    const dData = dompetSheet.getDataRange().getValues();
+    const dHeaders = dData[0];
+    const iNama = dHeaders.indexOf('Nama');
+    const iSaldo = dHeaders.indexOf('SaldoSaatIni');
+    for (let i = 1; i < dData.length; i++) {
+      const nama = dData[i][iNama];
+      if (netPerDompet[nama] !== undefined) {
+        const saldoBaru = (parseFloat(dData[i][iSaldo]) || 0) + netPerDompet[nama];
+        dompetSheet.getRange(i + 1, iSaldo + 1).setValue(saldoBaru);
+      }
+    }
+  }
+
+  return { success: true, saved: rows.length };
 }
 
 // ==================== DATA DELETE ====================
