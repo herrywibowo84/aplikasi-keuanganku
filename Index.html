@@ -629,7 +629,10 @@
         <input type="text" id="filterSearch" placeholder="Cari keterangan, kategori, nominal..." class="w-full border rounded-lg py-2 pl-9 pr-3 text-sm focus:ring focus:ring-blue-200" onkeyup="if(event.key==='Enter') applyFilter()"></div>
       </div>
       <div><label class="block text-xs font-medium text-gray-700 mb-1">Dompet</label>
-        <select id="filterDompet" class="border rounded-lg p-2 text-sm focus:ring focus:ring-blue-200"><option value="">Semua Dompet</option></select></div>
+        <select id="filterDompet" class="border rounded-lg p-2 text-sm focus:ring focus:ring-blue-200">
+          <option value="">Semua Dompet</option>
+          <option value="__kosong__">⚠️ Dompet Kosong</option>
+        </select></div>
       <div><label class="block text-xs font-medium text-gray-700 mb-1">Jenis</label>
         <select id="filterJenis" class="border rounded-lg p-2 text-sm focus:ring focus:ring-blue-200">
           <option value="">Semua</option><option>Pemasukan</option><option>Pengeluaran</option><option>Transfer</option>
@@ -644,10 +647,27 @@
         <button onclick="resetFilter()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm"><i class="fas fa-sync-alt mr-1"></i>Reset</button>
       </div>
     </div>
+    <!-- Bulk action toolbar (muncul saat ada yang dicentang) -->
+    <div id="bulkToolbar" class="hidden px-4 py-3 bg-indigo-50 border-b border-indigo-200 flex flex-wrap items-center gap-3">
+      <span class="text-sm font-medium text-indigo-700"><span id="bulkCount">0</span> transaksi dipilih</span>
+      <div class="flex items-center gap-2 ml-auto flex-wrap">
+        <label class="text-xs text-indigo-700 font-medium">Ubah Dompet ke:</label>
+        <select id="bulkDompetSelect" class="border border-indigo-300 rounded-lg p-1.5 text-sm focus:ring focus:ring-indigo-200 bg-white"></select>
+        <button onclick="applyBulkDompet()" class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">
+          <i class="fas fa-check mr-1"></i>Terapkan
+        </button>
+        <button onclick="clearBulkSelection()" class="px-3 py-1.5 bg-white text-indigo-600 border border-indigo-300 rounded-lg hover:bg-indigo-50 text-sm">
+          Batal
+        </button>
+      </div>
+    </div>
     <div class="overflow-x-auto p-4">
       <table class="min-w-full text-sm">
         <thead class="bg-gray-50 text-gray-600">
           <tr>
+            <th class="py-3 px-3 text-center w-8">
+              <input type="checkbox" id="selectAllChk" onchange="toggleSelectAll(this.checked)" class="w-4 h-4 rounded accent-indigo-600">
+            </th>
             <th class="py-3 px-4 text-left font-medium">Tanggal</th>
             <th class="py-3 px-4 text-left font-medium">Jenis</th>
             <th class="py-3 px-4 text-left font-medium">Kategori</th>
@@ -2199,7 +2219,8 @@ function applyFilter() {
   let res=[...filteredRiwayat];
   if (start) res=res.filter(t=>t.Tanggal>=start);
   if (end) res=res.filter(t=>t.Tanggal<=end);
-  if (dompet) res=res.filter(t=>t.DompetAsal===dompet||(t.isTransfer&&t.KeDompet===dompet));
+  if (dompet === '__kosong__') res=res.filter(t=>!t.isTransfer && (!t.DompetAsal||t.DompetAsal.trim()===''));
+  else if (dompet) res=res.filter(t=>t.DompetAsal===dompet||(t.isTransfer&&t.KeDompet===dompet));
   if (jenis) res=res.filter(t=>t.Jenis===jenis);
   if (search) {
     res=res.filter(t=>{
@@ -2233,7 +2254,7 @@ function renderRiwayatTable() {
   const tbody=document.getElementById('riwayatTableBody');
   tbody.innerHTML='';
   if (!data.length) {
-    tbody.innerHTML='<tr><td colspan="7" class="py-6 text-center text-gray-400 text-sm">Tidak ada data yang sesuai filter.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="8" class="py-6 text-center text-gray-400 text-sm">Tidak ada data yang sesuai filter.</td></tr>';
     document.getElementById('riwayatPagination').innerHTML='';
     return;
   }
@@ -2242,17 +2263,27 @@ function renderRiwayatTable() {
   const start = (_riwayatPage-1)*_riwayatPerPage;
   const pageData = data.slice(start, start+_riwayatPerPage);
 
+  // Isi selector dompet di bulk toolbar
+  const bulkDompetSel = document.getElementById('bulkDompetSelect');
+  if (bulkDompetSel) bulkDompetSel.innerHTML = appData.Dompet.map(d=>`<option value="${d.Nama}">${d.Nama}</option>`).join('');
+
   pageData.forEach(t => {
     const color=t.Jenis==='Pemasukan'?'text-green-600':(t.Jenis==='Transfer'?'text-blue-600':'text-red-600');
     const badge=t.Jenis==='Pemasukan'?'bg-green-100 text-green-700':(t.Jenis==='Transfer'?'bg-blue-100 text-blue-700':'bg-red-100 text-red-700');
     const kategoriCell = t.isTransfer
       ? `<span class="px-2 py-0.5 text-xs font-bold rounded bg-blue-100 text-blue-700">Transfer</span>`
       : `<span class="text-xs">${t.Kategori||'—'}</span>`;
+    const emptyDompet = !t.isTransfer && (!t.DompetAsal||t.DompetAsal.trim()==='');
     const dompetCell = t.isTransfer
       ? `<span class="text-xs">${t.DariDompet} <i class="fas fa-arrow-right text-xs mx-1"></i> ${t.KeDompet}</span>`
-      : `<span class="text-xs">${t.DompetAsal||'—'}</span>`;
+      : emptyDompet
+        ? `<span class="text-xs text-amber-500 font-medium"><i class="fas fa-exclamation-triangle mr-1"></i>Kosong</span>`
+        : `<span class="text-xs">${t.DompetAsal}</span>`;
     const editBtn=t.isTransfer?`<button onclick="editTransfer('${t.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>`:`<button onclick="editTransaksi('${t.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>`;
-    tbody.innerHTML+=`<tr class="hover:bg-gray-50 text-sm">
+    const chkCell = t.isTransfer ? `<td class="py-3 px-3"></td>` :
+      `<td class="py-3 px-3 text-center"><input type="checkbox" class="trx-chk w-4 h-4 rounded accent-indigo-600" data-id="${t.ID}" onchange="updateBulkToolbar()"></td>`;
+    tbody.innerHTML+=`<tr class="hover:bg-gray-50 text-sm" id="trxRow_${t.ID}">
+      ${chkCell}
       <td class="py-3 px-4">${t.Tanggal}</td>
       <td class="py-3 px-4"><span class="px-2 py-0.5 text-xs font-bold rounded ${badge}">${t.Jenis}</span></td>
       <td class="py-3 px-4">${kategoriCell}</td>
@@ -2263,6 +2294,9 @@ function renderRiwayatTable() {
         <button onclick="deleteData('${t.isTransfer?'Transfer':'Transaksi'}','${t.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
       </td></tr>`;
   });
+  // Reset selectAll checkbox state
+  const sal = document.getElementById('selectAllChk');
+  if (sal) sal.checked = false;
 
   // Render pagination bar
   const pEl = document.getElementById('riwayatPagination');
@@ -2291,6 +2325,56 @@ function renderRiwayatTable() {
       <div class="flex items-center gap-1">${pages}</div>
     </div>`;
 }
+// ── BULK SELECT / EDIT ────────────────────────────────────────
+function getCheckedIds() {
+  return [...document.querySelectorAll('.trx-chk:checked')].map(el=>el.dataset.id);
+}
+function updateBulkToolbar() {
+  const ids = getCheckedIds();
+  const toolbar = document.getElementById('bulkToolbar');
+  document.getElementById('bulkCount').textContent = ids.length;
+  toolbar.classList.toggle('hidden', ids.length === 0);
+  // Sync selectAll checkbox state
+  const all = document.querySelectorAll('.trx-chk');
+  const sal = document.getElementById('selectAllChk');
+  if (sal) sal.checked = all.length > 0 && ids.length === all.length;
+}
+function toggleSelectAll(checked) {
+  document.querySelectorAll('.trx-chk').forEach(el => el.checked = checked);
+  updateBulkToolbar();
+}
+function clearBulkSelection() {
+  document.querySelectorAll('.trx-chk').forEach(el => el.checked = false);
+  const sal = document.getElementById('selectAllChk');
+  if (sal) sal.checked = false;
+  updateBulkToolbar();
+}
+function applyBulkDompet() {
+  if (demoGuard()) return;
+  const ids = getCheckedIds();
+  if (!ids.length) { showAlert('Pilih minimal 1 transaksi.', 'error'); return; }
+  const dompet = document.getElementById('bulkDompetSelect').value;
+  if (!dompet) { showAlert('Pilih dompet tujuan.', 'error'); return; }
+  if (!confirm(`Ubah dompet ${ids.length} transaksi menjadi "${dompet}"?`)) return;
+  showLoading(`Memperbarui ${ids.length} transaksi...`);
+  google.script.run
+    .withSuccessHandler(res => {
+      hideLoading();
+      if (res && res.success) {
+        showAlert(`✅ ${res.updated} transaksi berhasil diperbarui!`, 'success');
+        clearBulkSelection();
+        loadAllData();
+      } else {
+        showAlert('Gagal update: ' + (res?.error||'Error tidak diketahui'), 'error');
+      }
+    })
+    .withFailureHandler(err => {
+      hideLoading();
+      showAlert('Gagal: ' + (err.message||'Error'), 'error');
+    })
+    .updateTransaksiField(ids, 'DompetAsal', dompet);
+}
+// ──────────────────────────────────────────────────────────────
 function editTransaksi(id) {
   const data=appData.Transaksi.find(t=>t.ID===id); if (!data) return;
   switchPage('catat'); setCatatTab(data.Jenis.toLowerCase()==='pemasukan'?'pemasukan':'pengeluaran');

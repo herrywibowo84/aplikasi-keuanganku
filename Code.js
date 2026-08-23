@@ -4,7 +4,7 @@
  */
 
 const APP_NAME    = 'DB_KeuanganKu';
-const APP_VERSION = '3.55'; // AUTO-UPDATED by deploy.sh — jangan edit manual
+const APP_VERSION = '3.56'; // AUTO-UPDATED by deploy.sh — jangan edit manual
 
 // ── LISENSI ──────────────────────────────────────────────────
 // Ganti dengan email pemilik aplikasi — selalu Lifetime secara otomatis
@@ -358,6 +358,37 @@ function saveTransaksiBatch(records) {
   }
 
   return { success: true, saved: rows.length };
+}
+
+// ==================== BULK FIELD UPDATE ====================
+
+// Bulk-update satu field di banyak baris Transaksi sekaligus.
+// Contoh: updateTransaksiField(['id1','id2'], 'DompetAsal', 'Jago Syariah')
+function updateTransaksiField(ids, field, value) {
+  if (!ids || !ids.length || !field) return { success: false, error: 'Parameter tidak valid' };
+  const ss = getDB();
+  if (!ss) return { success: false, error: 'DB tidak ditemukan' };
+  const sheet = ss.getSheetByName('Transaksi');
+  if (!sheet || sheet.getLastRow() < 2) return { success: true, updated: 0 };
+
+  const range = sheet.getDataRange();
+  const data  = range.getValues();
+  const headers = data[0];
+  const iID    = headers.indexOf('ID');
+  const iField = headers.indexOf(field);
+  if (iID < 0 || iField < 0) return { success: false, error: 'Kolom tidak ditemukan: ' + field };
+
+  const idSet = new Set(ids);
+  let updated = 0;
+  for (let i = 1; i < data.length; i++) {
+    if (idSet.has(data[i][iID])) {
+      data[i][iField] = value;
+      updated++;
+    }
+  }
+  if (updated > 0) range.setValues(data);
+  Logger.log('updateTransaksiField: ' + field + '=' + value + ' → ' + updated + ' baris diperbarui');
+  return { success: true, updated };
 }
 
 // ==================== DATA DELETE ====================
