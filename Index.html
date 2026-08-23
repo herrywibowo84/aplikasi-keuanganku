@@ -649,7 +649,10 @@
     </div>
     <!-- Bulk action toolbar (muncul saat ada yang dicentang) -->
     <div id="bulkToolbar" class="hidden px-4 py-3 bg-indigo-50 border-b border-indigo-200 flex flex-wrap items-center gap-3">
-      <span class="text-sm font-medium text-indigo-700"><span id="bulkCount">0</span> transaksi dipilih</span>
+      <div class="flex flex-col gap-1">
+        <span class="text-sm font-medium text-indigo-700"><span id="bulkCount">0</span> transaksi dipilih</span>
+        <button id="bulkSelectAllFiltered" onclick="selectAllFiltered()" class="hidden text-xs text-indigo-600 underline hover:text-indigo-800 text-left"></button>
+      </div>
       <div class="flex items-center gap-2 ml-auto flex-wrap">
         <label class="text-xs text-indigo-700 font-medium">Ubah Dompet ke:</label>
         <select id="bulkDompetSelect" class="border border-indigo-300 rounded-lg p-1.5 text-sm focus:ring focus:ring-indigo-200 bg-white"></select>
@@ -2214,6 +2217,7 @@ function compileRiwayat() {
 let _riwayatAll = [];   // hasil filter penuh
 let _riwayatPage = 1;   // halaman aktif
 const _riwayatPerPage = 25;
+let _bulkSelectedIds = new Set(); // track semua ID terpilih lintas halaman
 
 function renderRiwayatPage() { compileRiwayat(); applyFilter(); }
 function applyFilter() {
@@ -2243,6 +2247,7 @@ function applyFilter() {
   });
   _riwayatAll = res;
   _riwayatPage = 1;
+  _bulkSelectedIds.clear();
   renderRiwayatTable();
 }
 function resetFilter() {
@@ -2301,9 +2306,25 @@ function renderRiwayatTable() {
         <button onclick="deleteData('${t.isTransfer?'Transfer':'Transaksi'}','${t.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
       </td></tr>`;
   });
-  // Reset selectAll checkbox state
+  // Restore centang untuk ID yang sudah ada di _bulkSelectedIds
+  document.querySelectorAll('.trx-chk').forEach(el => {
+    el.checked = _bulkSelectedIds.has(el.dataset.id);
+  });
+  // Sync selectAll & toolbar
+  const chks = document.querySelectorAll('.trx-chk');
   const sal = document.getElementById('selectAllChk');
-  if (sal) sal.checked = false;
+  if (sal) sal.checked = chks.length > 0 && [...chks].every(el => _bulkSelectedIds.has(el.dataset.id));
+  if (_bulkSelectedIds.size > 0) {
+    document.getElementById('bulkCount').textContent = _bulkSelectedIds.size;
+    document.getElementById('bulkToolbar').classList.remove('hidden');
+    const btn = document.getElementById('bulkSelectAllFiltered');
+    const allFiltered = _riwayatAll.filter(t=>!t.isTransfer);
+    if (btn) {
+      const allSelected = allFiltered.every(t => _bulkSelectedIds.has(t.ID));
+      btn.classList.toggle('hidden', allSelected);
+      btn.textContent = `Pilih semua ${allFiltered.length} transaksi hasil filter →`;
+    }
+  }
 
   // Render pagination bar
   const pEl = document.getElementById('riwayatPagination');
@@ -2333,32 +2354,56 @@ function renderRiwayatTable() {
     </div>`;
 }
 // ── BULK SELECT / EDIT ────────────────────────────────────────
-function getCheckedIds() {
-  return [...document.querySelectorAll('.trx-chk:checked')].map(el=>el.dataset.id);
-}
 function updateBulkToolbar() {
-  const ids = getCheckedIds();
-  const toolbar = document.getElementById('bulkToolbar');
-  document.getElementById('bulkCount').textContent = ids.length;
-  toolbar.classList.toggle('hidden', ids.length === 0);
-  // Sync selectAll checkbox state
-  const all = document.querySelectorAll('.trx-chk');
+  // Sync checkbox state → update global Set
+  document.querySelectorAll('.trx-chk').forEach(el => {
+    if (el.checked) _bulkSelectedIds.add(el.dataset.id);
+    else _bulkSelectedIds.delete(el.dataset.id);
+  });
+  const count = _bulkSelectedIds.size;
+  document.getElementById('bulkCount').textContent = count;
+  document.getElementById('bulkToolbar').classList.toggle('hidden', count === 0);
+
+  // Tombol "Pilih semua X hasil filter"
+  const allFilteredNonTransfer = _riwayatAll.filter(t => !t.isTransfer);
+  const allFilteredCount = allFilteredNonTransfer.length;
+  const btn = document.getElementById('bulkSelectAllFiltered');
+  if (btn) {
+    const allSelected = allFilteredNonTransfer.every(t => _bulkSelectedIds.has(t.ID));
+    btn.classList.toggle('hidden', allSelected || count === 0);
+    btn.textContent = `Pilih semua ${allFilteredCount} transaksi hasil filter →`;
+  }
+
+  // Sync selectAll header checkbox
+  const chks = document.querySelectorAll('.trx-chk');
   const sal = document.getElementById('selectAllChk');
-  if (sal) sal.checked = all.length > 0 && ids.length === all.length;
+  if (sal) sal.checked = chks.length > 0 && [...chks].every(el => _bulkSelectedIds.has(el.dataset.id));
 }
 function toggleSelectAll(checked) {
-  document.querySelectorAll('.trx-chk').forEach(el => el.checked = checked);
+  document.querySelectorAll('.trx-chk').forEach(el => {
+    el.checked = checked;
+    if (checked) _bulkSelectedIds.add(el.dataset.id);
+    else _bulkSelectedIds.delete(el.dataset.id);
+  });
+  updateBulkToolbar();
+}
+function selectAllFiltered() {
+  // Tambahkan semua ID dari hasil filter (lintas halaman) ke Set
+  _riwayatAll.filter(t => !t.isTransfer).forEach(t => _bulkSelectedIds.add(t.ID));
+  // Centang semua checkbox yang tampil di halaman ini
+  document.querySelectorAll('.trx-chk').forEach(el => el.checked = true);
   updateBulkToolbar();
 }
 function clearBulkSelection() {
+  _bulkSelectedIds.clear();
   document.querySelectorAll('.trx-chk').forEach(el => el.checked = false);
   const sal = document.getElementById('selectAllChk');
   if (sal) sal.checked = false;
-  updateBulkToolbar();
+  document.getElementById('bulkToolbar').classList.add('hidden');
 }
 function applyBulkDompet() {
   if (demoGuard()) return;
-  const ids = getCheckedIds();
+  const ids = [..._bulkSelectedIds];
   if (!ids.length) { showAlert('Pilih minimal 1 transaksi.', 'error'); return; }
   const dompet = document.getElementById('bulkDompetSelect').value;
   if (!dompet) { showAlert('Pilih dompet tujuan.', 'error'); return; }
