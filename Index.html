@@ -664,23 +664,23 @@
         </button>
       </div>
     </div>
-    <div class="overflow-x-auto p-4">
-      <table class="min-w-full text-sm">
-        <thead class="bg-gray-50 text-gray-600">
-          <tr>
-            <th class="py-3 px-3 text-center w-8">
-              <input type="checkbox" id="selectAllChk" onchange="toggleSelectAll(this.checked)" class="w-4 h-4 rounded accent-indigo-600">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border-collapse">
+        <thead>
+          <tr class="border-b-2 border-gray-200 bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <th class="py-3 px-3 text-center w-10">
+              <input type="checkbox" id="selectAllChk" onchange="toggleSelectAll(this.checked)" class="w-4 h-4 rounded accent-indigo-600 cursor-pointer">
             </th>
-            <th class="py-3 px-4 text-left font-medium">Tanggal</th>
-            <th class="py-3 px-4 text-left font-medium">Jenis</th>
-            <th class="py-3 px-4 text-left font-medium">Kategori</th>
-            <th class="py-3 px-4 text-left font-medium">Dompet</th>
-            <th class="py-3 px-4 text-left font-medium">Keterangan</th>
-            <th class="py-3 px-4 text-right font-medium">Nominal</th>
-            <th class="py-3 px-4 text-center font-medium">Aksi</th>
+            <th class="py-3 px-4 text-left whitespace-nowrap">Tanggal</th>
+            <th class="py-3 px-4 text-left">Jenis</th>
+            <th class="py-3 px-4 text-left">Kategori</th>
+            <th class="py-3 px-4 text-left whitespace-nowrap">Dompet</th>
+            <th class="py-3 px-4 text-left w-full">Keterangan</th>
+            <th class="py-3 px-4 text-right whitespace-nowrap">Nominal</th>
+            <th class="py-3 px-4 text-center whitespace-nowrap">Aksi</th>
           </tr>
         </thead>
-        <tbody id="riwayatTableBody" class="divide-y divide-gray-100"></tbody>
+        <tbody id="riwayatTableBody"></tbody>
       </table>
     </div>
     <!-- Pagination -->
@@ -2277,7 +2277,7 @@ function renderRiwayatTable() {
   const tbody=document.getElementById('riwayatTableBody');
   tbody.innerHTML='';
   if (!data.length) {
-    tbody.innerHTML='<tr><td colspan="8" class="py-6 text-center text-gray-400 text-sm">Tidak ada data yang sesuai filter.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="8" class="py-10 text-center text-gray-400 text-sm"><i class="fas fa-inbox text-2xl mb-2 block"></i>Tidak ada data yang sesuai filter.</td></tr>';
     document.getElementById('riwayatPagination').innerHTML='';
     return;
   }
@@ -2290,34 +2290,65 @@ function renderRiwayatTable() {
   const bulkDompetSel = document.getElementById('bulkDompetSelect');
   if (bulkDompetSel) bulkDompetSel.innerHTML = appData.Dompet.map(d=>`<option value="${d.Nama}">${d.Nama}</option>`).join('');
 
-  pageData.forEach(t => {
-    const color=t.Jenis==='Pemasukan'?'text-green-600':(t.Jenis==='Transfer'?'text-blue-600':'text-red-600');
-    const badge=t.Jenis==='Pemasukan'?'bg-green-100 text-green-700':(t.Jenis==='Transfer'?'bg-blue-100 text-blue-700':'bg-red-100 text-red-700');
+  const rowBase = 'border-b border-gray-100 transition-colors duration-100';
+  pageData.forEach((t, idx) => {
+    const color  = t.Jenis==='Pemasukan' ? 'text-emerald-600' : (t.Jenis==='Transfer' ? 'text-blue-600' : 'text-rose-600');
+    const badgeCls = t.Jenis==='Pemasukan'
+      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+      : (t.Jenis==='Transfer'
+        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+        : 'bg-rose-50 text-rose-700 border border-rose-200');
+    const sign = t.Jenis==='Pemasukan' ? '+' : (t.Jenis==='Transfer' ? '' : '-');
+
     const kategoriCell = t.isTransfer
-      ? `<span class="px-2 py-0.5 text-xs font-bold rounded bg-blue-100 text-blue-700">Transfer</span>`
-      : `<span class="text-xs">${t.Kategori||'—'}</span>`;
-    const emptyDompet = !t.isTransfer && (!t.DompetAsal||t.DompetAsal.trim()==='');
+      ? `<span class="inline-flex items-center gap-1 text-xs text-blue-600"><i class="fas fa-exchange-alt text-[10px]"></i>${t.DariDompet} → ${t.KeDompet}</span>`
+      : `<span class="text-xs text-gray-700">${t.Kategori||'—'}</span>`;
+
+    const emptyDompet = !t.isTransfer && (!t.DompetAsal || t.DompetAsal.trim()==='');
     const dompetCell = t.isTransfer
-      ? `<span class="text-xs">${t.DariDompet} <i class="fas fa-arrow-right text-xs mx-1"></i> ${t.KeDompet}</span>`
+      ? `<span class="text-xs text-gray-500">—</span>`
       : emptyDompet
-        ? `<span class="text-xs text-amber-500 font-medium"><i class="fas fa-exclamation-triangle mr-1"></i>Kosong</span>`
-        : `<span class="text-xs">${t.DompetAsal}</span>`;
+        ? `<span class="inline-flex items-center gap-1 text-xs text-amber-600 font-medium"><i class="fas fa-exclamation-circle text-[10px]"></i>Kosong</span>`
+        : `<span class="text-xs text-gray-700">${t.DompetAsal}</span>`;
+
+    // Format tanggal jadi lebih readable: "23 Agu 2026"
+    const tglFmt = (() => {
+      try {
+        const d = new Date(t.Tanggal + 'T00:00:00');
+        return d.toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'});
+      } catch(e) { return t.Tanggal; }
+    })();
+
     const editBtn = t.isTransfer
-      ? `<button onclick="editTransfer('${t.ID}')" class="text-blue-500 hover:text-blue-700 mx-1" title="Edit"><i class="fas fa-edit"></i></button>`
-      : `<button onclick="inlineEditRow('${t.ID}')" class="text-blue-500 hover:text-blue-700 mx-1" title="Edit inline"><i class="fas fa-edit"></i></button>`;
+      ? `<button onclick="editTransfer('${t.ID}')" class="p-1.5 rounded hover:bg-blue-50 text-blue-400 hover:text-blue-600 transition-colors" title="Edit"><i class="fas fa-pen text-xs"></i></button>`
+      : `<button onclick="inlineEditRow('${t.ID}')" class="p-1.5 rounded hover:bg-blue-50 text-blue-400 hover:text-blue-600 transition-colors" title="Edit langsung"><i class="fas fa-pen text-xs"></i></button>`;
+    const delBtn = `<button onclick="deleteData('${t.isTransfer?'Transfer':'Transaksi'}','${t.ID}')" class="p-1.5 rounded hover:bg-rose-50 text-gray-300 hover:text-rose-500 transition-colors" title="Hapus"><i class="fas fa-trash text-xs"></i></button>`;
+
     const chkCell = t.isTransfer ? `<td class="py-3 px-3"></td>` :
-      `<td class="py-3 px-3 text-center"><input type="checkbox" class="trx-chk w-4 h-4 rounded accent-indigo-600" data-id="${t.ID}" onchange="updateBulkToolbar()"></td>`;
-    tbody.innerHTML+=`<tr class="hover:bg-gray-50 text-sm" id="trxRow_${t.ID}">
+      `<td class="py-3 px-3 text-center"><input type="checkbox" class="trx-chk w-4 h-4 rounded accent-indigo-600 cursor-pointer" data-id="${t.ID}" onchange="updateBulkToolbar()"></td>`;
+
+    const rowBg = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50';
+
+    tbody.innerHTML += `<tr class="${rowBase} ${rowBg} hover:bg-indigo-50/30" id="trxRow_${t.ID}">
       ${chkCell}
-      <td class="py-3 px-4" id="rTgl_${t.ID}">${t.Tanggal}</td>
-      <td class="py-3 px-4" id="rJenis_${t.ID}"><span class="px-2 py-0.5 text-xs font-bold rounded ${badge}">${t.Jenis}</span></td>
+      <td class="py-3 px-4 whitespace-nowrap" id="rTgl_${t.ID}">
+        <span class="text-xs font-medium text-gray-700">${tglFmt}</span>
+      </td>
+      <td class="py-3 px-4 whitespace-nowrap" id="rJenis_${t.ID}">
+        <span class="px-2 py-1 text-xs font-semibold rounded-full ${badgeCls}">${t.Jenis}</span>
+      </td>
       <td class="py-3 px-4" id="rKat_${t.ID}">${kategoriCell}</td>
-      <td class="py-3 px-4" id="rDompet_${t.ID}">${dompetCell}</td>
-      <td class="py-3 px-4 text-gray-500" id="rKet_${t.ID}">${t.Keterangan||'-'}</td>
-      <td class="py-3 px-4 text-right font-bold ${color}" id="rNom_${t.ID}">Rp ${fmt(t.Nominal)}</td>
-      <td class="py-3 px-4 text-center" id="rAksi_${t.ID}">${editBtn}
-        <button onclick="deleteData('${t.isTransfer?'Transfer':'Transaksi'}','${t.ID}')" class="text-red-500 hover:text-red-700 mx-1" title="Hapus"><i class="fas fa-trash"></i></button>
-      </td></tr>`;
+      <td class="py-3 px-4 whitespace-nowrap" id="rDompet_${t.ID}">${dompetCell}</td>
+      <td class="py-3 px-4 max-w-xs" id="rKet_${t.ID}">
+        <span class="text-xs text-gray-600 line-clamp-2">${t.Keterangan||'<span class="text-gray-300 italic">—</span>'}</span>
+      </td>
+      <td class="py-3 px-4 text-right whitespace-nowrap" id="rNom_${t.ID}">
+        <span class="text-sm font-semibold ${color}">${sign}Rp&nbsp;${fmt(t.Nominal||t.Jumlah)}</span>
+      </td>
+      <td class="py-3 px-4 text-center whitespace-nowrap" id="rAksi_${t.ID}">
+        <div class="inline-flex items-center gap-0.5">${editBtn}${delBtn}</div>
+      </td>
+    </tr>`;
   });
   // Restore centang untuk ID yang sudah ada di _bulkSelectedIds
   document.querySelectorAll('.trx-chk').forEach(el => {
@@ -2443,37 +2474,44 @@ function inlineEditRow(id) {
     `<option value="${k.Nama}" ${k.Nama===t.Kategori?'selected':''}>${k.Nama}</option>`).join('');
 
   const row = document.getElementById(`trxRow_${id}`);
-  if (row) row.classList.add('bg-blue-50');
+  if (row) row.className = 'border-b border-indigo-200 bg-indigo-50/60 ring-1 ring-inset ring-indigo-200';
 
-  // Ganti setiap cell jadi input/select
+  const ieCls = 'w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 bg-white';
+
   document.getElementById(`rTgl_${id}`).innerHTML =
-    `<input type="date" id="ie_tgl_${id}" value="${t.Tanggal}" class="border rounded p-1 text-xs w-28 focus:ring focus:ring-blue-200">`;
+    `<input type="date" id="ie_tgl_${id}" value="${t.Tanggal}" class="${ieCls} min-w-[7.5rem]">`;
 
   document.getElementById(`rJenis_${id}`).innerHTML =
-    `<select id="ie_jenis_${id}" onchange="ieUpdateKat('${id}')" class="border rounded p-1 text-xs focus:ring focus:ring-blue-200">
+    `<select id="ie_jenis_${id}" onchange="ieUpdateKat('${id}')" class="${ieCls} min-w-[7rem]">
       <option value="Pengeluaran" ${t.Jenis==='Pengeluaran'?'selected':''}>Pengeluaran</option>
       <option value="Pemasukan"   ${t.Jenis==='Pemasukan'?'selected':''}>Pemasukan</option>
     </select>`;
 
   document.getElementById(`rKat_${id}`).innerHTML =
-    `<select id="ie_kat_${id}" class="border rounded p-1 text-xs w-32 focus:ring focus:ring-blue-200">
+    `<select id="ie_kat_${id}" class="${ieCls} min-w-[8rem]">
       ${t.Jenis==='Pemasukan' ? katIn : katOut}
     </select>`;
 
   document.getElementById(`rDompet_${id}`).innerHTML =
-    `<select id="ie_dompet_${id}" class="border rounded p-1 text-xs w-28 focus:ring focus:ring-blue-200">${dompetOpts}</select>`;
+    `<select id="ie_dompet_${id}" class="${ieCls} min-w-[7rem]">${dompetOpts}</select>`;
 
   document.getElementById(`rKet_${id}`).innerHTML =
     `<input type="text" id="ie_ket_${id}" value="${(t.Keterangan||'').replace(/"/g,'&quot;')}"
-      class="border rounded p-1 text-xs w-36 focus:ring focus:ring-blue-200">`;
+      placeholder="Keterangan…" class="${ieCls} min-w-[10rem]">`;
 
   document.getElementById(`rNom_${id}`).innerHTML =
     `<input type="number" id="ie_nom_${id}" value="${t.Nominal}"
-      class="border rounded p-1 text-xs w-24 text-right focus:ring focus:ring-blue-200">`;
+      class="${ieCls} min-w-[7rem] text-right font-semibold">`;
 
   document.getElementById(`rAksi_${id}`).innerHTML =
-    `<button onclick="saveInlineEdit('${id}')" class="text-green-600 hover:text-green-800 mx-1 font-bold text-base" title="Simpan"><i class="fas fa-check"></i></button>
-     <button onclick="cancelInlineEdit('${id}')" class="text-gray-400 hover:text-gray-600 mx-1 text-base" title="Batal"><i class="fas fa-times"></i></button>`;
+    `<div class="inline-flex items-center gap-1">
+       <button onclick="saveInlineEdit('${id}')" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md text-xs font-semibold transition-colors" title="Simpan">
+         <i class="fas fa-check mr-1"></i>Simpan
+       </button>
+       <button onclick="cancelInlineEdit('${id}')" class="px-2.5 py-1.5 bg-white hover:bg-gray-100 text-gray-500 border border-gray-200 rounded-md text-xs transition-colors" title="Batal">
+         <i class="fas fa-times"></i>
+       </button>
+     </div>`;
 
   // Fokus ke field keterangan
   setTimeout(() => document.getElementById(`ie_ket_${id}`)?.focus(), 50);
