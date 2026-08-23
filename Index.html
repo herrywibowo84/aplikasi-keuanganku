@@ -1790,6 +1790,13 @@ function refreshUI() {
   populateSelect('tfDari', dompetNames);
   populateSelect('tfKe', dompetNames);
   populateSelect('filterDompet', dompetNames, 'Semua Dompet');
+  // Tambahkan opsi "Dompet Kosong" setelah populateSelect (agar tidak tertimpa)
+  const fdEl = document.getElementById('filterDompet');
+  if (fdEl && !fdEl.querySelector('option[value="__kosong__"]')) {
+    const opt = document.createElement('option');
+    opt.value = '__kosong__'; opt.textContent = '⚠️ Dompet Kosong';
+    fdEl.appendChild(opt);
+  }
   populateSelect('invSumberDana', dompetNames, '-- Hanya catat aset (jangan potong saldo) --');
   populateKategoriDropdown();
   renderAnggaranKategoriSelect();
