@@ -485,8 +485,16 @@
             <input type="time" id="transaksiWaktu" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm"></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
-            <input type="text" id="transaksiNominal" required inputmode="numeric" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm" placeholder="0" oninput="formatRibuan(this)"></div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
+            <input type="text" id="transaksiNominal" required inputmode="decimal"
+              class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm font-mono"
+              placeholder="contoh: 50000+25000"
+              oninput="calcNominalPreview(this,'calcPreviewMain')"
+              onblur="evalCalcNominal(this,'calcPreviewMain')"
+              onkeydown="if(event.key==='Enter'){evalCalcNominal(this,'calcPreviewMain');event.preventDefault();}">
+            <span id="calcPreviewMain" class="hidden text-xs text-indigo-600 font-medium mt-0.5 block"></span>
+          </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Biaya (Rp)</label>
             <input type="text" id="transaksiBiaya" inputmode="numeric" value="0" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-200 text-sm" oninput="formatRibuan(this)">
@@ -2583,8 +2591,15 @@ function inlineEditRow(id) {
       placeholder="Keterangan…" class="${ieCls} min-w-[10rem]">`;
 
   document.getElementById(`rNom_${id}`).innerHTML =
-    `<input type="number" id="ie_nom_${id}" value="${t.Nominal}"
-      class="${ieCls} min-w-[7rem] text-right font-semibold">`;
+    `<div>
+      <input type="text" id="ie_nom_${id}" value="${t.Nominal}" inputmode="decimal"
+        placeholder="50000+25000"
+        class="${ieCls} min-w-[8rem] text-right font-mono"
+        oninput="calcNominalPreview(this,'ie_nom_prev_${id}')"
+        onblur="evalCalcNominal(this,'ie_nom_prev_${id}')"
+        onkeydown="if(event.key==='Enter'){evalCalcNominal(this,'ie_nom_prev_${id}');}">
+      <span id="ie_nom_prev_${id}" class="hidden text-xs text-indigo-600 block text-right mt-0.5"></span>
+    </div>`;
 
   document.getElementById(`rAksi_${id}`).innerHTML =
     `<div class="inline-flex items-center gap-1">
@@ -2619,7 +2634,7 @@ function saveInlineEdit(id) {
     Kategori:   document.getElementById(`ie_kat_${id}`).value,
     DompetAsal: document.getElementById(`ie_dompet_${id}`).value,
     Keterangan: document.getElementById(`ie_ket_${id}`).value,
-    Nominal:    parseFloat(document.getElementById(`ie_nom_${id}`).value) || 0,
+    Nominal:    parseRibuan(document.getElementById(`ie_nom_${id}`).value) || 0,
   };
   showLoading('Menyimpan...');
   google.script.run
@@ -4027,6 +4042,59 @@ function saveDesimalSetting() {
   localStorage.setItem('desimalSetting', val);
   showAlert('Format desimal disimpan!','success');
 }
+// ── KALKULATOR NOMINAL ────────────────────────────────────────
+// Evaluasi ekspresi math di input nominal: "50000+25000" → 75000
+function _evalExpr(raw) {
+  // Bersihkan: hanya izinkan angka, operator, spasi, titik (ribuan), koma (desimal)
+  const cleaned = raw
+    .replace(/\./g, '')       // hapus titik ribuan
+    .replace(/,/g, '.')       // koma desimal → titik
+    .replace(/[^0-9+\-*/(). ]/g, '');
+  if (!cleaned || !/\d/.test(cleaned)) return null;
+  // Keamanan: hanya izinkan ekspresi matematika sederhana
+  if (!/^[\d\s+\-*/(). ]+$/.test(cleaned)) return null;
+  try {
+    // eslint-disable-next-line no-new-func
+    const result = Function('"use strict"; return (' + cleaned + ')')();
+    return isFinite(result) && result >= 0 ? Math.round(result) : null;
+  } catch(e) { return null; }
+}
+
+function calcNominalPreview(el, previewId) {
+  const raw = el.value;
+  const isExpr = /[+\-*/]/.test(raw.replace(/^\-/, '')); // ada operator selain tanda minus di awal
+  const preview = document.getElementById(previewId);
+  if (!preview) return;
+  if (isExpr) {
+    const result = _evalExpr(raw);
+    if (result !== null) {
+      preview.textContent = '= Rp ' + result.toLocaleString('id-ID');
+      preview.classList.remove('hidden');
+    } else {
+      preview.classList.add('hidden');
+    }
+  } else {
+    preview.classList.add('hidden');
+    // Format ribuan biasa jika tidak ada operator
+    formatRibuan(el);
+  }
+}
+
+function evalCalcNominal(el, previewId) {
+  const raw = el.value;
+  const isExpr = /[+\-*/]/.test(raw.replace(/^\-/, ''));
+  if (isExpr) {
+    const result = _evalExpr(raw);
+    if (result !== null) {
+      el.value = result.toLocaleString('id-ID');
+      const preview = document.getElementById(previewId);
+      if (preview) preview.classList.add('hidden');
+    }
+  } else {
+    formatRibuan(el);
+  }
+}
+// ──────────────────────────────────────────────────────────────
 function formatRibuanVal(n) {
   const dec = getDesimal();
   if (dec === 0) return Math.round(n).toLocaleString('id-ID');
