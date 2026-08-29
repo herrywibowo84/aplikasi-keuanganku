@@ -895,25 +895,33 @@
       </div>
       <!-- Analisa anggaran -->
       <div class="bg-white rounded-xl shadow p-5" id="anggaranAnalisisCtn">
-        <h3 class="text-base font-bold text-gray-800 mb-1"><i class="fas fa-chart-bar mr-2 text-indigo-500"></i>Analisa Anggaran</h3>
-        <p class="text-xs text-gray-400 mb-4">Perbandingan anggaran vs realisasi pengeluaran bulan yang dipilih</p>
-        <!-- Summary cards -->
-        <div class="grid grid-cols-3 gap-3 mb-5" id="anggaranSummaryCards">
-          <div class="bg-blue-50 rounded-xl p-3 text-center">
-            <p class="text-xs text-blue-500 font-medium mb-1">Total Anggaran</p>
-            <p class="text-base font-bold text-blue-700" id="angSumLimit">Rp 0</p>
+        <h3 class="text-base font-bold text-gray-800 mb-1"><i class="fas fa-balance-scale mr-2 text-indigo-500"></i>Analisa Anggaran</h3>
+        <p class="text-xs text-gray-400 mb-4">Perbandingan anggaran pemasukan & pengeluaran vs realisasi bulan yang dipilih</p>
+        <!-- Pemasukan row -->
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
+            <p class="text-xs text-emerald-600 font-semibold mb-2 flex items-center gap-1"><i class="fas fa-arrow-down text-[10px]"></i>Pemasukan</p>
+            <div class="flex justify-between text-xs text-gray-500 mb-1"><span>Anggaran</span><span class="font-semibold text-gray-700" id="angPemasukanLimit">Rp 0</span></div>
+            <div class="flex justify-between text-xs text-gray-500 mb-2"><span>Realisasi</span><span class="font-semibold" id="angPemasukanSpent">Rp 0</span></div>
+            <div class="w-full bg-emerald-100 rounded-full h-2"><div class="h-2 rounded-full bg-emerald-500 transition-all" id="angPemasukanBar" style="width:0%"></div></div>
+            <p class="text-[11px] mt-1.5 font-medium" id="angPemasukanStatus"></p>
           </div>
-          <div class="bg-rose-50 rounded-xl p-3 text-center">
-            <p class="text-xs text-rose-500 font-medium mb-1">Total Realisasi</p>
-            <p class="text-base font-bold text-rose-700" id="angSumSpent">Rp 0</p>
-          </div>
-          <div class="rounded-xl p-3 text-center" id="angSisaCard">
-            <p class="text-xs font-medium mb-1" id="angSisaLabel">Sisa</p>
-            <p class="text-base font-bold" id="angSisaVal">Rp 0</p>
+          <div class="bg-rose-50 border border-rose-100 rounded-xl p-3">
+            <p class="text-xs text-rose-600 font-semibold mb-2 flex items-center gap-1"><i class="fas fa-arrow-up text-[10px]"></i>Pengeluaran</p>
+            <div class="flex justify-between text-xs text-gray-500 mb-1"><span>Anggaran</span><span class="font-semibold text-gray-700" id="angPengeluaranLimit">Rp 0</span></div>
+            <div class="flex justify-between text-xs text-gray-500 mb-2"><span>Realisasi</span><span class="font-semibold" id="angPengeluaranSpent">Rp 0</span></div>
+            <div class="w-full bg-rose-100 rounded-full h-2"><div class="h-2 rounded-full bg-rose-500 transition-all" id="angPengeluaranBar" style="width:0%"></div></div>
+            <p class="text-[11px] mt-1.5 font-medium" id="angPengeluaranStatus"></p>
           </div>
         </div>
+        <!-- Net / surplus card -->
+        <div class="rounded-xl p-3 mb-4 text-center border" id="angNetCard">
+          <p class="text-xs font-medium mb-0.5" id="angNetLabel">Surplus / Defisit</p>
+          <p class="text-lg font-bold" id="angNetVal">Rp 0</p>
+          <p class="text-xs text-gray-400" id="angNetDesc"></p>
+        </div>
         <!-- Bar chart -->
-        <div class="relative" style="height:260px">
+        <div class="relative" style="height:240px">
           <canvas id="anggaranChart"></canvas>
         </div>
       </div>
@@ -3043,13 +3051,18 @@ function renderAnggaranKategoriSelect() {
   const sel = document.getElementById('anggaranKategori');
   if (!sel) return;
   sel.innerHTML = '';
-  const parents = appData.Kategori.filter(k=>k.Jenis==='Pengeluaran'&&!k.ParentID);
-  const subs    = appData.Kategori.filter(k=>k.Jenis==='Pengeluaran'&&k.ParentID);
-  parents.forEach(p => {
-    sel.innerHTML += `<option value="${p.Nama}">${p.Nama}</option>`;
-    subs.filter(s=>s.ParentID===p.ID).forEach(s=>{
-      sel.innerHTML += `<option value="${s.Nama}">&nbsp;&nbsp;└ ${s.Nama}</option>`;
+  ['Pemasukan','Pengeluaran'].forEach(jenis => {
+    const optGroup = document.createElement('optgroup');
+    optGroup.label = '── ' + jenis + ' ──';
+    const parents = appData.Kategori.filter(k=>k.Jenis===jenis&&!k.ParentID);
+    const subs    = appData.Kategori.filter(k=>k.Jenis===jenis&&k.ParentID);
+    parents.forEach(p => {
+      optGroup.innerHTML += `<option value="${p.Nama}">${p.Nama}</option>`;
+      subs.filter(s=>s.ParentID===p.ID).forEach(s=>{
+        optGroup.innerHTML += `<option value="${s.Nama}">&nbsp;&nbsp;└ ${s.Nama}</option>`;
+      });
     });
+    if (parents.length) sel.appendChild(optGroup);
   });
 }
 let _anggaranChart = null;
@@ -3068,15 +3081,18 @@ function renderAnggaranList() {
     return;
   }
 
-  // ── Bangun struktur parent-sub ────────────────────────────────
-  // Cari katObj untuk setiap anggaran item
+  // ── Bangun struktur parent-sub (support Pemasukan & Pengeluaran) ──
   const enriched = list.map(a => {
-    const katObj = appData.Kategori.find(k => k.Nama === a.Kategori && k.Jenis === 'Pengeluaran');
+    // Cari kategori: coba Pengeluaran dulu, lalu Pemasukan
+    const katObj = appData.Kategori.find(k => k.Nama === a.Kategori && k.Jenis === 'Pengeluaran')
+                || appData.Kategori.find(k => k.Nama === a.Kategori && k.Jenis === 'Pemasukan')
+                || appData.Kategori.find(k => k.Nama === a.Kategori);
+    const jenis  = katObj?.Jenis || 'Pengeluaran';
     const parObj = katObj?.ParentID ? appData.Kategori.find(k => k.ID === katObj.ParentID) : null;
     const spent  = appData.Transaksi
-      .filter(t => t.Jenis==='Pengeluaran' && t.Kategori===a.Kategori && t.Tanggal.startsWith(bulan))
+      .filter(t => t.Jenis===jenis && t.Kategori===a.Kategori && t.Tanggal.startsWith(bulan))
       .reduce((s,t)=>s+parseFloat(t.Nominal||0),0);
-    return { ...a, katObj, parObj, spent, limit: parseFloat(a.Nominal)||0 };
+    return { ...a, katObj, jenis, parObj, spent, limit: parseFloat(a.Nominal)||0 };
   });
 
   // Kelompokkan: items yang merupakan sub → masuk ke group parentNama
@@ -3094,35 +3110,51 @@ function renderAnggaranList() {
     }
   });
 
-  // ── Render standalone ─────────────────────────────────────────
+  // ── Render bar per item ──────────────────────────────────────
   const renderBar = (a, isChild=false) => {
-    const { spent, limit } = a;
+    const { spent, limit, jenis } = a;
+    const isPemasukan = jenis === 'Pemasukan';
     const pct  = limit ? Math.min(Math.round((spent/limit)*100),100) : 0;
-    const over = spent > limit;
-    const sisa = limit - spent;
-    const barColor = over ? 'bg-red-500' : pct>80 ? 'bg-amber-400' : 'bg-blue-500';
+    // Pemasukan: "tercapai" = good (hijau), "belum" = warning
+    // Pengeluaran: "melebihi" = bad (merah)
+    const over = isPemasukan ? (spent < limit) : (spent > limit); // "over budget" sense
+    const sisa = isPemasukan ? spent - limit : limit - spent;
+    const statusText = isPemasukan
+      ? (spent >= limit ? `✅ Tercapai +Rp ${fmt(spent-limit)}` : `Kurang: Rp ${fmt(limit-spent)}`)
+      : (spent > limit ? `⚠️ Lebih: Rp ${fmt(spent-limit)}` : `Sisa: Rp ${fmt(limit-spent)}`);
+    const barColor = isPemasukan
+      ? (spent>=limit ? 'bg-emerald-500' : pct>80 ? 'bg-emerald-400' : 'bg-blue-400')
+      : (spent>limit ? 'bg-red-500' : pct>80 ? 'bg-amber-400' : 'bg-blue-500');
+    const statusCls = isPemasukan
+      ? (spent>=limit ? 'text-emerald-600 font-bold' : 'text-gray-500')
+      : (spent>limit ? 'text-red-600 font-bold' : 'text-gray-500');
+    const badge = isPemasukan
+      ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-600 font-semibold">Pemasukan</span>`
+      : '';
     return `<div class="${isChild?'pl-1':'border border-gray-100 rounded-xl p-4 hover:shadow-sm transition'}">
       <div class="flex justify-between items-center mb-1.5">
         <div class="flex items-center gap-1.5">
           ${isChild ? '<span class="text-gray-300 text-xs">└</span>' : ''}
           <h4 class="font-${isChild?'medium':'bold'} text-${isChild?'sm':'base'} text-gray-800">${a.Kategori}</h4>
+          ${!isChild ? badge : ''}
         </div>
         <div class="flex items-center gap-2">
-          <span class="text-xs ${over?'text-red-600 font-bold':'text-gray-500'}">${over?'⚠️ Lebih':'Sisa: Rp '+fmt(sisa)}</span>
-          ${isChild?`<button onclick="editAnggaran('${a.ID}')" class="text-blue-400 hover:text-blue-600 text-xs"><i class="fas fa-edit"></i></button>
-            <button onclick="deleteData('Anggaran','${a.ID}')" class="text-rose-300 hover:text-rose-500 text-xs"><i class="fas fa-trash"></i></button>`
-          :`<button onclick="editAnggaran('${a.ID}')" class="text-blue-500 hover:text-blue-700 text-sm"><i class="fas fa-edit"></i></button>
-            <button onclick="deleteData('Anggaran','${a.ID}')" class="text-red-500 hover:text-red-700 text-sm"><i class="fas fa-trash"></i></button>`}
+          <span class="text-xs ${statusCls}">${statusText}</span>
+          ${isChild
+            ? `<button onclick="editAnggaran('${a.ID}')" class="text-blue-400 hover:text-blue-600 text-xs"><i class="fas fa-edit"></i></button>
+               <button onclick="deleteData('Anggaran','${a.ID}')" class="text-rose-300 hover:text-rose-500 text-xs"><i class="fas fa-trash"></i></button>`
+            : `<button onclick="editAnggaran('${a.ID}')" class="text-blue-500 hover:text-blue-700 text-sm"><i class="fas fa-edit"></i></button>
+               <button onclick="deleteData('Anggaran','${a.ID}')" class="text-red-500 hover:text-red-700 text-sm"><i class="fas fa-trash"></i></button>`}
         </div>
       </div>
       <div class="flex items-center gap-2">
         <div class="flex-1 bg-gray-100 rounded-full h-2">
           <div class="h-2 rounded-full ${barColor} transition-all" style="width:${pct}%"></div>
         </div>
-        <span class="text-xs font-semibold ${over?'text-red-600':'text-gray-600'} whitespace-nowrap">${pct}%</span>
+        <span class="text-xs font-semibold text-gray-500 whitespace-nowrap">${pct}%</span>
       </div>
       <div class="flex justify-between text-xs mt-1 text-gray-400">
-        <span>Terpakai: <b class="${over?'text-red-600':'text-gray-700'}">Rp ${fmt(spent)}</b></span>
+        <span>Realisasi: <b class="text-gray-700">Rp ${fmt(spent)}</b></span>
         <span>Anggaran: <b>Rp ${fmt(limit)}</b></span>
       </div>
     </div>`;
@@ -3169,63 +3201,120 @@ function renderAnggaranList() {
 }
 
 function renderAnggaranChart(enriched, bulan) {
-  const ctn = document.getElementById('anggaranAnalisisCtn');
-  if (!ctn) return;
+  if (!document.getElementById('anggaranAnalisisCtn')) return;
 
-  if (!enriched.length) {
-    document.getElementById('angSumLimit').textContent = 'Rp 0';
-    document.getElementById('angSumSpent').textContent = 'Rp 0';
-    document.getElementById('angSisaVal').textContent  = 'Rp 0';
-    if (_anggaranChart) { _anggaranChart.destroy(); _anggaranChart = null; }
-    return;
-  }
+  const masukItems  = enriched.filter(a => a.jenis === 'Pemasukan');
+  const keluarItems = enriched.filter(a => a.jenis === 'Pengeluaran');
 
-  const totalLimit = enriched.reduce((s,a)=>s+a.limit,0);
-  const totalSpent = enriched.reduce((s,a)=>s+a.spent,0);
-  const sisa = totalLimit - totalSpent;
-  const over = sisa < 0;
+  const masukLimit  = masukItems.reduce((s,a)=>s+a.limit,0);
+  const masukSpent  = masukItems.reduce((s,a)=>s+a.spent,0);
+  const keluarLimit = keluarItems.reduce((s,a)=>s+a.limit,0);
+  const keluarSpent = keluarItems.reduce((s,a)=>s+a.spent,0);
 
-  document.getElementById('angSumLimit').textContent = 'Rp ' + fmt(totalLimit);
-  document.getElementById('angSumSpent').textContent = 'Rp ' + fmt(totalSpent);
-  document.getElementById('angSisaVal').textContent  = (over?'-':'') + 'Rp ' + fmt(Math.abs(sisa));
-  document.getElementById('angSisaLabel').textContent = over ? '⚠️ Melebihi' : '✅ Sisa';
-  const sisaCard = document.getElementById('angSisaCard');
-  sisaCard.className = `rounded-xl p-3 text-center ${over?'bg-red-50':'bg-emerald-50'}`;
-  document.getElementById('angSisaLabel').className = `text-xs font-medium mb-1 ${over?'text-red-500':'text-emerald-500'}`;
-  document.getElementById('angSisaVal').className   = `text-base font-bold ${over?'text-red-700':'text-emerald-700'}`;
+  // ── Pemasukan card ────────────────────────────────────────────
+  const masukPct = masukLimit ? Math.min(Math.round((masukSpent/masukLimit)*100),100) : 0;
+  const masukOk  = masukSpent >= masukLimit;
+  document.getElementById('angPemasukanLimit').textContent = 'Rp ' + fmt(masukLimit);
+  const masukSpentEl = document.getElementById('angPemasukanSpent');
+  masukSpentEl.textContent = 'Rp ' + fmt(masukSpent);
+  masukSpentEl.className = `font-semibold ${masukOk ? 'text-emerald-600' : 'text-gray-700'}`;
+  document.getElementById('angPemasukanBar').style.width = masukPct + '%';
+  const masukStatusEl = document.getElementById('angPemasukanStatus');
+  masukStatusEl.textContent = masukLimit
+    ? (masukOk ? `✅ Tercapai (+Rp ${fmt(masukSpent-masukLimit)})` : `⏳ Kurang Rp ${fmt(masukLimit-masukSpent)} (${masukPct}%)`)
+    : 'Belum ada anggaran pemasukan';
+  masukStatusEl.className = `text-[11px] mt-1.5 font-medium ${masukOk ? 'text-emerald-600' : 'text-gray-400'}`;
 
-  // Build chart data — per unique top-level category (parent atau standalone)
+  // ── Pengeluaran card ──────────────────────────────────────────
+  const keluarPct = keluarLimit ? Math.min(Math.round((keluarSpent/keluarLimit)*100),100) : 0;
+  const keluarOver = keluarSpent > keluarLimit;
+  document.getElementById('angPengeluaranLimit').textContent = 'Rp ' + fmt(keluarLimit);
+  const keluarSpentEl = document.getElementById('angPengeluaranSpent');
+  keluarSpentEl.textContent = 'Rp ' + fmt(keluarSpent);
+  keluarSpentEl.className = `font-semibold ${keluarOver ? 'text-red-600' : 'text-gray-700'}`;
+  document.getElementById('angPengeluaranBar').style.width = keluarPct + '%';
+  document.getElementById('angPengeluaranBar').className =
+    `h-2 rounded-full transition-all ${keluarOver ? 'bg-red-500' : keluarPct>80 ? 'bg-amber-400' : 'bg-rose-400'}`;
+  const keluarStatusEl = document.getElementById('angPengeluaranStatus');
+  keluarStatusEl.textContent = keluarLimit
+    ? (keluarOver ? `⚠️ Melebihi Rp ${fmt(keluarSpent-keluarLimit)}` : `✅ Sisa Rp ${fmt(keluarLimit-keluarSpent)} (${100-keluarPct}%)`)
+    : 'Belum ada anggaran pengeluaran';
+  keluarStatusEl.className = `text-[11px] mt-1.5 font-medium ${keluarOver ? 'text-red-600' : 'text-emerald-600'}`;
+
+  // ── Net / surplus card ────────────────────────────────────────
+  // Surplus = pemasukan terealisasi − pengeluaran terealisasi
+  const netRealisasi = masukSpent - keluarSpent;
+  const netAnggaran  = masukLimit  - keluarLimit;
+  const netCard = document.getElementById('angNetCard');
+  const isPlus  = netRealisasi >= 0;
+  netCard.className = `rounded-xl p-3 mb-4 text-center border ${isPlus ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`;
+  document.getElementById('angNetLabel').textContent = isPlus ? '✅ Surplus Realisasi' : '🔴 Defisit Realisasi';
+  document.getElementById('angNetLabel').className = `text-xs font-medium mb-0.5 ${isPlus?'text-emerald-600':'text-red-600'}`;
+  document.getElementById('angNetVal').textContent = (isPlus?'+':'') + 'Rp ' + fmt(Math.abs(netRealisasi));
+  document.getElementById('angNetVal').className = `text-lg font-bold ${isPlus?'text-emerald-700':'text-red-700'}`;
+  document.getElementById('angNetDesc').textContent =
+    `Anggaran direncanakan: ${netAnggaran>=0?'+':''}Rp ${fmt(Math.abs(netAnggaran))} ${netAnggaran>=0?'surplus':'defisit'}`;
+
+  // ── Bar chart: 4 batang — Pemasukan & Pengeluaran (Anggaran vs Realisasi) ──
+  if (_anggaranChart) _anggaranChart.destroy();
+  if (!enriched.length) { _anggaranChart = null; return; }
+
+  // Per-kategori top-level
   const chartData = [];
   const seen = new Set();
   enriched.forEach(a => {
-    const label = a.parObj ? a.parObj.Nama : a.Kategori;
+    const label = (a.parObj ? a.parObj.Nama : a.Kategori) + (a.jenis==='Pemasukan' ? ' 📥' : '');
     if (!seen.has(label)) {
       seen.add(label);
-      const siblings = enriched.filter(x=>(x.parObj?.Nama||x.Kategori)===label);
+      const siblings = enriched.filter(x => {
+        const l = (x.parObj ? x.parObj.Nama : x.Kategori) + (x.jenis==='Pemasukan' ? ' 📥' : '');
+        return l === label;
+      });
       chartData.push({
         label,
+        jenis: a.jenis,
         limit: siblings.reduce((s,x)=>s+x.limit,0),
         spent: siblings.reduce((s,x)=>s+x.spent,0),
       });
     }
   });
 
-  if (_anggaranChart) _anggaranChart.destroy();
   _anggaranChart = new Chart(document.getElementById('anggaranChart'), {
     type: 'bar',
     data: {
-      labels: chartData.map(d=>d.label),
+      labels: chartData.map(d => d.label),
       datasets: [
-        { label:'Anggaran',   data: chartData.map(d=>d.limit), backgroundColor:'rgba(99,102,241,0.6)', borderColor:'rgba(99,102,241,1)', borderWidth:1 },
-        { label:'Realisasi',  data: chartData.map(d=>d.spent), backgroundColor: chartData.map(d=>d.spent>d.limit?'rgba(239,68,68,0.7)':'rgba(34,197,94,0.6)'), borderColor:'transparent', borderWidth:0 },
+        {
+          label: 'Anggaran',
+          data: chartData.map(d => d.limit),
+          backgroundColor: chartData.map(d => d.jenis==='Pemasukan' ? 'rgba(16,185,129,0.3)' : 'rgba(99,102,241,0.3)'),
+          borderColor:     chartData.map(d => d.jenis==='Pemasukan' ? 'rgba(16,185,129,0.9)' : 'rgba(99,102,241,0.9)'),
+          borderWidth: 1.5, borderDash: [],
+        },
+        {
+          label: 'Realisasi',
+          data: chartData.map(d => d.spent),
+          backgroundColor: chartData.map(d => {
+            if (d.jenis === 'Pemasukan') return d.spent>=d.limit ? 'rgba(16,185,129,0.8)' : 'rgba(59,130,246,0.6)';
+            return d.spent>d.limit ? 'rgba(239,68,68,0.75)' : 'rgba(34,197,94,0.7)';
+          }),
+          borderColor: 'transparent', borderWidth: 0,
+        },
       ]
     },
     options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'top', labels:{font:{size:11}} } },
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position:'top', labels:{ font:{size:11}, usePointStyle:true } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: Rp ${fmt(ctx.parsed.y)}`
+          }
+        }
+      },
       scales: {
-        x:{ ticks:{font:{size:10}, maxRotation:30} },
-        y:{ beginAtZero:true, ticks:{ callback:v=>fmtAxis(v) } }
+        x: { ticks:{ font:{size:10}, maxRotation:30 } },
+        y: { beginAtZero:true, ticks:{ callback:v=>fmtAxis(v) } }
       }
     }
   });
