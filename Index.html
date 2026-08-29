@@ -2266,22 +2266,82 @@ function renderDashboard() {
   angDiv.innerHTML='';
   if (!angBulanIni.length) { angDiv.innerHTML='<p class="text-gray-400 text-xs">Belum ada anggaran</p>'; }
   else {
-    angBulanIni.forEach(a => {
-      const spent=appData.Transaksi.filter(t=>t.Jenis==='Pengeluaran'&&t.Kategori===a.Kategori&&t.Tanggal>=period.start&&t.Tanggal<=period.end).reduce((s,t)=>s+parseFloat(t.Nominal||0),0);
-      const pct=Math.min(Math.round((spent/(parseFloat(a.Nominal)||1))*100),100);
-      const over=spent>parseFloat(a.Nominal);
-      const color=over?'bg-red-500':(pct>80?'bg-yellow-500':'bg-green-500');
-      angDiv.innerHTML+=`
-        <div>
+    // Enrich: cari parent masing-masing anggaran
+    const enriched = angBulanIni.map(a => {
+      const katObj = appData.Kategori.find(k=>k.Nama===a.Kategori&&k.Jenis==='Pengeluaran');
+      const parObj = katObj?.ParentID ? appData.Kategori.find(k=>k.ID===katObj.ParentID) : null;
+      const spent  = appData.Transaksi
+        .filter(t=>t.Jenis==='Pengeluaran'&&t.Kategori===a.Kategori&&t.Tanggal>=period.start&&t.Tanggal<=period.end)
+        .reduce((s,t)=>s+parseFloat(t.Nominal||0),0);
+      return {...a, katObj, parObj, spent, limit: parseFloat(a.Nominal)||0};
+    });
+
+    // Kelompokkan: sub → masuk ke group parent, standalone → langsung tampil
+    const groups = {};
+    const standalone = [];
+    enriched.forEach(a => {
+      if (a.parObj) {
+        const key = a.parObj.Nama;
+        if (!groups[key]) groups[key] = {parNama: key, items: []};
+        groups[key].items.push(a);
+      } else { standalone.push(a); }
+    });
+
+    const barRow = (label, spent, limit, isChild=false) => {
+      const pct   = limit ? Math.min(Math.round((spent/limit)*100),100) : 0;
+      const over  = spent > limit;
+      const color = over ? 'bg-red-500' : pct>80 ? 'bg-yellow-400' : 'bg-emerald-500';
+      return `<div class="${isChild?'pl-3 border-l-2 border-gray-100':''}">
+        <div class="flex justify-between text-xs mb-1">
+          <span class="${isChild?'text-gray-500':'font-semibold text-gray-700'}">${isChild?'└ ':''}${label}</span>
+          <span class="${over?'text-red-600 font-bold':'text-gray-500'}">${fmt(spent)} / ${fmt(limit)}</span>
+        </div>
+        <div class="w-full bg-gray-100 rounded-full h-1.5"><div class="${color} h-1.5 rounded-full transition-all" style="width:${pct}%"></div></div>
+      </div>`;
+    };
+
+    // Standalone
+    standalone.forEach(a => { angDiv.innerHTML += barRow(a.Kategori, a.spent, a.limit); });
+
+    // Grouped dengan accordion
+    const _dashAngOpen = window._dashAngOpen || (window._dashAngOpen = new Set());
+    Object.entries(groups).forEach(([parNama, group]) => {
+      const totalLimit = group.items.reduce((s,a)=>s+a.limit,0);
+      const totalSpent = group.items.reduce((s,a)=>s+a.spent,0);
+      const pct   = totalLimit ? Math.min(Math.round((totalSpent/totalLimit)*100),100) : 0;
+      const over  = totalSpent > totalLimit;
+      const color = over ? 'bg-red-500' : pct>80 ? 'bg-yellow-400' : 'bg-emerald-500';
+      const isOpen = _dashAngOpen.has(parNama);
+      const subHtml = group.items.map(a=>barRow(a.Kategori, a.spent, a.limit, true)).join('');
+      angDiv.innerHTML += `
+        <div class="cursor-pointer" onclick="toggleDashAng('${parNama}')">
           <div class="flex justify-between text-xs mb-1">
-            <span class="font-bold text-gray-700">${a.Kategori}</span>
-            <span class="${over?'text-red-600 font-bold':''}">${fmt(spent)} / ${fmt(a.Nominal)}</span>
+            <span class="font-semibold text-gray-700 flex items-center gap-1">
+              ${parNama}
+              <span class="text-gray-300 text-[10px]">(${group.items.length})</span>
+              <i class="fas fa-chevron-${isOpen?'up':'down'} text-[9px] text-gray-400 ml-0.5"></i>
+            </span>
+            <span class="${over?'text-red-600 font-bold':'text-gray-500'}">${fmt(totalSpent)} / ${fmt(totalLimit)}</span>
           </div>
-          <div class="w-full bg-gray-200 rounded-full h-2"><div class="${color} h-2 rounded-full" style="width:${pct}%"></div></div>
-        </div>`;
+          <div class="w-full bg-gray-100 rounded-full h-1.5 mb-1.5"><div class="${color} h-1.5 rounded-full" style="width:${pct}%"></div></div>
+        </div>
+        <div id="dashAng_${parNama.replace(/\s+/g,'_')}" class="${isOpen?'':'hidden'} space-y-2 mb-1">${subHtml}</div>`;
     });
   }
   renderNetWorth(totalSaldo);
+}
+
+function toggleDashAng(parNama) {
+  window._dashAngOpen = window._dashAngOpen || new Set();
+  const key = parNama.replace(/\s+/g,'_');
+  const panel = document.getElementById(`dashAng_${key}`);
+  if (!panel) return;
+  const opening = panel.classList.contains('hidden');
+  if (opening) { window._dashAngOpen.add(parNama); panel.classList.remove('hidden'); }
+  else { window._dashAngOpen.delete(parNama); panel.classList.add('hidden'); }
+  // Flip chevron
+  const chevs = panel.previousElementSibling?.querySelectorAll('.fa-chevron-up,.fa-chevron-down');
+  chevs?.forEach(c => { c.classList.toggle('fa-chevron-up', opening); c.classList.toggle('fa-chevron-down', !opening); });
 }
 
 function renderNetWorth(totalSaldoKas) {
