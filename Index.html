@@ -863,7 +863,12 @@
         <div><label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
           <select id="anggaranKategori" required class="w-full border rounded-lg p-2 text-sm"></select></div>
         <div><label class="block text-sm font-medium text-gray-700 mb-1">Batas Nominal (Rp)</label>
-          <input type="number" id="anggaranNominal" required min="1" class="w-full border rounded-lg p-2 text-sm" placeholder="Misal: 2000000"></div>
+          <input type="text" id="anggaranNominal" required inputmode="decimal"
+            class="w-full border rounded-lg p-2 text-sm" placeholder="mis. 2000000 atau 500000+300000"
+            oninput="calcNominalPreview(this,'calcPreviewAng')"
+            onblur="evalCalcNominal(this,'calcPreviewAng')"
+            onkeydown="if(event.key==='Enter'){evalCalcNominal(this,'calcPreviewAng');event.preventDefault();}">
+          <span id="calcPreviewAng" class="hidden text-xs text-indigo-600 font-medium mt-0.5 block"></span></div>
         <div class="flex gap-2">
           <button type="button" onclick="cancelEdit('Anggaran')" id="btnCancelAnggaran" class="hidden flex-1 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">Batal</button>
           <button type="submit" class="flex-1 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 text-sm"><i class="fas fa-save mr-1"></i>Simpan</button>
@@ -946,7 +951,12 @@
         <div><label class="block text-sm font-medium text-gray-700 mb-1">Nama Orang / Pihak</label>
           <input type="text" id="hpNama" required class="w-full border rounded-lg p-2 text-sm" placeholder="Misal: Budi Santoso"></div>
         <div><label class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
-          <input type="number" id="hpNominal" required min="1" class="w-full border rounded-lg p-2 text-sm"></div>
+          <input type="text" id="hpNominal" required inputmode="decimal"
+            class="w-full border rounded-lg p-2 text-sm" placeholder="mis. 500000 atau 250000+150000"
+            oninput="calcNominalPreview(this,'calcPreviewHP')"
+            onblur="evalCalcNominal(this,'calcPreviewHP')"
+            onkeydown="if(event.key==='Enter'){evalCalcNominal(this,'calcPreviewHP');event.preventDefault();}">
+          <span id="calcPreviewHP" class="hidden text-xs text-indigo-600 font-medium mt-0.5 block"></span></div>
         <div class="grid grid-cols-2 gap-3">
           <div><label class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
             <input type="date" id="hpTanggal" required class="w-full border rounded-lg p-2 text-sm"></div>
@@ -1392,7 +1402,12 @@
       </div>
       <div>
         <label class="block text-xs font-medium text-gray-600 mb-1">Nominal (Rp)</label>
-        <input id="recNominal" type="number" min="0" placeholder="0" class="w-full text-sm px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300">
+        <input id="recNominal" type="text" inputmode="decimal" placeholder="mis. 500000 atau 200000+100000"
+          class="w-full text-sm px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+          oninput="calcNominalPreview(this,'calcPreviewRec')"
+          onblur="evalCalcNominal(this,'calcPreviewRec')"
+          onkeydown="if(event.key==='Enter'){evalCalcNominal(this,'calcPreviewRec');event.preventDefault();}">
+        <span id="calcPreviewRec" class="hidden text-xs text-indigo-600 font-medium mt-0.5 block"></span>
       </div>
       <div>
         <label class="block text-xs font-medium text-gray-600 mb-1">Dompet Sumber</label>
@@ -2079,7 +2094,7 @@ function submitAnggaran(e) {
     ID:document.getElementById('anggaranID').value||'',
     BulanTahun:document.getElementById('anggaranBulanForm').value,
     Kategori:document.getElementById('anggaranKategori').value,
-    Nominal:parseFloat(document.getElementById('anggaranNominal').value)
+    Nominal:parseRibuan(document.getElementById('anggaranNominal').value)||0
   }], () => { cancelEdit('Anggaran'); renderAnggaranList(); });
 }
 function submitHP(e) {
@@ -2088,7 +2103,7 @@ function submitHP(e) {
   const id = document.getElementById('hpID').value;
   const obj = {
     ID:id||'', Jenis:document.querySelector('input[name="hpJenis"]:checked').value,
-    Nama:document.getElementById('hpNama').value, Nominal:parseFloat(document.getElementById('hpNominal').value),
+    Nama:document.getElementById('hpNama').value, Nominal:parseRibuan(document.getElementById('hpNominal').value)||0,
     Tanggal:document.getElementById('hpTanggal').value, JatuhTempo:document.getElementById('hpJatuhTempo').value,
     Keterangan:document.getElementById('hpKeterangan').value
   };
@@ -3444,10 +3459,16 @@ function renderPengaturan() {
       addRow.id = `katAddRow_${k.ID}`;
       addRow.className = 'hidden px-3 py-2.5 border-t border-gray-100 space-y-2 bg-indigo-50/40';
       const _angField = (jenis==='Pengeluaran'||jenis==='Pemasukan')
-        ? `<div class="flex items-center gap-2 ml-5">
-            <span class="text-xs text-gray-500 whitespace-nowrap">Anggaran (Rp):</span>
-            <input type="number" id="katAddAnggaran_${k.ID}" placeholder="opsional" min="0"
-              class="flex-1 border border-blue-200 rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white">
+        ? `<div class="ml-5">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-500 whitespace-nowrap">Anggaran (Rp):</span>
+              <input type="text" id="katAddAnggaran_${k.ID}" placeholder="opsional, mis. 500000+200000" inputmode="decimal"
+                class="flex-1 border border-blue-200 rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
+                oninput="calcNominalPreview(this,'katAddAngPrev_${k.ID}')"
+                onblur="evalCalcNominal(this,'katAddAngPrev_${k.ID}')"
+                onkeydown="if(event.key==='Enter'){evalCalcNominal(this,'katAddAngPrev_${k.ID}');}">
+            </div>
+            <span id="katAddAngPrev_${k.ID}" class="hidden text-xs text-indigo-600 font-medium mt-0.5 ml-2 block"></span>
            </div>` : '';
       addRow.innerHTML = `
         <div class="flex items-center gap-2">
@@ -3483,10 +3504,16 @@ function renderPengaturan() {
             class="flex-1 border border-blue-300 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
             onkeydown="if(event.key==='Enter'){saveQuickParent('${jenis}');}else if(event.key==='Escape'){hideQuickParent('${jenis}');}">
         </div>
-        ${jenis==='Pengeluaran'||jenis==='Pemasukan' ? `<div class="flex items-center gap-2">
-          <span class="text-xs text-gray-500 whitespace-nowrap">Anggaran (Rp):</span>
-          <input type="number" id="katAddParentAnggaran_${jenis}" placeholder="opsional, mis. 2000000" min="0"
-            class="flex-1 border border-blue-200 rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white">
+        ${jenis==='Pengeluaran'||jenis==='Pemasukan' ? `<div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-500 whitespace-nowrap">Anggaran (Rp):</span>
+            <input type="text" id="katAddParentAnggaran_${jenis}" placeholder="opsional, mis. 1000000+500000" inputmode="decimal"
+              class="flex-1 border border-blue-200 rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
+              oninput="calcNominalPreview(this,'katParAngPrev_${jenis}')"
+              onblur="evalCalcNominal(this,'katParAngPrev_${jenis}')"
+              onkeydown="if(event.key==='Enter'){evalCalcNominal(this,'katParAngPrev_${jenis}');}">
+          </div>
+          <span id="katParAngPrev_${jenis}" class="hidden text-xs text-indigo-600 font-medium mt-0.5 ml-2 block"></span>
         </div>` : ''}
         <div class="flex gap-2">
           <button onclick="saveQuickParent('${jenis}')"
@@ -3556,7 +3583,7 @@ function saveQuickSub(parentId, jenis) {
   if (demoGuard()) return;
   const nama = document.getElementById(`katAddInput_${parentId}`)?.value.trim();
   if (!nama) { showAlert('Nama tidak boleh kosong.','error'); return; }
-  const anggaranVal = parseFloat(document.getElementById(`katAddAnggaran_${parentId}`)?.value) || 0;
+  const anggaranVal = parseRibuan(document.getElementById(`katAddAnggaran_${parentId}`)?.value) || 0;
   const bulanIni = new Date().toISOString().slice(0,7);
   showLoading('Menyimpan...');
   google.script.run
@@ -3598,7 +3625,7 @@ function saveQuickParent(jenis) {
   if (demoGuard()) return;
   const nama = document.getElementById(`katAddParentInput_${jenis}`)?.value.trim();
   if (!nama) { showAlert('Nama tidak boleh kosong.','error'); return; }
-  const anggaranVal = parseFloat(document.getElementById(`katAddParentAnggaran_${jenis}`)?.value) || 0;
+  const anggaranVal = parseRibuan(document.getElementById(`katAddParentAnggaran_${jenis}`)?.value) || 0;
   const bulanIni = new Date().toISOString().slice(0,7);
   showLoading('Menyimpan...');
   google.script.run
@@ -5020,7 +5047,7 @@ function updateRecKategori() {
 function submitRecurring() {
   if (demoGuard()) return;
   const nama = document.getElementById('recNama').value.trim();
-  const nominal = parseFloat(document.getElementById('recNominal').value)||0;
+  const nominal = parseRibuan(document.getElementById('recNominal').value)||0;
   if (!nama) { showAlert('Nama tidak boleh kosong','error'); return; }
   if (!nominal) { showAlert('Nominal tidak valid','error'); return; }
   const obj = {
