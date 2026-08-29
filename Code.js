@@ -7,8 +7,9 @@ const APP_NAME    = 'DB_KeuanganKu';
 const APP_VERSION = '3.72'; // AUTO-UPDATED by deploy.sh — jangan edit manual
 
 // ── LISENSI ──────────────────────────────────────────────────
-// Ganti dengan email pemilik aplikasi — selalu Lifetime secara otomatis
-const OWNER_EMAIL = 'herry.wibowo84@gmail.com';
+// Email owner diambil dari ScriptProperties agar tidak hardcoded di source code
+// Set di GAS editor: Project Settings → Script Properties → tambah OWNER_EMAIL = emailmu
+const OWNER_EMAIL = PropertiesService.getScriptProperties().getProperty('OWNER_EMAIL') || '';
 
 // Lisensi disimpan di ScriptProperties (bukan Google Sheet)
 // agar bisa dibaca semua user tanpa perlu akses spreadsheet pemilik.
