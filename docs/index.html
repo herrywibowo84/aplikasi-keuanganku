@@ -21,7 +21,7 @@
 <meta name="twitter:description" content="Aplikasi keuangan pribadi gratis. Data di Google Sheets Anda sendiri.">
 
 <!-- Canonical -->
-<link rel="canonical" href="https://herrywibowo84.github.io/aplikasi-keuanganku/">
+<link rel="canonical" href="https://appkeuanganku.my.id/">
 
 <!-- Favicon -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
@@ -367,6 +367,7 @@ footer { border-top: 1px solid var(--border); padding: 36px 0; }
           <div class="trust-pill">🔒 Data di Google Drive Anda</div>
           <div class="trust-pill">⚡ Login 1 klik via Google</div>
           <div class="trust-pill">📱 Install ke HP tanpa App Store</div>
+          <div class="trust-pill">🧮 Kalkulator built-in di semua input</div>
         </div>
       </div>
       <!-- App mock -->
@@ -461,6 +462,7 @@ footer { border-top: 1px solid var(--border); padding: 36px 0; }
           <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Grafik arus kas bulanan & pie pengeluaran per kategori</p></div>
           <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Analisis tren naik/turun dibanding bulan sebelumnya</p></div>
           <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Rata-rata pengeluaran harian & transaksi terbesar</p></div>
+          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Filter riwayat transaksi by kategori & sub-kategori</p></div>
         </div>
       </div>
       <div class="feat-card">
@@ -495,11 +497,12 @@ footer { border-top: 1px solid var(--border); padding: 36px 0; }
     <div class="feat-row flip">
       <div>
         <div class="eyebrow" style="margin-bottom:12px">Anggaran & Kontrol</div>
-        <h2 class="h2" style="margin-bottom:14px">Tetapkan batas, pantau realisasi</h2>
-        <p class="body-sm" style="margin-bottom:20px">Buat anggaran per kategori setiap bulan. Progress bar real-time menunjukkan berapa yang sudah terpakai — merah jika mendekati atau melebihi batas.</p>
+        <h2 class="h2" style="margin-bottom:14px">Tetapkan batas, pantau realisasi, dapat rekomendasi</h2>
+        <p class="body-sm" style="margin-bottom:20px">Buat anggaran per kategori & sub-kategori setiap bulan. Progress bar real-time menunjukkan realisasi vs rencana — lengkap dengan notifikasi dan rekomendasi otomatis jika anggaran terlampaui.</p>
         <div class="feat-points">
-          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Anggaran fleksibel per kategori per bulan</p></div>
-          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Peringatan visual saat anggaran mendekati batas</p></div>
+          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Anggaran fleksibel per kategori & sub-kategori</p></div>
+          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Notifikasi & rekomendasi otomatis jika anggaran terlampaui</p></div>
+          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Analisa grafik rencana vs realisasi per kategori</p></div>
           <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Salin anggaran bulan lalu dengan satu klik</p></div>
         </div>
       </div>
@@ -527,6 +530,9 @@ footer { border-top: 1px solid var(--border); padding: 36px 0; }
             <span class="bud-pct" style="color:var(--accent)">30%</span>
           </div>
           <div class="bud-warn">❌ Tagihan melebihi anggaran Rp 120.000</div>
+          <div style="margin-top:8px;padding:9px 10px;background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.25);border-radius:7px;font-size:.68rem;color:var(--indigo-fg);font-weight:600;line-height:1.5;">
+            💡 <strong>Rekomendasi:</strong> Kurangi makan di luar 3× seminggu untuk hemat ~Rp 180rb bulan depan.
+          </div>
         </div>
       </div>
     </div>
@@ -572,6 +578,48 @@ footer { border-top: 1px solid var(--border); padding: 36px 0; }
         <div class="pdf-row" style="border-bottom:none"><span>🚗 Transportasi</span><span style="color:var(--text-sub)">Rp 320rb · 15%</span></div>
       </div>
     </div>
+    <!-- Row 4: Kalkulator -->
+    <div class="feat-row flip">
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px">Kalkulator & Sub-Kategori</div>
+        <h2 class="h2" style="margin-bottom:14px">Input cerdas yang menghemat waktu Anda</h2>
+        <p class="body-sm" style="margin-bottom:20px">Tidak perlu buka kalkulator terpisah. Ketik ekspresi langsung di kolom nominal — hasilnya dihitung otomatis. Lengkapi dengan sub-kategori untuk pencatatan yang lebih rapi dan terstruktur.</p>
+        <div class="feat-points">
+          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Ketik <code style="background:var(--surface2);padding:1px 6px;border-radius:4px;font-size:.8rem">50.000+25.000</code> → langsung jadi <strong>75.000</strong></p></div>
+          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Berlaku di semua form: transaksi, anggaran, hutang, recurring</p></div>
+          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Sub-kategori accordion — klik kategori untuk lihat & kelola detail</p></div>
+          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Tambah & edit kategori/sub-kategori langsung tanpa buka menu lain</p></div>
+        </div>
+      </div>
+      <div class="feat-card">
+        <div style="font-size:.7rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px">🧮 Input Nominal</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="background:var(--surface2);border-radius:8px;padding:12px;border:1px solid var(--border)">
+            <div style="font-size:.65rem;color:var(--muted);margin-bottom:6px;font-weight:600">NOMINAL TRANSAKSI</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="flex:1;background:var(--surface3);border-radius:6px;padding:8px 10px;font-size:.82rem;font-variant-numeric:tabular-nums;color:var(--text)">150.000+75.000+25.000</div>
+              <div style="background:var(--accent);color:#002B1E;border-radius:6px;padding:7px 10px;font-size:.75rem;font-weight:800">=</div>
+            </div>
+            <div style="margin-top:6px;padding:7px 10px;background:rgba(0,200,150,.1);border:1px solid rgba(0,200,150,.25);border-radius:6px;font-size:.85rem;font-weight:800;color:var(--accent);text-align:right;font-variant-numeric:tabular-nums;">✓ Rp 250.000</div>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:12px;border:1px solid var(--border)">
+            <div style="font-size:.65rem;color:var(--muted);margin-bottom:8px;font-weight:600">SUB-KATEGORI</div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:var(--surface3);border-radius:6px;">
+                <span style="font-size:.75rem">🍽</span>
+                <span style="font-size:.75rem;color:var(--text);font-weight:600">Makanan & Minuman</span>
+                <span style="margin-left:auto;font-size:.65rem;color:var(--accent)">▼</span>
+              </div>
+              <div style="padding:4px 8px 4px 24px;display:flex;flex-direction:column;gap:4px">
+                <div style="font-size:.7rem;color:var(--text-sub);padding:3px 6px;background:rgba(0,200,150,.06);border-left:2px solid var(--accent);border-radius:3px">🍱 Makan Siang</div>
+                <div style="font-size:.7rem;color:var(--text-sub);padding:3px 6px;background:var(--surface3);border-left:2px solid var(--border);border-radius:3px">☕ Kopi & Snack</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
