@@ -889,15 +889,11 @@
       </div>
     </div>
     <div class="lg:col-span-2 space-y-6">
-      <div class="bg-white rounded-xl shadow p-5">
-        <h3 class="text-base font-bold text-gray-800 mb-4" id="anggaranBulanTitle">Anggaran Bulan Ini</h3>
-        <div id="anggaranList" class="space-y-4"><p class="text-gray-400 text-sm text-center py-4">Belum ada anggaran untuk bulan ini.</p></div>
-      </div>
-      <!-- Analisa anggaran -->
+      <!-- Analisa anggaran — di atas -->
       <div class="bg-white rounded-xl shadow p-5" id="anggaranAnalisisCtn">
         <h3 class="text-base font-bold text-gray-800 mb-1"><i class="fas fa-balance-scale mr-2 text-indigo-500"></i>Analisa Anggaran</h3>
         <p class="text-xs text-gray-400 mb-4">Perbandingan anggaran pemasukan & pengeluaran vs realisasi bulan yang dipilih</p>
-        <!-- Pemasukan row -->
+        <!-- Pemasukan & Pengeluaran -->
         <div class="grid grid-cols-2 gap-3 mb-3">
           <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-3">
             <p class="text-xs text-emerald-600 font-semibold mb-2 flex items-center gap-1"><i class="fas fa-arrow-down text-[10px]"></i>Pemasukan</p>
@@ -914,8 +910,8 @@
             <p class="text-[11px] mt-1.5 font-medium" id="angPengeluaranStatus"></p>
           </div>
         </div>
-        <!-- Net / surplus card -->
-        <div class="grid grid-cols-2 gap-3 mb-4">
+        <!-- Selisih anggaran & realisasi -->
+        <div class="grid grid-cols-2 gap-3">
           <div class="rounded-xl p-3 text-center border" id="angNetAnggaranCard">
             <p class="text-xs font-medium mb-0.5" id="angNetAnggaranLabel">Selisih Anggaran</p>
             <p class="text-base font-bold" id="angNetAnggaranVal">Rp 0</p>
@@ -923,14 +919,15 @@
           </div>
           <div class="rounded-xl p-3 text-center border" id="angNetCard">
             <p class="text-xs font-medium mb-0.5" id="angNetLabel">Selisih Realisasi</p>
-            <p class="text-lg font-bold" id="angNetVal">Rp 0</p>
+            <p class="text-base font-bold" id="angNetVal">Rp 0</p>
             <p class="text-[10px] text-gray-400 mt-0.5">Aktual Masuk − Aktual Keluar</p>
           </div>
         </div>
-        <!-- Bar chart -->
-        <div class="relative" style="height:240px">
-          <canvas id="anggaranChart"></canvas>
-        </div>
+      </div>
+      <!-- Daftar anggaran — di bawah -->
+      <div class="bg-white rounded-xl shadow p-5">
+        <h3 class="text-base font-bold text-gray-800 mb-4" id="anggaranBulanTitle">Anggaran Bulan Ini</h3>
+        <div id="anggaranList" class="space-y-4"><p class="text-gray-400 text-sm text-center py-4">Belum ada anggaran untuk bulan ini.</p></div>
       </div>
     </div>
   </div>
@@ -3072,8 +3069,6 @@ function renderAnggaranKategoriSelect() {
     if (parents.length) sel.appendChild(optGroup);
   });
 }
-let _anggaranChart = null;
-
 function renderAnggaranList() {
   const bulan = document.getElementById('anggaranBulanFilter').value ||
     new Date().toISOString().slice(0,7);
@@ -3268,69 +3263,6 @@ function renderAnggaranChart(enriched, bulan) {
   document.getElementById('angNetVal').textContent = (isPlus?'+':'−') + 'Rp ' + fmt(Math.abs(netRealisasi));
   document.getElementById('angNetVal').className = `text-lg font-bold ${isPlus?'text-emerald-700':'text-red-700'}`;
 
-  // ── Bar chart: 4 batang — Pemasukan & Pengeluaran (Anggaran vs Realisasi) ──
-  if (_anggaranChart) _anggaranChart.destroy();
-  if (!enriched.length) { _anggaranChart = null; return; }
-
-  // Per-kategori top-level
-  const chartData = [];
-  const seen = new Set();
-  enriched.forEach(a => {
-    const label = (a.parObj ? a.parObj.Nama : a.Kategori) + (a.jenis==='Pemasukan' ? ' 📥' : '');
-    if (!seen.has(label)) {
-      seen.add(label);
-      const siblings = enriched.filter(x => {
-        const l = (x.parObj ? x.parObj.Nama : x.Kategori) + (x.jenis==='Pemasukan' ? ' 📥' : '');
-        return l === label;
-      });
-      chartData.push({
-        label,
-        jenis: a.jenis,
-        limit: siblings.reduce((s,x)=>s+x.limit,0),
-        spent: siblings.reduce((s,x)=>s+x.spent,0),
-      });
-    }
-  });
-
-  _anggaranChart = new Chart(document.getElementById('anggaranChart'), {
-    type: 'bar',
-    data: {
-      labels: chartData.map(d => d.label),
-      datasets: [
-        {
-          label: 'Anggaran',
-          data: chartData.map(d => d.limit),
-          backgroundColor: chartData.map(d => d.jenis==='Pemasukan' ? 'rgba(16,185,129,0.3)' : 'rgba(99,102,241,0.3)'),
-          borderColor:     chartData.map(d => d.jenis==='Pemasukan' ? 'rgba(16,185,129,0.9)' : 'rgba(99,102,241,0.9)'),
-          borderWidth: 1.5, borderDash: [],
-        },
-        {
-          label: 'Realisasi',
-          data: chartData.map(d => d.spent),
-          backgroundColor: chartData.map(d => {
-            if (d.jenis === 'Pemasukan') return d.spent>=d.limit ? 'rgba(16,185,129,0.8)' : 'rgba(59,130,246,0.6)';
-            return d.spent>d.limit ? 'rgba(239,68,68,0.75)' : 'rgba(34,197,94,0.7)';
-          }),
-          borderColor: 'transparent', borderWidth: 0,
-        },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { position:'top', labels:{ font:{size:11}, usePointStyle:true } },
-        tooltip: {
-          callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: Rp ${fmt(ctx.parsed.y)}`
-          }
-        }
-      },
-      scales: {
-        x: { ticks:{ font:{size:10}, maxRotation:30 } },
-        y: { beginAtZero:true, ticks:{ callback:v=>fmtAxis(v) } }
-      }
-    }
-  });
 }
 function editAnggaran(id) {
   const data=appData.Anggaran.find(a=>a.ID===id); if (!data) return;
