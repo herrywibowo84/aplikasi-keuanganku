@@ -915,10 +915,17 @@
           </div>
         </div>
         <!-- Net / surplus card -->
-        <div class="rounded-xl p-3 mb-4 text-center border" id="angNetCard">
-          <p class="text-xs font-medium mb-0.5" id="angNetLabel">Surplus / Defisit</p>
-          <p class="text-lg font-bold" id="angNetVal">Rp 0</p>
-          <p class="text-xs text-gray-400" id="angNetDesc"></p>
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="rounded-xl p-3 text-center border" id="angNetAnggaranCard">
+            <p class="text-xs font-medium mb-0.5" id="angNetAnggaranLabel">Selisih Anggaran</p>
+            <p class="text-base font-bold" id="angNetAnggaranVal">Rp 0</p>
+            <p class="text-[10px] text-gray-400 mt-0.5">Rencana Masuk − Rencana Keluar</p>
+          </div>
+          <div class="rounded-xl p-3 text-center border" id="angNetCard">
+            <p class="text-xs font-medium mb-0.5" id="angNetLabel">Selisih Realisasi</p>
+            <p class="text-lg font-bold" id="angNetVal">Rp 0</p>
+            <p class="text-[10px] text-gray-400 mt-0.5">Aktual Masuk − Aktual Keluar</p>
+          </div>
         </div>
         <!-- Bar chart -->
         <div class="relative" style="height:240px">
@@ -3241,19 +3248,25 @@ function renderAnggaranChart(enriched, bulan) {
     : 'Belum ada anggaran pengeluaran';
   keluarStatusEl.className = `text-[11px] mt-1.5 font-medium ${keluarOver ? 'text-red-600' : 'text-emerald-600'}`;
 
-  // ── Net / surplus card ────────────────────────────────────────
-  // Surplus = pemasukan terealisasi − pengeluaran terealisasi
+  // ── Selisih Anggaran (rencana) ────────────────────────────────
+  const netAnggaran = masukLimit - keluarLimit;
+  const isPlusAng   = netAnggaran >= 0;
+  const angCard = document.getElementById('angNetAnggaranCard');
+  angCard.className = `rounded-xl p-3 text-center border ${isPlusAng ? 'bg-indigo-50 border-indigo-200' : 'bg-orange-50 border-orange-200'}`;
+  document.getElementById('angNetAnggaranLabel').textContent = isPlusAng ? '📋 Surplus Rencana' : '📋 Defisit Rencana';
+  document.getElementById('angNetAnggaranLabel').className = `text-xs font-medium mb-0.5 ${isPlusAng?'text-indigo-600':'text-orange-600'}`;
+  document.getElementById('angNetAnggaranVal').textContent = (isPlusAng?'+':'−') + 'Rp ' + fmt(Math.abs(netAnggaran));
+  document.getElementById('angNetAnggaranVal').className = `text-base font-bold ${isPlusAng?'text-indigo-700':'text-orange-700'}`;
+
+  // ── Selisih Realisasi (aktual) ────────────────────────────────
   const netRealisasi = masukSpent - keluarSpent;
-  const netAnggaran  = masukLimit  - keluarLimit;
+  const isPlus       = netRealisasi >= 0;
   const netCard = document.getElementById('angNetCard');
-  const isPlus  = netRealisasi >= 0;
-  netCard.className = `rounded-xl p-3 mb-4 text-center border ${isPlus ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`;
-  document.getElementById('angNetLabel').textContent = isPlus ? '✅ Surplus Realisasi' : '🔴 Defisit Realisasi';
+  netCard.className = `rounded-xl p-3 text-center border ${isPlus ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`;
+  document.getElementById('angNetLabel').textContent = isPlus ? '✅ Surplus Aktual' : '🔴 Defisit Aktual';
   document.getElementById('angNetLabel').className = `text-xs font-medium mb-0.5 ${isPlus?'text-emerald-600':'text-red-600'}`;
-  document.getElementById('angNetVal').textContent = (isPlus?'+':'') + 'Rp ' + fmt(Math.abs(netRealisasi));
+  document.getElementById('angNetVal').textContent = (isPlus?'+':'−') + 'Rp ' + fmt(Math.abs(netRealisasi));
   document.getElementById('angNetVal').className = `text-lg font-bold ${isPlus?'text-emerald-700':'text-red-700'}`;
-  document.getElementById('angNetDesc').textContent =
-    `Anggaran direncanakan: ${netAnggaran>=0?'+':''}Rp ${fmt(Math.abs(netAnggaran))} ${netAnggaran>=0?'surplus':'defisit'}`;
 
   // ── Bar chart: 4 batang — Pemasukan & Pengeluaran (Anggaran vs Realisasi) ──
   if (_anggaranChart) _anggaranChart.destroy();
