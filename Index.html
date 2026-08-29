@@ -883,9 +883,35 @@
         <p class="text-xs text-gray-400 mt-1 text-center">Salin & sesuaikan anggaran bulan lalu ke bulan yang dipilih</p>
       </div>
     </div>
-    <div class="lg:col-span-2 bg-white rounded-xl shadow p-5">
-      <h3 class="text-base font-bold text-gray-800 mb-4" id="anggaranBulanTitle">Anggaran Bulan Ini</h3>
-      <div id="anggaranList" class="space-y-4"><p class="text-gray-400 text-sm text-center py-4">Belum ada anggaran untuk bulan ini.</p></div>
+    <div class="lg:col-span-2 space-y-6">
+      <div class="bg-white rounded-xl shadow p-5">
+        <h3 class="text-base font-bold text-gray-800 mb-4" id="anggaranBulanTitle">Anggaran Bulan Ini</h3>
+        <div id="anggaranList" class="space-y-4"><p class="text-gray-400 text-sm text-center py-4">Belum ada anggaran untuk bulan ini.</p></div>
+      </div>
+      <!-- Analisa anggaran -->
+      <div class="bg-white rounded-xl shadow p-5" id="anggaranAnalisisCtn">
+        <h3 class="text-base font-bold text-gray-800 mb-1"><i class="fas fa-chart-bar mr-2 text-indigo-500"></i>Analisa Anggaran</h3>
+        <p class="text-xs text-gray-400 mb-4">Perbandingan anggaran vs realisasi pengeluaran bulan yang dipilih</p>
+        <!-- Summary cards -->
+        <div class="grid grid-cols-3 gap-3 mb-5" id="anggaranSummaryCards">
+          <div class="bg-blue-50 rounded-xl p-3 text-center">
+            <p class="text-xs text-blue-500 font-medium mb-1">Total Anggaran</p>
+            <p class="text-base font-bold text-blue-700" id="angSumLimit">Rp 0</p>
+          </div>
+          <div class="bg-rose-50 rounded-xl p-3 text-center">
+            <p class="text-xs text-rose-500 font-medium mb-1">Total Realisasi</p>
+            <p class="text-base font-bold text-rose-700" id="angSumSpent">Rp 0</p>
+          </div>
+          <div class="rounded-xl p-3 text-center" id="angSisaCard">
+            <p class="text-xs font-medium mb-1" id="angSisaLabel">Sisa</p>
+            <p class="text-base font-bold" id="angSisaVal">Rp 0</p>
+          </div>
+        </div>
+        <!-- Bar chart -->
+        <div class="relative" style="height:260px">
+          <canvas id="anggaranChart"></canvas>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -2638,19 +2664,35 @@ function inlineEditRow(id) {
       <option value="Pemasukan"   ${t.Jenis==='Pemasukan'?'selected':''}>Pemasukan</option>
     </select>`;
 
+  // Resolve kategori hierarchy untuk pre-select
+  const _tKatObj = appData.Kategori.find(k => k.Nama === t.Kategori && k.Jenis === t.Jenis);
+  const _tKatPar = _tKatObj?.ParentID ? appData.Kategori.find(k => k.ID === _tKatObj.ParentID) : null;
+  const _initParNama = _tKatPar ? _tKatPar.Nama : (t.Kategori || '');
+  const _initSubNama = _tKatPar ? t.Kategori : '';
+
+  // Parent select (hanya parent categories)
+  const buildParOpts = (jenis, selNama) =>
+    appData.Kategori.filter(k => k.Jenis === jenis && !k.ParentID)
+      .map(k => `<option value="${k.Nama}" ${k.Nama===selNama?'selected':''}>${k.Nama}</option>`).join('');
+
+  // Sub select berdasarkan parent yang dipilih
+  const buildSubOpts = (jenis, parNama, selNama) => {
+    const par = appData.Kategori.find(k => k.Jenis === jenis && !k.ParentID && k.Nama === parNama);
+    const subs = par ? appData.Kategori.filter(k => k.ParentID === par.ID) : [];
+    if (!subs.length) return `<option value="">— tidak ada sub —</option>`;
+    return `<option value="" ${!selNama?'selected':''}>— pilih sub-kategori —</option>` +
+      subs.map(s => `<option value="${s.Nama}" ${s.Nama===selNama?'selected':''}>${s.Nama}</option>`).join('');
+  };
+
   document.getElementById(`rKat_${id}`).innerHTML =
     `<select id="ie_kat_${id}" onchange="ieUpdateSubKat('${id}')" class="${ieCls} min-w-[8rem]">
-      ${buildKatOpts(t.Jenis, t.Kategori)}
+      ${buildParOpts(t.Jenis, _initParNama)}
     </select>`;
 
-  // Sub-kategori cell: readonly, derived dari Kategori select
-  const _initSubKat = (() => {
-    const obj = appData.Kategori.find(k => k.Nama === t.Kategori && k.Jenis === t.Jenis);
-    const par = obj?.ParentID ? appData.Kategori.find(k => k.ID === obj.ParentID) : null;
-    return par ? t.Kategori : '—';
-  })();
   document.getElementById(`rSubKat_${id}`).innerHTML =
-    `<span id="ie_subkat_${id}" class="text-xs ${_initSubKat==='—'?'text-gray-300':'text-indigo-600'}">${_initSubKat}</span>`;
+    `<select id="ie_subkat_${id}" class="${ieCls} min-w-[8rem]">
+      ${buildSubOpts(t.Jenis, _initParNama, _initSubNama)}
+    </select>`;
 
   document.getElementById(`rDompet_${id}`).innerHTML =
     `<select id="ie_dompet_${id}" class="${ieCls} min-w-[7rem]">${dompetOpts}</select>`;
@@ -2684,30 +2726,28 @@ function inlineEditRow(id) {
   setTimeout(() => document.getElementById(`ie_ket_${id}`)?.focus(), 50);
 }
 
+// Dipanggil saat parent category select berubah → update sub-kategori options
 function ieUpdateSubKat(id) {
-  const katNama = document.getElementById(`ie_kat_${id}`)?.value;
+  const parNama = document.getElementById(`ie_kat_${id}`)?.value;
   const jenis   = document.getElementById(`ie_jenis_${id}`)?.value;
-  const obj = appData.Kategori.find(k => k.Nama === katNama && k.Jenis === jenis);
-  const par = obj?.ParentID ? appData.Kategori.find(k => k.ID === obj.ParentID) : null;
-  const subEl = document.getElementById(`ie_subkat_${id}`);
-  if (subEl) {
-    subEl.textContent = par ? katNama : '—';
-    subEl.className = `text-xs ${par ? 'text-indigo-600' : 'text-gray-300'}`;
+  const subEl   = document.getElementById(`ie_subkat_${id}`);
+  if (!subEl || !parNama) return;
+  const par  = appData.Kategori.find(k => k.Jenis === jenis && !k.ParentID && k.Nama === parNama);
+  const subs = par ? appData.Kategori.filter(k => k.ParentID === par.ID) : [];
+  if (!subs.length) {
+    subEl.innerHTML = `<option value="">— tidak ada sub —</option>`;
+  } else {
+    subEl.innerHTML = `<option value="">— pilih sub-kategori —</option>` +
+      subs.map(s => `<option value="${s.Nama}">${s.Nama}</option>`).join('');
   }
 }
 
 function ieUpdateKat(id) {
   const jenis = document.getElementById(`ie_jenis_${id}`).value;
   const katEl = document.getElementById(`ie_kat_${id}`);
-  const parents = appData.Kategori.filter(k => k.Jenis === jenis && !k.ParentID);
-  const subs    = appData.Kategori.filter(k => k.Jenis === jenis && k.ParentID);
-  let opts = '';
-  parents.forEach(p => {
-    opts += `<option value="${p.Nama}">${p.Nama}</option>`;
-    subs.filter(s => s.ParentID === p.ID).forEach(s => {
-      opts += `<option value="${s.Nama}">　└ ${s.Nama}</option>`;
-    });
-  });
+  // Hanya parent categories
+  const opts  = appData.Kategori.filter(k => k.Jenis === jenis && !k.ParentID)
+    .map(k => `<option value="${k.Nama}">${k.Nama}</option>`).join('');
   if (katEl) katEl.innerHTML = opts;
   ieUpdateSubKat(id);
 }
@@ -2720,7 +2760,8 @@ function saveInlineEdit(id) {
     ...t,
     Tanggal:    document.getElementById(`ie_tgl_${id}`).value,
     Jenis:      document.getElementById(`ie_jenis_${id}`).value,
-    Kategori:   document.getElementById(`ie_kat_${id}`).value,
+    Kategori:   document.getElementById(`ie_subkat_${id}`)?.value ||
+                document.getElementById(`ie_kat_${id}`).value,
     DompetAsal: document.getElementById(`ie_dompet_${id}`).value,
     Keterangan: document.getElementById(`ie_ket_${id}`).value,
     Nominal:    parseRibuan(document.getElementById(`ie_nom_${id}`).value) || 0,
@@ -2924,36 +2965,194 @@ function renderDompetTrxTable(nama) {
 // ANGGARAN
 // ============================================================
 function renderAnggaranKategoriSelect() {
-  populateSelect('anggaranKategori',appData.Kategori.filter(k=>k.Jenis==='Pengeluaran').map(k=>k.Nama));
+  const sel = document.getElementById('anggaranKategori');
+  if (!sel) return;
+  sel.innerHTML = '';
+  const parents = appData.Kategori.filter(k=>k.Jenis==='Pengeluaran'&&!k.ParentID);
+  const subs    = appData.Kategori.filter(k=>k.Jenis==='Pengeluaran'&&k.ParentID);
+  parents.forEach(p => {
+    sel.innerHTML += `<option value="${p.Nama}">${p.Nama}</option>`;
+    subs.filter(s=>s.ParentID===p.ID).forEach(s=>{
+      sel.innerHTML += `<option value="${s.Nama}">&nbsp;&nbsp;└ ${s.Nama}</option>`;
+    });
+  });
 }
+let _anggaranChart = null;
+
 function renderAnggaranList() {
-  const bulan=document.getElementById('anggaranBulanFilter').value;
-  document.getElementById('anggaranBulanTitle').innerText='Anggaran '+(bulan||'Bulan Ini');
-  const list=appData.Anggaran.filter(a=>!bulan||a.BulanTahun===bulan);
-  const div=document.getElementById('anggaranList');
-  div.innerHTML='';
-  if (!list.length) { div.innerHTML='<p class="text-gray-400 text-sm text-center py-6"><i class="fas fa-inbox text-2xl block mb-2"></i>Belum ada anggaran.<br>Tambahkan melalui form di kiri.</p>'; return; }
-  list.forEach(a => {
-    const spent=appData.Transaksi.filter(t=>t.Jenis==='Pengeluaran'&&t.Kategori===a.Kategori&&t.Tanggal.startsWith(a.BulanTahun)).reduce((s,t)=>s+parseFloat(t.Nominal||0),0);
-    const limit=parseFloat(a.Nominal)||0;
-    const pct=limit?Math.min(Math.round((spent/limit)*100),100):0;
-    const over=spent>limit;
-    const sisa=limit-spent;
-    div.innerHTML+=`<div class="border border-gray-100 rounded-xl p-4 hover:shadow-sm transition">
-      <div class="flex justify-between items-start mb-2">
-        <div><h4 class="font-bold text-gray-800">${a.Kategori}</h4><p class="text-xs text-gray-400">${a.BulanTahun}</p></div>
-        <div class="flex gap-2">
-          <button onclick="editAnggaran('${a.ID}')" class="text-blue-500 hover:text-blue-700 text-sm"><i class="fas fa-edit"></i></button>
-          <button onclick="deleteData('Anggaran','${a.ID}')" class="text-red-500 hover:text-red-700 text-sm"><i class="fas fa-trash"></i></button>
+  const bulan = document.getElementById('anggaranBulanFilter').value ||
+    new Date().toISOString().slice(0,7);
+  document.getElementById('anggaranBulanTitle').innerText = 'Anggaran ' + bulan;
+  const list = appData.Anggaran.filter(a => a.BulanTahun === bulan);
+  const div = document.getElementById('anggaranList');
+  div.innerHTML = '';
+
+  if (!list.length) {
+    div.innerHTML = '<p class="text-gray-400 text-sm text-center py-6"><i class="fas fa-inbox text-2xl block mb-2"></i>Belum ada anggaran.<br>Tambahkan melalui form di kiri.</p>';
+    renderAnggaranChart([], bulan);
+    return;
+  }
+
+  // ── Bangun struktur parent-sub ────────────────────────────────
+  // Cari katObj untuk setiap anggaran item
+  const enriched = list.map(a => {
+    const katObj = appData.Kategori.find(k => k.Nama === a.Kategori && k.Jenis === 'Pengeluaran');
+    const parObj = katObj?.ParentID ? appData.Kategori.find(k => k.ID === katObj.ParentID) : null;
+    const spent  = appData.Transaksi
+      .filter(t => t.Jenis==='Pengeluaran' && t.Kategori===a.Kategori && t.Tanggal.startsWith(bulan))
+      .reduce((s,t)=>s+parseFloat(t.Nominal||0),0);
+    return { ...a, katObj, parObj, spent, limit: parseFloat(a.Nominal)||0 };
+  });
+
+  // Kelompokkan: items yang merupakan sub → masuk ke group parentNama
+  // items tanpa parent → mandiri
+  const groups = {};       // parentNama → [{sub...}]
+  const standalone = [];   // anggaran langsung (bukan sub)
+
+  enriched.forEach(a => {
+    if (a.parObj) {
+      const key = a.parObj.Nama;
+      if (!groups[key]) groups[key] = { parObj: a.parObj, items: [] };
+      groups[key].items.push(a);
+    } else {
+      standalone.push(a);
+    }
+  });
+
+  // ── Render standalone ─────────────────────────────────────────
+  const renderBar = (a, isChild=false) => {
+    const { spent, limit } = a;
+    const pct  = limit ? Math.min(Math.round((spent/limit)*100),100) : 0;
+    const over = spent > limit;
+    const sisa = limit - spent;
+    const barColor = over ? 'bg-red-500' : pct>80 ? 'bg-amber-400' : 'bg-blue-500';
+    return `<div class="${isChild?'pl-1':'border border-gray-100 rounded-xl p-4 hover:shadow-sm transition'}">
+      <div class="flex justify-between items-center mb-1.5">
+        <div class="flex items-center gap-1.5">
+          ${isChild ? '<span class="text-gray-300 text-xs">└</span>' : ''}
+          <h4 class="font-${isChild?'medium':'bold'} text-${isChild?'sm':'base'} text-gray-800">${a.Kategori}</h4>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs ${over?'text-red-600 font-bold':'text-gray-500'}">${over?'⚠️ Lebih':'Sisa: Rp '+fmt(sisa)}</span>
+          ${isChild?`<button onclick="editAnggaran('${a.ID}')" class="text-blue-400 hover:text-blue-600 text-xs"><i class="fas fa-edit"></i></button>
+            <button onclick="deleteData('Anggaran','${a.ID}')" class="text-rose-300 hover:text-rose-500 text-xs"><i class="fas fa-trash"></i></button>`
+          :`<button onclick="editAnggaran('${a.ID}')" class="text-blue-500 hover:text-blue-700 text-sm"><i class="fas fa-edit"></i></button>
+            <button onclick="deleteData('Anggaran','${a.ID}')" class="text-red-500 hover:text-red-700 text-sm"><i class="fas fa-trash"></i></button>`}
         </div>
       </div>
-      <div class="progress-bar mb-2"><div class="progress-fill ${over?'bg-red-500':pct>80?'bg-yellow-500':'bg-blue-500'}" style="width:${pct}%"></div></div>
-      <div class="flex justify-between text-xs">
-        <span class="text-gray-500">Terpakai: <b class="${over?'text-red-600':'text-gray-800'}">Rp ${fmt(spent)}</b></span>
-        <span class="text-gray-500">Limit: <b>Rp ${fmt(limit)}</b></span>
-        <span class="${over?'text-red-600 font-bold':'text-green-600'}">${over?'Melebihi: -Rp '+fmt(Math.abs(sisa)):'Sisa: Rp '+fmt(sisa)}</span>
+      <div class="flex items-center gap-2">
+        <div class="flex-1 bg-gray-100 rounded-full h-2">
+          <div class="h-2 rounded-full ${barColor} transition-all" style="width:${pct}%"></div>
+        </div>
+        <span class="text-xs font-semibold ${over?'text-red-600':'text-gray-600'} whitespace-nowrap">${pct}%</span>
+      </div>
+      <div class="flex justify-between text-xs mt-1 text-gray-400">
+        <span>Terpakai: <b class="${over?'text-red-600':'text-gray-700'}">Rp ${fmt(spent)}</b></span>
+        <span>Anggaran: <b>Rp ${fmt(limit)}</b></span>
       </div>
     </div>`;
+  };
+
+  standalone.forEach(a => { div.innerHTML += renderBar(a); });
+
+  // ── Render grouped (parent card + sub breakdown) ──────────────
+  Object.entries(groups).forEach(([parNama, group]) => {
+    const totalLimit = group.items.reduce((s,a)=>s+a.limit,0);
+    const totalSpent = group.items.reduce((s,a)=>s+a.spent,0);
+    const pct  = totalLimit ? Math.min(Math.round((totalSpent/totalLimit)*100),100) : 0;
+    const over = totalSpent > totalLimit;
+    const sisa = totalLimit - totalSpent;
+    const barColor = over ? 'bg-red-500' : pct>80 ? 'bg-amber-400' : 'bg-blue-500';
+
+    const subHtml = group.items.map(a => renderBar(a, true)).join('');
+    div.innerHTML += `<div class="border border-indigo-100 rounded-xl overflow-hidden">
+      <div class="p-4 bg-indigo-50/40">
+        <div class="flex justify-between items-center mb-1.5">
+          <div>
+            <h4 class="font-bold text-gray-800">${parNama}</h4>
+            <span class="text-xs text-indigo-400">${group.items.length} sub-kategori</span>
+          </div>
+          <span class="text-xs ${over?'text-red-600 font-bold':'text-gray-500'}">${over?'⚠️ Melebihi':'Sisa: Rp '+fmt(sisa)}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="flex-1 bg-indigo-100 rounded-full h-2.5">
+            <div class="h-2.5 rounded-full ${barColor} transition-all" style="width:${pct}%"></div>
+          </div>
+          <span class="text-xs font-bold ${over?'text-red-600':'text-indigo-600'} whitespace-nowrap">${pct}%</span>
+        </div>
+        <div class="flex justify-between text-xs mt-1 text-gray-400">
+          <span>Total terpakai: <b class="${over?'text-red-600':'text-gray-700'}">Rp ${fmt(totalSpent)}</b></span>
+          <span>Total anggaran: <b>Rp ${fmt(totalLimit)}</b></span>
+        </div>
+      </div>
+      <div class="divide-y divide-gray-100 px-4 py-2 bg-white space-y-2">${subHtml}</div>
+    </div>`;
+  });
+
+  // ── Chart analisa ─────────────────────────────────────────────
+  renderAnggaranChart(enriched, bulan);
+}
+
+function renderAnggaranChart(enriched, bulan) {
+  const ctn = document.getElementById('anggaranAnalisisCtn');
+  if (!ctn) return;
+
+  if (!enriched.length) {
+    document.getElementById('angSumLimit').textContent = 'Rp 0';
+    document.getElementById('angSumSpent').textContent = 'Rp 0';
+    document.getElementById('angSisaVal').textContent  = 'Rp 0';
+    if (_anggaranChart) { _anggaranChart.destroy(); _anggaranChart = null; }
+    return;
+  }
+
+  const totalLimit = enriched.reduce((s,a)=>s+a.limit,0);
+  const totalSpent = enriched.reduce((s,a)=>s+a.spent,0);
+  const sisa = totalLimit - totalSpent;
+  const over = sisa < 0;
+
+  document.getElementById('angSumLimit').textContent = 'Rp ' + fmt(totalLimit);
+  document.getElementById('angSumSpent').textContent = 'Rp ' + fmt(totalSpent);
+  document.getElementById('angSisaVal').textContent  = (over?'-':'') + 'Rp ' + fmt(Math.abs(sisa));
+  document.getElementById('angSisaLabel').textContent = over ? '⚠️ Melebihi' : '✅ Sisa';
+  const sisaCard = document.getElementById('angSisaCard');
+  sisaCard.className = `rounded-xl p-3 text-center ${over?'bg-red-50':'bg-emerald-50'}`;
+  document.getElementById('angSisaLabel').className = `text-xs font-medium mb-1 ${over?'text-red-500':'text-emerald-500'}`;
+  document.getElementById('angSisaVal').className   = `text-base font-bold ${over?'text-red-700':'text-emerald-700'}`;
+
+  // Build chart data — per unique top-level category (parent atau standalone)
+  const chartData = [];
+  const seen = new Set();
+  enriched.forEach(a => {
+    const label = a.parObj ? a.parObj.Nama : a.Kategori;
+    if (!seen.has(label)) {
+      seen.add(label);
+      const siblings = enriched.filter(x=>(x.parObj?.Nama||x.Kategori)===label);
+      chartData.push({
+        label,
+        limit: siblings.reduce((s,x)=>s+x.limit,0),
+        spent: siblings.reduce((s,x)=>s+x.spent,0),
+      });
+    }
+  });
+
+  if (_anggaranChart) _anggaranChart.destroy();
+  _anggaranChart = new Chart(document.getElementById('anggaranChart'), {
+    type: 'bar',
+    data: {
+      labels: chartData.map(d=>d.label),
+      datasets: [
+        { label:'Anggaran',   data: chartData.map(d=>d.limit), backgroundColor:'rgba(99,102,241,0.6)', borderColor:'rgba(99,102,241,1)', borderWidth:1 },
+        { label:'Realisasi',  data: chartData.map(d=>d.spent), backgroundColor: chartData.map(d=>d.spent>d.limit?'rgba(239,68,68,0.7)':'rgba(34,197,94,0.6)'), borderColor:'transparent', borderWidth:0 },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{font:{size:11}} } },
+      scales: {
+        x:{ ticks:{font:{size:10}, maxRotation:30} },
+        y:{ beginAtZero:true, ticks:{ callback:v=>fmtAxis(v) } }
+      }
+    }
   });
 }
 function editAnggaran(id) {
@@ -3243,17 +3442,26 @@ function renderPengaturan() {
       // Inline add row (hidden by default)
       const addRow = document.createElement('div');
       addRow.id = `katAddRow_${k.ID}`;
-      addRow.className = 'hidden px-3 py-2 border-t border-gray-100';
+      addRow.className = 'hidden px-3 py-2.5 border-t border-gray-100 space-y-2 bg-indigo-50/40';
+      const _angField = (jenis==='Pengeluaran'||jenis==='Pemasukan')
+        ? `<div class="flex items-center gap-2 ml-5">
+            <span class="text-xs text-gray-500 whitespace-nowrap">Anggaran (Rp):</span>
+            <input type="number" id="katAddAnggaran_${k.ID}" placeholder="opsional" min="0"
+              class="flex-1 border border-blue-200 rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white">
+           </div>` : '';
       addRow.innerHTML = `
         <div class="flex items-center gap-2">
           <span class="text-gray-300 text-xs ml-2">└</span>
           <input type="text" id="katAddInput_${k.ID}" placeholder="Nama sub-kategori..."
-            class="flex-1 border border-blue-300 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            class="flex-1 border border-blue-300 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
             onkeydown="if(event.key==='Enter'){saveQuickSub('${k.ID}','${jenis}');}else if(event.key==='Escape'){hideQuickAdd('${k.ID}');}">
+        </div>
+        ${_angField}
+        <div class="flex gap-2 ml-5">
           <button onclick="saveQuickSub('${k.ID}','${jenis}')"
-            class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs rounded-lg font-semibold transition-colors">Simpan</button>
+            class="flex-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs rounded-lg font-semibold transition-colors">Simpan</button>
           <button onclick="hideQuickAdd('${k.ID}')"
-            class="px-2 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-500 text-xs rounded-lg transition-colors">Batal</button>
+            class="px-2 py-1.5 bg-white hover:bg-gray-50 text-gray-500 text-xs rounded-lg border border-gray-200 transition-colors">Batal</button>
         </div>`;
       subPanel.appendChild(addRow);
 
@@ -3269,13 +3477,20 @@ function renderPengaturan() {
         class="w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-gray-200 text-xs text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:bg-gray-50 transition-all group">
         <i class="fas fa-plus text-xs"></i> Tambah kategori ${jenis.toLowerCase()}
       </button>
-      <div id="katAddParentRow_${jenis}" class="hidden mt-1 border border-blue-200 rounded-xl px-3 py-2.5 bg-blue-50">
+      <div id="katAddParentRow_${jenis}" class="hidden mt-1 border border-blue-200 rounded-xl px-3 py-2.5 bg-blue-50 space-y-2">
         <div class="flex items-center gap-2">
           <input type="text" id="katAddParentInput_${jenis}" placeholder="Nama kategori baru..."
             class="flex-1 border border-blue-300 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white"
             onkeydown="if(event.key==='Enter'){saveQuickParent('${jenis}');}else if(event.key==='Escape'){hideQuickParent('${jenis}');}">
+        </div>
+        ${jenis==='Pengeluaran'||jenis==='Pemasukan' ? `<div class="flex items-center gap-2">
+          <span class="text-xs text-gray-500 whitespace-nowrap">Anggaran (Rp):</span>
+          <input type="number" id="katAddParentAnggaran_${jenis}" placeholder="opsional, mis. 2000000" min="0"
+            class="flex-1 border border-blue-200 rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white">
+        </div>` : ''}
+        <div class="flex gap-2">
           <button onclick="saveQuickParent('${jenis}')"
-            class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg font-semibold transition-colors">Simpan</button>
+            class="flex-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg font-semibold transition-colors">Simpan</button>
           <button onclick="hideQuickParent('${jenis}')"
             class="px-2 py-1.5 bg-white hover:bg-gray-50 text-gray-500 text-xs rounded-lg border border-gray-200 transition-colors">Batal</button>
         </div>
@@ -3341,16 +3556,24 @@ function saveQuickSub(parentId, jenis) {
   if (demoGuard()) return;
   const nama = document.getElementById(`katAddInput_${parentId}`)?.value.trim();
   if (!nama) { showAlert('Nama tidak boleh kosong.','error'); return; }
+  const anggaranVal = parseFloat(document.getElementById(`katAddAnggaran_${parentId}`)?.value) || 0;
+  const bulanIni = new Date().toISOString().slice(0,7);
   showLoading('Menyimpan...');
   google.script.run
     .withSuccessHandler(res => {
-      hideLoading();
       if (res && res.success) {
-        hideQuickAdd(parentId);
-        showAlert('Sub-kategori ditambahkan!','success');
-        _katOpen.add(parentId); // jaga tetap terbuka
-        loadAllData();
-      } else { showAlert('Gagal: '+(res?.error||'Error'),'error'); }
+        if (anggaranVal > 0) {
+          // Simpan anggaran untuk sub-kategori ini
+          google.script.run
+            .withSuccessHandler(() => { hideLoading(); hideQuickAdd(parentId); showAlert('Sub-kategori + anggaran ditambahkan!','success'); _katOpen.add(parentId); loadAllData(); })
+            .withFailureHandler(() => { hideLoading(); hideQuickAdd(parentId); showAlert('Sub-kategori ditambahkan (anggaran gagal)','warning'); _katOpen.add(parentId); loadAllData(); })
+            .saveRecord('Anggaran', { ID:'', BulanTahun: bulanIni, Kategori: nama, Nominal: anggaranVal });
+        } else {
+          hideLoading(); hideQuickAdd(parentId);
+          showAlert('Sub-kategori ditambahkan!','success');
+          _katOpen.add(parentId); loadAllData();
+        }
+      } else { hideLoading(); showAlert('Gagal: '+(res?.error||'Error'),'error'); }
     })
     .withFailureHandler(err => { hideLoading(); showAlert('Gagal: '+(err.message||'Error'),'error'); })
     .saveKategoriBatch([{ ID:'', Jenis: jenis, Nama: nama, ParentID: parentId }]);
@@ -3368,20 +3591,29 @@ function hideQuickParent(jenis) {
   if (row) row.classList.add('hidden');
   const inp = document.getElementById(`katAddParentInput_${jenis}`);
   if (inp) inp.value = '';
+  const ang = document.getElementById(`katAddParentAnggaran_${jenis}`);
+  if (ang) ang.value = '';
 }
 function saveQuickParent(jenis) {
   if (demoGuard()) return;
   const nama = document.getElementById(`katAddParentInput_${jenis}`)?.value.trim();
   if (!nama) { showAlert('Nama tidak boleh kosong.','error'); return; }
+  const anggaranVal = parseFloat(document.getElementById(`katAddParentAnggaran_${jenis}`)?.value) || 0;
+  const bulanIni = new Date().toISOString().slice(0,7);
   showLoading('Menyimpan...');
   google.script.run
     .withSuccessHandler(res => {
-      hideLoading();
       if (res && res.success) {
-        hideQuickParent(jenis);
-        showAlert('Kategori ditambahkan!','success');
-        loadAllData();
-      } else { showAlert('Gagal: '+(res?.error||'Error'),'error'); }
+        if (anggaranVal > 0) {
+          google.script.run
+            .withSuccessHandler(() => { hideLoading(); hideQuickParent(jenis); showAlert('Kategori + anggaran ditambahkan!','success'); loadAllData(); })
+            .withFailureHandler(() => { hideLoading(); hideQuickParent(jenis); showAlert('Kategori ditambahkan (anggaran gagal)','warning'); loadAllData(); })
+            .saveRecord('Anggaran', { ID:'', BulanTahun: bulanIni, Kategori: nama, Nominal: anggaranVal });
+        } else {
+          hideLoading(); hideQuickParent(jenis);
+          showAlert('Kategori ditambahkan!','success'); loadAllData();
+        }
+      } else { hideLoading(); showAlert('Gagal: '+(res?.error||'Error'),'error'); }
     })
     .withFailureHandler(err => { hideLoading(); showAlert('Gagal: '+(err.message||'Error'),'error'); })
     .saveKategoriBatch([{ ID:'', Jenis: jenis, Nama: nama, ParentID: '' }]);
