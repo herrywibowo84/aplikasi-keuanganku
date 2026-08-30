@@ -3765,14 +3765,25 @@ function submitBayarHutang() {
   if (!jumlah || jumlah<=0) return showAlert('Masukkan jumlah pembayaran.','warning');
 
   if (isDemoMode) {
-    // Update demo data lokal
     const h=appData.HutangPiutang.find(x=>x.ID===id); if (!h) return;
     const outstanding=parseFloat(h.Outstanding)||parseFloat(h.Nominal)||0;
-    const newOut=Math.max(0,outstanding-jumlah);
+    const actualJumlah=Math.min(jumlah,outstanding);
+    const newOut=Math.max(0,outstanding-actualJumlah);
     h.Outstanding=String(newOut);
     if (newOut===0) h.Status='Lunas';
+    // Simpan ke PembayaranHutang demo
+    if (!appData.PembayaranHutang) appData.PembayaranHutang=[];
+    appData.PembayaranHutang.push({
+      ID:'demo-pb-'+Date.now(), HutangID:id,
+      Tanggal:tanggal||new Date().toISOString().split('T')[0],
+      Jumlah:String(actualJumlah), DompetNama:dompet, Catatan:catatan||''
+    });
+    // Update saldo dompet lokal
+    const d=appData.Dompet.find(x=>x.Nama===dompet);
+    if (d) d.SaldoSaatIni=String(parseFloat(d.SaldoSaatIni)-actualJumlah);
     closeBayarModal();
     renderHutangPage();
+    updateDashboard();
     showAlert(newOut===0?'Lunas! Hutang sudah terbayar penuh 🎉':'Pembayaran berhasil dicatat.','success');
     return;
   }
@@ -3803,7 +3814,11 @@ function showHistoryHP(id) {
   document.getElementById('modalHistoryHP').style.display='flex';
 
   if (isDemoMode) {
-    _renderHistoryList([]);
+    // Filter dari appData.PembayaranHutang berdasarkan HutangID
+    const list=(appData.PembayaranHutang||[])
+      .filter(p=>p.HutangID===id)
+      .sort((a,b)=>new Date(b.Tanggal)-new Date(a.Tanggal));
+    _renderHistoryList(list);
     return;
   }
   gasRun('getHutangPembayaran',[id], res => {
