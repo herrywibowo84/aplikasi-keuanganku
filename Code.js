@@ -4,7 +4,7 @@
  */
 
 const APP_NAME    = 'DB_KeuanganKu';
-const APP_VERSION = '3.80'; // AUTO-UPDATED by deploy.sh — jangan edit manual
+const APP_VERSION = '3.81'; // AUTO-UPDATED by deploy.sh — jangan edit manual
 
 // ── LISENSI ──────────────────────────────────────────────────
 // Email owner diambil dari ScriptProperties agar tidak hardcoded di source code
@@ -77,7 +77,8 @@ const SCHEMAS = {
   'Anggaran':      ['ID', 'BulanTahun', 'Kategori', 'Nominal'],
   'Transaksi':     ['ID', 'Tanggal', 'Waktu', 'Jenis', 'Kategori', 'Nominal', 'Biaya', 'KategoriBiaya', 'Keterangan', 'DompetAsal'],
   'Transfer':      ['ID', 'Tanggal', 'DariDompet', 'KeDompet', 'Jumlah', 'Biaya', 'Catatan'],
-  'HutangPiutang': ['ID', 'Jenis', 'Nama', 'Nominal', 'Tanggal', 'JatuhTempo', 'Status', 'Keterangan'],
+  'HutangPiutang':    ['ID', 'Jenis', 'Nama', 'Nominal', 'Tanggal', 'JatuhTempo', 'Status', 'Outstanding', 'Keterangan'],
+  'PembayaranHutang': ['ID', 'HutangID', 'Tanggal', 'Jumlah', 'DompetNama', 'Catatan'],
   'Investasi':     ['ID', 'NamaInvestasi', 'JenisInvestasi', 'BeratGram', 'HargaBeliGram', 'TotalModal', 'NilaiSaatIni', 'ReturnRate', 'Tanggal'],
   'Recurring':     ['ID', 'Nama', 'Jenis', 'Kategori', 'Nominal', 'DompetAsal', 'Frekuensi', 'TanggalMulai', 'Aktif', 'TerakhirDijalankan']
 };
@@ -210,7 +211,8 @@ function resetAndSetupDB() {
 
 function getAppData() {
   const ss = getDB();
-  const empty = { Dompet: [], Kategori: [], Anggaran: [], Transaksi: [], Transfer: [], HutangPiutang: [], Investasi: [], Recurring: [] };
+  const empty = { Dompet: [], Kategori: [], Anggaran: [], Transaksi: [], Transfer: [], HutangPiutang: [], PembayaranHutang: [], Investasi: [], Recurring: [] };
+  migrateHutangOutstanding_(); // pastikan kolom Outstanding ada di sheet lama
   if (!ss) return empty;
 
   const result = {};
@@ -295,6 +297,18 @@ function saveRecord(tableName, recordObj) {
   // Transaksi: update wallet balance on new transaction
   if (tableName === 'Transaksi') {
     updateWalletBalance_(ss, recordObj['DompetAsal'], parseFloat(recordObj['Nominal']) || 0, recordObj['Jenis']);
+  }
+
+  // New HutangPiutang: Outstanding = Nominal (belum ada pembayaran)
+  if (tableName === 'HutangPiutang') {
+    const allData2 = sheet.getDataRange().getValues();
+    const hdr2 = allData2[0];
+    const lastRow2 = allData2.length;
+    const outIdx2 = hdr2.indexOf('Outstanding');
+    if (outIdx2 >= 0) {
+      const nom = parseFloat(recordObj['Nominal']) || 0;
+      sheet.getRange(lastRow2, outIdx2 + 1).setValue(nom);
+    }
   }
 
   // New Dompet: set SaldoSaatIni = SaldoAwal
@@ -492,6 +506,23 @@ function deleteRecord(tableName, id) {
       }
 
       sheet.deleteRow(i + 1);
+
+      // Hapus semua PembayaranHutang terkait (cascade delete)
+      if (tableName === 'HutangPiutang') {
+        const pbSheet = ss.getSheetByName('PembayaranHutang');
+        if (pbSheet && pbSheet.getLastRow() > 1) {
+          const pbData = pbSheet.getDataRange().getValues();
+          const pbHeaders = pbData[0];
+          const hidIdx = pbHeaders.indexOf('HutangID');
+          // Hapus dari bawah agar index tidak bergeser
+          for (let j = pbData.length - 1; j >= 1; j--) {
+            if (String(pbData[j][hidIdx]) === String(id)) {
+              pbSheet.deleteRow(j + 1);
+            }
+          }
+        }
+      }
+
       return { success: true };
     }
   }
@@ -793,4 +824,157 @@ function adminRevokeLicense(email) {
   if (!_isOwner()) return { error: 'Unauthorized' };
   revokeLicense(email.trim().toLowerCase());
   return { success: true, message: 'Lisensi ' + email + ' berhasil dicabut' };
+}
+
+// ==================== HUTANG & PIUTANG ====================
+
+/**
+ * Bayar hutang atau terima pembayaran piutang.
+ * Mekanisme seperti Transfer — dompet berkurang/bertambah, TIDAK masuk ke laporan Pengeluaran/Pemasukan.
+ *
+ * @param {string} hutangId   - ID record HutangPiutang
+ * @param {number} jumlah     - Nominal yang dibayar / diterima
+ * @param {string} dompetNama - Nama dompet yang digunakan
+ * @param {string} tanggal    - Tanggal pembayaran (YYYY-MM-DD)
+ * @param {string} catatan    - Catatan opsional
+ */
+function bayarHutang(hutangId, jumlah, dompetNama, tanggal, catatan) {
+  if (!hutangId || !jumlah || !dompetNama)
+    return { success: false, message: 'Parameter tidak lengkap' };
+
+  const ss = getDB();
+  if (!ss) return { success: false, message: 'Database tidak ditemukan' };
+
+  jumlah = parseFloat(jumlah);
+  if (isNaN(jumlah) || jumlah <= 0)
+    return { success: false, message: 'Jumlah tidak valid' };
+
+  // 1. Baca data hutang
+  const hpSheet = ss.getSheetByName('HutangPiutang');
+  if (!hpSheet) return { success: false, message: 'Sheet HutangPiutang tidak ditemukan' };
+
+  const hpData  = hpSheet.getDataRange().getValues();
+  const hpHdr   = hpData[0];
+  const idIdx   = hpHdr.indexOf('ID');
+  const nomIdx  = hpHdr.indexOf('Nominal');
+  const outIdx  = hpHdr.indexOf('Outstanding');
+  const stIdx   = hpHdr.indexOf('Status');
+  const jenisIdx= hpHdr.indexOf('Jenis');
+
+  let hutangRow = -1, outstanding = 0, jenis = '';
+  for (let i = 1; i < hpData.length; i++) {
+    if (String(hpData[i][idIdx]) === String(hutangId)) {
+      hutangRow   = i;
+      jenis       = hpData[i][jenisIdx];
+      // Fallback: jika kolom Outstanding belum ada, gunakan Nominal
+      outstanding = outIdx >= 0
+        ? (parseFloat(hpData[i][outIdx]) || parseFloat(hpData[i][nomIdx]) || 0)
+        : (parseFloat(hpData[i][nomIdx]) || 0);
+      break;
+    }
+  }
+  if (hutangRow === -1) return { success: false, message: 'Data hutang tidak ditemukan' };
+  if (outstanding <= 0) return { success: false, message: 'Hutang sudah lunas' };
+
+  // 2. Hitung outstanding baru (tidak boleh minus)
+  const actualJumlah   = Math.min(jumlah, outstanding);
+  const newOutstanding = Math.round((outstanding - actualJumlah) * 100) / 100;
+  const newStatus      = newOutstanding === 0 ? 'Lunas' : 'Aktif';
+
+  // 3. Update kolom Outstanding & Status di sheet
+  if (outIdx >= 0) hpSheet.getRange(hutangRow + 1, outIdx + 1).setValue(newOutstanding);
+  if (stIdx  >= 0) hpSheet.getRange(hutangRow + 1, stIdx  + 1).setValue(newStatus);
+
+  // 4. Dampak ke saldo dompet
+  //    Hutang   → bayar = dompet KELUAR
+  //    Piutang  → terima = dompet MASUK
+  const dompetJenis = jenis === 'Hutang' ? 'Pengeluaran' : 'Pemasukan';
+  updateWalletBalance_(ss, dompetNama, actualJumlah, dompetJenis);
+
+  // 5. Catat ke sheet PembayaranHutang
+  const pbSheet = ss.getSheetByName('PembayaranHutang');
+  if (pbSheet) {
+    const tgl = tanggal || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    pbSheet.appendRow([Utilities.getUuid(), hutangId, tgl, actualJumlah, dompetNama, catatan || '']);
+  }
+
+  return {
+    success:        true,
+    newOutstanding: newOutstanding,
+    status:         newStatus,
+    jumlahDibayar:  actualJumlah,
+    message:        newStatus === 'Lunas'
+      ? 'Lunas! Selamat, hutang sudah terbayar penuh 🎉'
+      : 'Pembayaran berhasil dicatat.'
+  };
+}
+
+/**
+ * Ambil history pembayaran untuk satu hutang, urut terbaru dulu.
+ */
+function getHutangPembayaran(hutangId) {
+  const ss = getDB();
+  if (!ss) return { success: false, list: [] };
+
+  const sheet = ss.getSheetByName('PembayaranHutang');
+  if (!sheet || sheet.getLastRow() <= 1) return { success: true, list: [] };
+
+  const data    = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const hidIdx  = headers.indexOf('HutangID');
+
+  const list = [];
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][hidIdx]) === String(hutangId)) {
+      const row = {};
+      headers.forEach((h, j) => row[h] = data[i][j]);
+      list.push(row);
+    }
+  }
+
+  list.sort((a, b) => new Date(b.Tanggal) - new Date(a.Tanggal));
+  return { success: true, list };
+}
+
+/**
+ * Migrasi: tambah kolom Outstanding ke sheet HutangPiutang jika belum ada.
+ * Dipanggil otomatis di awal getAppData().
+ * Aman dijalankan berkali-kali (idempoten).
+ */
+function migrateHutangOutstanding_() {
+  try {
+    const ss = getDB();
+    if (!ss) return;
+
+    const sheet = ss.getSheetByName('HutangPiutang');
+    if (!sheet || sheet.getLastRow() < 1) return;
+
+    const headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (headerRow.indexOf('Outstanding') >= 0) return; // sudah ada, skip
+
+    // Tambah kolom Outstanding di akhir
+    const newCol = sheet.getLastColumn() + 1;
+    const hdrCell = sheet.getRange(1, newCol);
+    hdrCell.setValue('Outstanding');
+    hdrCell.setFontWeight('bold').setBackground('#1e40af').setFontColor('#ffffff');
+
+    // Isi Outstanding untuk baris yang sudah ada
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return;
+
+    const nomIdx    = headerRow.indexOf('Nominal');
+    const statusIdx = headerRow.indexOf('Status');
+    const data      = sheet.getRange(2, 1, lastRow - 1, headerRow.length).getValues();
+
+    const outValues = data.map(row => {
+      const status  = String(row[statusIdx] || '').trim();
+      const nominal = parseFloat(row[nomIdx]) || 0;
+      return [status === 'Lunas' ? 0 : nominal];
+    });
+
+    sheet.getRange(2, newCol, outValues.length, 1).setValues(outValues);
+  } catch(e) {
+    // Jangan crash jika migrasi gagal — app tetap bisa jalan
+    Logger.log('migrateHutangOutstanding_ error: ' + e.message);
+  }
 }
