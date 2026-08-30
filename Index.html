@@ -980,26 +980,82 @@
     </div>
     <div class="lg:col-span-2 bg-white rounded-xl shadow overflow-hidden">
       <div class="flex border-b text-sm">
-        <button onclick="filterHP('all')" id="hpTabAll" class="flex-1 py-3 text-center tab-active transition">Semua</button>
-        <button onclick="filterHP('Hutang')" id="hpTabHutang" class="flex-1 py-3 text-center text-red-600 hover:bg-red-50 transition">Hutang</button>
+        <button onclick="filterHP('all')"     id="hpTabAll"     class="flex-1 py-3 text-center tab-active transition">Semua</button>
+        <button onclick="filterHP('Hutang')"  id="hpTabHutang"  class="flex-1 py-3 text-center text-red-600   hover:bg-red-50   transition">Hutang</button>
         <button onclick="filterHP('Piutang')" id="hpTabPiutang" class="flex-1 py-3 text-center text-green-600 hover:bg-green-50 transition">Piutang</button>
-        <button onclick="filterHP('Lunas')" id="hpTabLunas" class="flex-1 py-3 text-center text-gray-500 hover:bg-gray-50 transition">Lunas</button>
+        <button onclick="filterHP('Lunas')"   id="hpTabLunas"   class="flex-1 py-3 text-center text-gray-500  hover:bg-gray-50  transition">Lunas</button>
       </div>
-      <div class="overflow-x-auto p-4">
-        <table class="min-w-full text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="py-3 px-4 text-left text-gray-600 font-medium">Nama</th>
-              <th class="py-3 px-4 text-left text-gray-600 font-medium">Jenis</th>
-              <th class="py-3 px-4 text-right text-gray-600 font-medium">Nominal</th>
-              <th class="py-3 px-4 text-center text-gray-600 font-medium">Jatuh Tempo</th>
-              <th class="py-3 px-4 text-center text-gray-600 font-medium">Status</th>
-              <th class="py-3 px-4 text-center text-gray-600 font-medium">Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="hpTableBody" class="divide-y"></tbody>
-        </table>
+      <div id="hpCardContainer" class="p-4 space-y-3 max-h-[70vh] overflow-y-auto"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Bayar Hutang ───────────────────────────────────── -->
+<div id="modalBayarHutang" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm p-4" style="display:none">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+    <div class="p-5 border-b flex items-center justify-between">
+      <h3 class="font-bold text-gray-800"><i class="fas fa-money-bill-wave mr-2 text-green-600"></i>Bayar Hutang</h3>
+      <button onclick="closeBayarModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="p-5 space-y-4">
+      <!-- Info hutang -->
+      <div class="bg-gray-50 rounded-xl p-3">
+        <p class="text-sm font-bold text-gray-800" id="bayarHpNama">-</p>
+        <div class="flex justify-between mt-1 text-xs text-gray-500">
+          <span>Sisa hutang:</span>
+          <span class="font-bold text-red-600" id="bayarHpSisa">Rp 0</span>
+        </div>
       </div>
+      <input type="hidden" id="bayarHpId">
+      <!-- Dompet -->
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">Bayar dari Dompet</label>
+        <select id="bayarHpDompet" class="w-full border rounded-lg p-2 text-sm"></select>
+      </div>
+      <!-- Jumlah -->
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">Jumlah Bayar (Rp)</label>
+        <div class="flex gap-2">
+          <input type="text" id="bayarHpJumlah" inputmode="decimal"
+            class="flex-1 border rounded-lg p-2 text-sm" placeholder="Nominal pembayaran">
+          <button onclick="bayarHpSetFull()" class="px-3 py-2 bg-gray-100 text-gray-700 text-xs rounded-lg hover:bg-gray-200 whitespace-nowrap font-medium">
+            Lunasi Semua
+          </button>
+        </div>
+      </div>
+      <!-- Tanggal -->
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">Tanggal Bayar</label>
+        <input type="date" id="bayarHpTanggal" class="w-full border rounded-lg p-2 text-sm">
+      </div>
+      <!-- Catatan -->
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">Catatan (opsional)</label>
+        <input type="text" id="bayarHpCatatan" class="w-full border rounded-lg p-2 text-sm" placeholder="mis. transfer BCA">
+      </div>
+    </div>
+    <div class="p-5 pt-0 flex gap-3">
+      <button onclick="closeBayarModal()" class="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Batal</button>
+      <button onclick="submitBayarHutang()"
+        class="flex-1 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700">
+        <i class="fas fa-check mr-1"></i>Bayar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: History Pembayaran ─────────────────────────────── -->
+<div id="modalHistoryHP" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm p-4" style="display:none">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col max-h-[85vh]">
+    <div class="p-5 border-b flex items-center justify-between shrink-0">
+      <div>
+        <h3 class="font-bold text-gray-800"><i class="fas fa-history mr-2 text-blue-600"></i>History Pembayaran</h3>
+        <p class="text-xs text-gray-500 mt-0.5" id="historyHpNama">-</p>
+      </div>
+      <button onclick="closeHistoryModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="p-5 overflow-y-auto flex-1">
+      <div id="historyHpList" class="space-y-2"></div>
     </div>
   </div>
 </div>
@@ -1675,7 +1731,7 @@ function updatePeriodPreview() {
 // ============================================================
 // STATE
 // ============================================================
-let appData = { Dompet:[], Kategori:[], Anggaran:[], Transaksi:[], Transfer:[], HutangPiutang:[], Investasi:[], Recurring:[] };
+let appData = { Dompet:[], Kategori:[], Anggaran:[], Transaksi:[], Transfer:[], HutangPiutang:[], PembayaranHutang:[], Investasi:[], Recurring:[] };
 let filteredRiwayat = [];
 let importedDataTemp = [];
 let cfChartInstance = null;
@@ -1763,8 +1819,8 @@ const DEMO_DATA = (function() {
       { ID:uid('a5'), BulanTahun:thisMonth, Kategori:'Hiburan',            Nominal:'400000'  },
     ],
     HutangPiutang: [
-      { ID:uid('hp1'), Jenis:'Piutang', Nama:'Budi Santoso',    Nominal:'500000',  Tanggal:d(-20), JatuhTempo:d(10),  Status:'Aktif', Keterangan:'Pinjaman uang makan'   },
-      { ID:uid('hp2'), Jenis:'Hutang',  Nama:'Kartu Kredit BCA',Nominal:'750000',  Tanggal:d(-15), JatuhTempo:d(15),  Status:'Aktif', Keterangan:'Tagihan belanja online' },
+      { ID:uid('hp1'), Jenis:'Piutang', Nama:'Budi Santoso',     Nominal:'500000',  Outstanding:'300000', Tanggal:d(-20), JatuhTempo:d(10),  Status:'Aktif', Keterangan:'Pinjaman uang makan'   },
+      { ID:uid('hp2'), Jenis:'Hutang',  Nama:'Kartu Kredit BCA', Nominal:'750000',  Outstanding:'750000', Tanggal:d(-15), JatuhTempo:d(15),  Status:'Aktif', Keterangan:'Tagihan belanja online' },
     ],
     Investasi: [
       { ID:uid('i1'), NamaInvestasi:'Emas Antam', JenisInvestasi:'Emas', BeratGram:'5', HargaBeliGram:'1050000', TotalModal:'5250000', NilaiSaatIni:'5750000', ReturnRate:'9.52', Tanggal:d(-180) },
@@ -2465,7 +2521,8 @@ function renderNetWorth(totalSaldoKas) {
   let totalHutang = 0;
   appData.HutangPiutang.forEach(hp => {
     if (hp.Status === 'Aktif' && hp.Jenis === 'Hutang') {
-      totalHutang += parseFloat(hp.Nominal) || 0;
+      // Gunakan Outstanding (sisa hutang), fallback ke Nominal
+      totalHutang += parseFloat(hp.Outstanding) || parseFloat(hp.Nominal) || 0;
     }
   });
   
@@ -3535,12 +3592,13 @@ function editAnggaran(id) {
 // HUTANG & PIUTANG
 // ============================================================
 function renderHutangPage() {
-  let hutangTotal=0,piutangTotal=0,jtCount=0;
+  let hutangTotal=0, piutangTotal=0, jtCount=0;
   const now=new Date(); const nextWeek=new Date(now); nextWeek.setDate(now.getDate()+7);
   appData.HutangPiutang.forEach(h => {
     if (h.Status==='Lunas') return;
-    const nom=parseFloat(h.Nominal)||0;
-    if (h.Jenis==='Hutang') hutangTotal+=nom; else piutangTotal+=nom;
+    // Gunakan Outstanding jika ada, fallback ke Nominal
+    const sisa = parseFloat(h.Outstanding) || parseFloat(h.Nominal) || 0;
+    if (h.Jenis==='Hutang') hutangTotal+=sisa; else piutangTotal+=sisa;
     if (h.JatuhTempo) { const jt=new Date(h.JatuhTempo); if (jt>=now&&jt<=nextWeek) jtCount++; }
   });
   document.getElementById('sumHutang').innerText='Rp '+fmt(hutangTotal);
@@ -3548,39 +3606,107 @@ function renderHutangPage() {
   document.getElementById('sumJatuhTempo').innerText=jtCount+' item';
   filterHP(hpFilterMode);
 }
+
 function filterHP(mode) {
   hpFilterMode=mode;
   ['all','Hutang','Piutang','Lunas'].forEach(m => {
     const el=document.getElementById('hpTab'+(m==='all'?'All':m));
-    if (el) el.classList.toggle('tab-active',m===mode);
+    if (el) el.classList.toggle('tab-active', m===mode);
   });
+
   let data=appData.HutangPiutang;
   if (mode==='Lunas') data=data.filter(h=>h.Status==='Lunas');
   else if (mode!=='all') data=data.filter(h=>h.Jenis===mode&&h.Status!=='Lunas');
   else data=data.filter(h=>h.Status!=='Lunas');
-  const tbody=document.getElementById('hpTableBody');
-  tbody.innerHTML='';
-  if (!data.length) { tbody.innerHTML='<tr><td colspan="6" class="py-6 text-center text-gray-400 text-sm">Tidak ada data.</td></tr>'; return; }
+
+  const container=document.getElementById('hpCardContainer');
+  container.innerHTML='';
+
+  if (!data.length) {
+    container.innerHTML='<p class="py-10 text-center text-gray-400 text-sm">Tidak ada data.</p>';
+    return;
+  }
+
   const now=new Date();
   data.forEach(h => {
-    const color=h.Jenis==='Hutang'?'text-red-600':'text-green-600';
-    const badge=h.Jenis==='Hutang'?'bg-red-100 text-red-700':'bg-green-100 text-green-700';
-    const isLewat=h.JatuhTempo&&new Date(h.JatuhTempo)<now&&h.Status!=='Lunas';
-    const jtDisplay=h.JatuhTempo?`<span class="${isLewat?'text-red-600 font-bold':''}">${h.JatuhTempo}${isLewat?' ⚠️':''}</span>`:'-';
-    const statusBadge=h.Status==='Lunas'?'<span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded font-medium">Lunas</span>':'<span class="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded font-medium">Aktif</span>';
-    tbody.innerHTML+=`<tr class="hover:bg-gray-50 text-sm">
-      <td class="py-3 px-4 font-medium">${h.Nama}<br><span class="text-xs text-gray-400">${h.Keterangan||''}</span></td>
-      <td class="py-3 px-4"><span class="px-2 py-0.5 text-xs font-bold rounded ${badge}">${h.Jenis}</span></td>
-      <td class="py-3 px-4 text-right font-bold ${color}">Rp ${fmt(h.Nominal)}</td>
-      <td class="py-3 px-4 text-center text-sm">${jtDisplay}</td>
-      <td class="py-3 px-4 text-center">${statusBadge}</td>
-      <td class="py-3 px-4 text-center">
-        ${h.Status!=='Lunas'?`<button onclick="lunasinHP('${h.ID}')" class="text-green-500 hover:text-green-700 mx-1" title="Tandai Lunas"><i class="fas fa-check-circle"></i></button>`:''}
-        <button onclick="editHP('${h.ID}')" class="text-blue-500 hover:text-blue-700 mx-1"><i class="fas fa-edit"></i></button>
-        <button onclick="deleteData('HutangPiutang','${h.ID}')" class="text-red-500 hover:text-red-700 mx-1"><i class="fas fa-trash"></i></button>
-      </td></tr>`;
+    const nominal      = parseFloat(h.Nominal)||0;
+    const outstanding  = parseFloat(h.Outstanding)||nominal; // fallback ke nominal jika belum ada kolom
+    const dibayar      = Math.max(0, nominal-outstanding);
+    const pct          = nominal>0 ? Math.min(100,Math.round(dibayar/nominal*100)) : 0;
+    const isHutang     = h.Jenis==='Hutang';
+    const isLunas      = h.Status==='Lunas';
+    const isJT         = h.JatuhTempo && new Date(h.JatuhTempo)<now && !isLunas;
+    const isDekatJT    = h.JatuhTempo && !isJT && !isLunas &&
+                         (new Date(h.JatuhTempo)-now)<7*864e5;
+
+    // Badges
+    const jenisBadge = isHutang
+      ? '<span class="px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full font-semibold">Hutang</span>'
+      : '<span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full font-semibold">Piutang</span>';
+
+    let statusBadge;
+    if      (isLunas)     statusBadge='<span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-500 rounded-full font-medium">✓ Lunas</span>';
+    else if (isJT)        statusBadge='<span class="px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full font-medium">⚠ Jatuh Tempo</span>';
+    else if (isDekatJT)   statusBadge='<span class="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded-full font-medium">⏰ Segera JT</span>';
+    else                  statusBadge='<span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium">Aktif</span>';
+
+    const outColor      = isLunas ? 'text-gray-400' : (isHutang?'text-red-600':'text-green-600');
+    const barColor      = isLunas ? 'bg-gray-300'  : (isHutang?'bg-red-500':'bg-green-500');
+
+    const jtHtml = h.JatuhTempo
+      ? `<span class="text-xs ${isJT?'text-red-600 font-semibold':'text-gray-400'}">
+           <i class="fas fa-calendar-alt mr-0.5"></i>${h.JatuhTempo}${isJT?' ⚠️':''}
+         </span>`
+      : '';
+
+    const bayarBtn = !isLunas
+      ? `<button onclick="openBayarModal('${h.ID}')"
+           class="px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 font-semibold whitespace-nowrap">
+           <i class="fas fa-money-bill-wave mr-1"></i>Bayar
+         </button>`
+      : '';
+
+    container.innerHTML+=`
+      <div class="border border-gray-100 rounded-xl p-4 hover:shadow-sm transition" id="hpCard_${h.ID}">
+        <!-- Header: nama + badges + tombol aksi -->
+        <div class="flex justify-between items-start gap-2 mb-3">
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
+              <span class="font-bold text-gray-800 text-sm">${h.Nama}</span>
+              ${jenisBadge} ${statusBadge}
+            </div>
+            ${h.Keterangan?`<p class="text-xs text-gray-400 mt-0.5">${h.Keterangan}</p>`:''}
+          </div>
+          <div class="flex items-center gap-0.5 shrink-0">
+            ${bayarBtn}
+            <button onclick="showHistoryHP('${h.ID}')" class="p-1.5 text-gray-400 hover:text-blue-600" title="History pembayaran"><i class="fas fa-history text-xs"></i></button>
+            <button onclick="editHP('${h.ID}')"        class="p-1.5 text-gray-400 hover:text-blue-600" title="Edit"><i class="fas fa-edit text-xs"></i></button>
+            <button onclick="deleteData('HutangPiutang','${h.ID}')" class="p-1.5 text-gray-400 hover:text-red-500" title="Hapus"><i class="fas fa-trash text-xs"></i></button>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="mb-2">
+          <div class="flex justify-between text-xs text-gray-400 mb-1">
+            <span>Dibayar: Rp ${fmt(dibayar)}</span>
+            <span>${pct}% dari Rp ${fmt(nominal)}</span>
+          </div>
+          <div class="progress-bar">
+            <div class="${barColor} progress-fill" style="width:${pct}%"></div>
+          </div>
+        </div>
+
+        <!-- Outstanding & Jatuh Tempo -->
+        <div class="flex justify-between items-center mt-2">
+          <span class="text-sm font-bold ${outColor}">
+            ${isLunas ? '✓ Lunas' : 'Sisa: Rp '+fmt(outstanding)}
+          </span>
+          ${jtHtml}
+        </div>
+      </div>`;
   });
 }
+
 function editHP(id) {
   const data=appData.HutangPiutang.find(h=>h.ID===id); if (!data) return;
   document.getElementById('hpID').value=data.ID;
@@ -3592,11 +3718,112 @@ function editHP(id) {
   document.getElementById('hpKeterangan').value=data.Keterangan||'';
   document.getElementById('btnCancelHP').classList.remove('hidden');
   document.getElementById('titleFormHP').innerText='Edit Data';
+  // Scroll ke form
+  document.getElementById('formHP').scrollIntoView({behavior:'smooth', block:'start'});
 }
-function lunasinHP(id) {
-  if (!confirm('Tandai sebagai Lunas?')) return;
-  const data=appData.HutangPiutang.find(h=>h.ID===id); if (!data) return;
-  gasRun('saveRecord',['HutangPiutang',{...data,Status:'Lunas'}],()=>renderHutangPage());
+
+// ── Modal: Bayar Hutang ──────────────────────────────────────
+function openBayarModal(id) {
+  const h=appData.HutangPiutang.find(x=>x.ID===id); if (!h) return;
+  const outstanding=parseFloat(h.Outstanding)||parseFloat(h.Nominal)||0;
+
+  document.getElementById('bayarHpId').value=id;
+  document.getElementById('bayarHpNama').innerText=h.Nama+(h.Keterangan?' — '+h.Keterangan:'');
+  document.getElementById('bayarHpSisa').innerText='Rp '+fmt(outstanding);
+  document.getElementById('bayarHpJumlah').value='';
+  document.getElementById('bayarHpCatatan').value='';
+  document.getElementById('bayarHpTanggal').value=new Date().toISOString().split('T')[0];
+
+  // Isi dropdown dompet
+  const sel=document.getElementById('bayarHpDompet');
+  sel.innerHTML=appData.Dompet
+    .filter(d=>d.IsCC!=='true')
+    .map(d=>`<option value="${d.Nama}">${d.Nama} — Rp ${fmt(d.SaldoSaatIni)}</option>`)
+    .join('');
+
+  document.getElementById('modalBayarHutang').style.display='flex';
+}
+function closeBayarModal() {
+  document.getElementById('modalBayarHutang').style.display='none';
+}
+function bayarHpSetFull() {
+  const id=document.getElementById('bayarHpId').value;
+  const h=appData.HutangPiutang.find(x=>x.ID===id); if (!h) return;
+  document.getElementById('bayarHpJumlah').value=parseFloat(h.Outstanding)||parseFloat(h.Nominal)||0;
+}
+function submitBayarHutang() {
+  const id      = document.getElementById('bayarHpId').value;
+  const jumlah  = parseFloat(document.getElementById('bayarHpJumlah').value);
+  const dompet  = document.getElementById('bayarHpDompet').value;
+  const tanggal = document.getElementById('bayarHpTanggal').value;
+  const catatan = document.getElementById('bayarHpCatatan').value;
+
+  if (!id || !dompet) return showAlert('Pilih dompet terlebih dahulu.','warning');
+  if (!jumlah || jumlah<=0) return showAlert('Masukkan jumlah pembayaran.','warning');
+
+  if (isDemoMode) {
+    // Update demo data lokal
+    const h=appData.HutangPiutang.find(x=>x.ID===id); if (!h) return;
+    const outstanding=parseFloat(h.Outstanding)||parseFloat(h.Nominal)||0;
+    const newOut=Math.max(0,outstanding-jumlah);
+    h.Outstanding=String(newOut);
+    if (newOut===0) h.Status='Lunas';
+    closeBayarModal();
+    renderHutangPage();
+    showAlert(newOut===0?'Lunas! Hutang sudah terbayar penuh 🎉':'Pembayaran berhasil dicatat.','success');
+    return;
+  }
+
+  showLoading();
+  gasRun('bayarHutang',[id,jumlah,dompet,tanggal,catatan], res => {
+    hideLoading();
+    if (!res || !res.success) { showAlert(res?.message||'Gagal mencatat pembayaran.','error'); return; }
+    // Update lokal
+    const h=appData.HutangPiutang.find(x=>x.ID===id);
+    if (h) { h.Outstanding=String(res.newOutstanding); h.Status=res.status; }
+    // Update saldo dompet lokal
+    const d=appData.Dompet.find(x=>x.Nama===dompet);
+    if (d) d.SaldoSaatIni=String(parseFloat(d.SaldoSaatIni)-jumlah);
+    closeBayarModal();
+    renderHutangPage();
+    updateDashboard();
+    showAlert(res.message,'success');
+  }, err => { hideLoading(); showAlert('Error: '+err,'error'); });
+}
+
+// ── Modal: History Pembayaran ────────────────────────────────
+function showHistoryHP(id) {
+  const h=appData.HutangPiutang.find(x=>x.ID===id);
+  document.getElementById('historyHpNama').innerText=h?h.Nama:'-';
+  document.getElementById('historyHpList').innerHTML=
+    '<p class="text-center text-gray-400 text-sm py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Memuat...</p>';
+  document.getElementById('modalHistoryHP').style.display='flex';
+
+  if (isDemoMode) {
+    _renderHistoryList([]);
+    return;
+  }
+  gasRun('getHutangPembayaran',[id], res => {
+    _renderHistoryList(res?.list||[]);
+  });
+}
+function _renderHistoryList(list) {
+  const el=document.getElementById('historyHpList');
+  if (!list.length) {
+    el.innerHTML='<p class="text-center text-gray-400 text-sm py-4">Belum ada pembayaran tercatat.</p>';
+    return;
+  }
+  el.innerHTML=list.map(p=>`
+    <div class="flex justify-between items-center py-2.5 border-b last:border-0">
+      <div>
+        <p class="text-sm font-semibold text-gray-800">Rp ${fmt(p.Jumlah)}</p>
+        <p class="text-xs text-gray-400">${p.Tanggal} · ${p.DompetNama}${p.Catatan?' · '+p.Catatan:''}</p>
+      </div>
+      <i class="fas fa-check-circle text-green-500"></i>
+    </div>`).join('');
+}
+function closeHistoryModal() {
+  document.getElementById('modalHistoryHP').style.display='none';
 }
 
 // ============================================================
