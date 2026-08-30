@@ -267,7 +267,7 @@ nav.scrolled { box-shadow: 0 4px 24px rgba(0,0,0,.18); }
 @media (max-width: 640px) { .install-grid { grid-template-columns: 1fr; } .phone-pair { margin-top: 24px; } }
 
 /* ── Pricing ─────────────────────────────────────────────── */
-.price-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; align-items: end; }
+.price-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 24px; align-items: stretch; max-width: 720px; margin: 0 auto; }
 .price-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 30px; position: relative; transition: transform .2s; }
 .price-card:hover { transform: translateY(-3px); }
 .price-featured { background: var(--surface); border-color: var(--accent); box-shadow: var(--glow), 0 20px 48px rgba(0,0,0,.25); transform: scale(1.04); }
@@ -282,7 +282,7 @@ nav.scrolled { box-shadow: 0 4px 24px rgba(0,0,0,.18); }
 .price-list .cx { color: var(--muted); opacity: .5; flex-shrink: 0; }
 .price-list .dim { color: var(--muted); }
 .price-note { font-size: .78rem; color: var(--accent2); font-weight: 600; margin-top: 4px; }
-@media (max-width: 860px) { .price-grid { grid-template-columns: 1fr; } .price-featured { transform: none; } }
+@media (max-width: 640px) { .price-grid { grid-template-columns: 1fr; } .price-featured { transform: none; } }
 
 /* ── Testimonials ─────────────────────────────────────────── */
 #testi { background: var(--surface); }
@@ -502,7 +502,7 @@ footer { border-top: 1px solid var(--border); padding: 36px 0; }
         <div class="feat-points">
           <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Anggaran fleksibel per kategori & sub-kategori</p></div>
           <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Notifikasi & rekomendasi otomatis jika anggaran terlampaui</p></div>
-          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Analisa grafik rencana vs realisasi per kategori</p></div>
+          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Analisa perbandingan anggaran pemasukan vs pengeluaran</p></div>
           <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)">Salin anggaran bulan lalu dengan satu klik</p></div>
         </div>
       </div>
@@ -578,7 +578,43 @@ footer { border-top: 1px solid var(--border); padding: 36px 0; }
         <div class="pdf-row" style="border-bottom:none"><span>🚗 Transportasi</span><span style="color:var(--text-sub)">Rp 320rb · 15%</span></div>
       </div>
     </div>
-    <!-- Row 4: Kalkulator -->
+    <!-- Row 4: Fitur Pro Eksklusif -->
+    <div class="feat-row flip">
+      <div>
+        <div class="eyebrow" style="margin-bottom:12px">Fitur Pro Eksklusif</div>
+        <h2 class="h2" style="margin-bottom:14px">Kendali penuh atas keuangan Anda</h2>
+        <p class="body-sm" style="margin-bottom:20px">Pengguna Pro mendapatkan modul lengkap yang tidak tersedia di Gratis — dari tagihan berulang otomatis, portofolio investasi, hingga pencatatan hutang dan piutang.</p>
+        <div class="feat-points">
+          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)"><strong>Transaksi Berulang</strong> — tagihan rutin (listrik, Netflix, cicilan) tercatat otomatis setiap bulan</p></div>
+          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)"><strong>Hutang & Piutang</strong> — catat siapa yang berutang atau ditagih, pantau status pelunasannya</p></div>
+          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)"><strong>Portofolio Investasi</strong> — pantau nilai & keuntungan saham, reksa dana, atau aset lainnya</p></div>
+          <div class="feat-pt"><div class="feat-dot"></div><p class="body-sm" style="color:var(--text)"><strong>Import & Export CSV</strong> — impor data massal atau ekspor untuk analisis di luar aplikasi</p></div>
+        </div>
+      </div>
+      <div class="feat-card">
+        <div style="font-size:.7rem;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px">✨ Modul Pro</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="background:var(--surface2);border-radius:10px;padding:13px 14px;border:1px solid var(--border);display:flex;align-items:center;gap:12px">
+            <div style="width:34px;height:34px;border-radius:8px;background:rgba(0,200,150,.12);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">🔁</div>
+            <div><div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:2px">Transaksi Berulang</div><div style="font-size:.72rem;color:var(--muted)">Otomatis setiap bulan</div></div>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:13px 14px;border:1px solid var(--border);display:flex;align-items:center;gap:12px">
+            <div style="width:34px;height:34px;border-radius:8px;background:rgba(248,113,113,.12);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">🤝</div>
+            <div><div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:2px">Hutang & Piutang</div><div style="font-size:.72rem;color:var(--muted)">Pantau status pelunasan</div></div>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:13px 14px;border:1px solid var(--border);display:flex;align-items:center;gap:12px">
+            <div style="width:34px;height:34px;border-radius:8px;background:rgba(129,140,248,.12);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">📈</div>
+            <div><div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:2px">Portofolio Investasi</div><div style="font-size:.72rem;color:var(--muted)">Nilai & keuntungan real-time</div></div>
+          </div>
+          <div style="background:var(--surface2);border-radius:10px;padding:13px 14px;border:1px solid var(--border);display:flex;align-items:center;gap:12px">
+            <div style="width:34px;height:34px;border-radius:8px;background:rgba(245,158,11,.12);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">📁</div>
+            <div><div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:2px">Import & Export CSV</div><div style="font-size:.72rem;color:var(--muted)">Migrasi data mudah</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 5: Kalkulator -->
     <div class="feat-row flip">
       <div>
         <div class="eyebrow" style="margin-bottom:12px">Kalkulator & Sub-Kategori</div>
@@ -835,7 +871,7 @@ footer { border-top: 1px solid var(--border); padding: 36px 0; }
     <div style="text-align:center;margin-bottom:52px">
       <div class="eyebrow" style="margin-bottom:12px">Paket & Harga</div>
       <h2 class="h2">Mulai gratis, upgrade kalau butuh lebih</h2>
-      <p class="body-sm" style="margin-top:12px;max-width:460px;margin-left:auto;margin-right:auto">Tidak ada biaya tersembunyi. Paket Gratis tidak dibatasi waktu — upgrade hanya jika fitur Pro benar-benar Anda butuhkan.</p>
+      <p class="body-sm" style="margin-top:12px;max-width:480px;margin-left:auto;margin-right:auto">Tidak ada biaya tersembunyi. Paket Gratis tidak dibatasi waktu — upgrade ke Pro hanya jika fitur lengkap benar-benar Anda butuhkan.</p>
     </div>
     <div class="price-grid">
       <!-- Gratis -->
@@ -844,14 +880,17 @@ footer { border-top: 1px solid var(--border); padding: 36px 0; }
         <div class="price-amt">Rp 0</div>
         <div class="price-per">selamanya</div>
         <ul class="price-list">
-          <li><span class="ck">✓</span> Catat transaksi (maks 50)</li>
+          <li><span class="ck">✓</span> Catat transaksi <strong>(maks 50)</strong></li>
           <li><span class="ck">✓</span> 2 dompet / rekening</li>
-          <li><span class="ck">✓</span> Dashboard & grafik</li>
+          <li><span class="ck">✓</span> Dashboard & grafik arus kas</li>
           <li><span class="ck">✓</span> Anggaran bulanan</li>
+          <li><span class="ck">✓</span> Kategori & sub-kategori</li>
           <li><span class="ck">✓</span> Login dengan Google</li>
-          <li><span class="cx">✗</span> <span class="dim">Export PDF laporan</span></li>
+          <li><span class="cx">✗</span> <span class="dim">Export PDF & CSV</span></li>
+          <li><span class="cx">✗</span> <span class="dim">Import CSV</span></li>
           <li><span class="cx">✗</span> <span class="dim">Transaksi Berulang</span></li>
-          <li><span class="cx">✗</span> <span class="dim">Investasi & Hutang</span></li>
+          <li><span class="cx">✗</span> <span class="dim">Portofolio Investasi</span></li>
+          <li><span class="cx">✗</span> <span class="dim">Hutang & Piutang</span></li>
         </ul>
         <a href="https://script.google.com/macros/s/AKfycbzwEYqyjw04RtD1MquvdFVv6IgQSyiKyzO7y_m_SPTeGvzztwf9GtCkvD1ghMl6CeqN/exec" target="_blank" class="btn btn-outline" style="width:100%;justify-content:center">Mulai Gratis</a>
       </div>
@@ -864,29 +903,17 @@ footer { border-top: 1px solid var(--border); padding: 36px 0; }
         <ul class="price-list">
           <li><span class="ck">✓</span> <strong>Transaksi tidak terbatas</strong></li>
           <li><span class="ck">✓</span> <strong>Dompet tidak terbatas</strong></li>
-          <li><span class="ck">✓</span> Dashboard & grafik</li>
-          <li><span class="ck">✓</span> Anggaran bulanan</li>
+          <li><span class="ck">✓</span> Dashboard & grafik + analisis tren</li>
+          <li><span class="ck">✓</span> Anggaran + analisa & notifikasi rekomendasi</li>
+          <li><span class="ck">✓</span> Kategori & sub-kategori tak terbatas</li>
           <li><span class="ck">✓</span> <strong>Export PDF profesional</strong></li>
+          <li><span class="ck">✓</span> <strong>Export & Import CSV</strong></li>
           <li><span class="ck">✓</span> <strong>Transaksi Berulang otomatis</strong></li>
           <li><span class="ck">✓</span> <strong>Portofolio Investasi</strong></li>
           <li><span class="ck">✓</span> <strong>Hutang & Piutang</strong></li>
+          <li><span class="ck">✓</span> Prioritas support via WhatsApp</li>
         </ul>
-        <a href="https://wa.me/6287875000151?text=Halo%2C+saya+ingin+upgrade+ke+Pro+Bulanan+KeuanganKu+Rp29.000%2Fbulan" target="_blank" class="btn btn-primary" style="width:100%;justify-content:center">Upgrade ke Pro →</a>
-      </div>
-      <!-- Lifetime -->
-      <div class="price-card">
-        <div class="price-tier">Lifetime</div>
-        <div class="price-amt" style="color:var(--indigo)">Rp 249rb</div>
-        <div class="price-per">bayar sekali, seumur hidup</div>
-        <ul class="price-list">
-          <li><span class="ck">✓</span> Semua fitur Pro</li>
-          <li><span class="ck">✓</span> Update fitur selamanya</li>
-          <li><span class="ck">✓</span> Prioritas dukungan</li>
-          <li><span class="ck">✓</span> Tidak ada biaya berulang</li>
-        </ul>
-        <p class="price-note">≈ balik modal setelah 8,6 bulan Pro</p>
-        <div style="height:18px"></div>
-        <a href="https://wa.me/6287875000151?text=Halo%2C+saya+ingin+beli+Lifetime+KeuanganKu+Rp249.000" target="_blank" class="btn btn-secondary" style="width:100%;justify-content:center;border-color:var(--indigo);color:var(--indigo)">Beli Lifetime</a>
+        <a href="https://wa.me/6287875000151?text=Halo%2C+saya+ingin+upgrade+ke+Pro+KeuanganKu+Rp29.000%2Fbulan" target="_blank" class="btn btn-primary" style="width:100%;justify-content:center">Upgrade ke Pro →</a>
       </div>
     </div>
     <p style="text-align:center;margin-top:24px;font-size:.8rem;color:var(--muted)">Pembayaran via transfer bank / GoPay / OVO. Aktivasi dalam 1×24 jam hari kerja.</p>
@@ -949,16 +976,16 @@ footer { border-top: 1px solid var(--border); padding: 36px 0; }
       <div class="faq-ans"><p>Klik tombol "Upgrade ke Pro", chat WhatsApp akan terbuka. Setelah konfirmasi pembayaran, email Anda akan diaktifkan sebagai Pro dalam 1×24 jam hari kerja. Tidak ada kartu kredit yang diperlukan.</p></div>
     </div>
     <div class="faq-item">
-      <button class="faq-btn" onclick="faq(this)">Apakah ada uji coba gratis fitur Pro? <span class="faq-ico">+</span></button>
-      <div class="faq-ans"><p>Ya. Klik "Demo Gratis" di halaman ini untuk mencoba semua fitur Pro dengan data contoh tanpa perlu login — termasuk laporan PDF, transaksi berulang, dan analisis insight.</p></div>
+      <button class="faq-btn" onclick="faq(this)">Bisakah saya coba dulu sebelum upgrade? <span class="faq-ico">+</span></button>
+      <div class="faq-ans"><p>Ya. Paket Gratis sudah bisa dipakai langsung tanpa batas waktu — Anda bisa merasakan alur pencatatan, dashboard, dan anggaran sebelum memutuskan upgrade ke Pro.</p></div>
     </div>
     <div class="faq-item">
       <button class="faq-btn" onclick="faq(this)">Bisakah saya ekspor data saya? <span class="faq-ico">+</span></button>
-      <div class="faq-ans"><p>Tentu. Karena data tersimpan di Google Sheets Anda, Anda bisa download sebagai Excel atau CSV kapan saja langsung dari Google Sheets. KeuanganKu juga punya fitur Export CSV bawaan.</p></div>
+      <div class="faq-ans"><p>Tentu. Karena data tersimpan di Google Sheets Anda, Anda bisa download sebagai Excel atau CSV kapan saja langsung dari Google Sheets. Pengguna Pro juga mendapat fitur Export PDF dan Export CSV langsung dari dalam aplikasi.</p></div>
     </div>
     <div class="faq-item">
-      <button class="faq-btn" onclick="faq(this)">Apakah Lifetime benar-benar seumur hidup? <span class="faq-ico">+</span></button>
-      <div class="faq-ans"><p>Ya, bayar sekali dan nikmati semua fitur Pro selamanya — termasuk semua update fitur di masa depan. Tidak ada biaya berulang, tidak ada kejutan.</p></div>
+      <button class="faq-btn" onclick="faq(this)">Apakah harga bisa berubah di masa depan? <span class="faq-ico">+</span></button>
+      <div class="faq-ans"><p>Harga Rp 29.000/bulan adalah harga early-adopter. Pengguna yang sudah berlangganan tidak terpengaruh jika harga naik di masa depan — harga Anda terkunci selama aktif berlangganan.</p></div>
     </div>
   </div>
 </section>
