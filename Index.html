@@ -309,6 +309,7 @@
       <a id="investasiNav" href="#" onclick="switchPage('investasi')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition flex items-center"><i class="fas fa-chart-line w-5 mr-2"></i><span data-i18n="nav_investasi">Investasi</span></a>
       <a href="#" onclick="switchPage('laporan')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-file-invoice-dollar w-5 mr-2"></i><span data-i18n="nav_laporan">Laporan</span></a>
       <a id="recurringNav" href="#" onclick="switchPage('recurring')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition flex items-center"><i class="fas fa-redo w-5 mr-2"></i><span>Transaksi Berulang</span></a>
+      <a id="adminNav" href="#" onclick="switchPage('admin')" class="nav-item hidden block px-5 py-3 hover:bg-purple-50 transition flex items-center gap-1 border-t mt-1 pt-3" style="color:#7c3aed"><i class="fas fa-shield-alt w-5 mr-2" style="color:#7c3aed"></i><span class="font-semibold text-sm">Admin Panel</span></a>
       <a href="#" onclick="switchPage('pengaturan')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-cog w-5 mr-2"></i><span data-i18n="nav_pengaturan">Pengaturan</span></a>
     </nav>
     <!-- Search Global -->
@@ -1456,6 +1457,88 @@
   </div>
 </div>
 
+<!-- ADMIN PANEL -->
+<div id="adminPage" class="page-content hidden fade-in">
+  <div class="flex items-center gap-3 mb-6">
+    <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg" style="background:linear-gradient(135deg,#7c3aed,#4f46e5)">
+      <i class="fas fa-shield-alt"></i>
+    </div>
+    <div>
+      <h2 class="text-2xl font-bold" style="color:var(--text-main)">Admin Panel</h2>
+      <p class="text-xs" style="color:var(--text-sub)">Manajemen lisensi pelanggan KeuanganKu</p>
+    </div>
+  </div>
+
+  <!-- Statistik -->
+  <div class="grid grid-cols-3 gap-4 mb-6" id="adminStats">
+    <div class="bg-white rounded-xl shadow p-4 text-center border-l-4 border-purple-500">
+      <p class="text-2xl font-black text-purple-600" id="adminStatPro">—</p>
+      <p class="text-xs text-gray-500 mt-1">Total Pro Aktif</p>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 text-center border-l-4 border-amber-400">
+      <p class="text-2xl font-black text-amber-500" id="adminStatWarn">—</p>
+      <p class="text-xs text-gray-500 mt-1">Hampir Expired (≤7 hari)</p>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4 text-center border-l-4 border-red-400">
+      <p class="text-2xl font-black text-red-500" id="adminStatExp">—</p>
+      <p class="text-xs text-gray-500 mt-1">Sudah Expired</p>
+    </div>
+  </div>
+
+  <!-- Form Aktifkan Lisensi -->
+  <div class="bg-white rounded-xl shadow p-5 mb-6">
+    <h3 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+      <i class="fas fa-key text-purple-500"></i> Aktifkan / Perpanjang Lisensi Pro
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <input id="adminEmail" type="email" placeholder="email@pelanggan.com"
+        class="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 md:col-span-1"
+        style="background:var(--bg-input);color:var(--text-main);border-color:var(--border-color)">
+      <select id="adminDuration" class="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+        style="background:var(--bg-input);color:var(--text-main);border-color:var(--border-color)">
+        <option value="30">30 hari (1 bulan)</option>
+        <option value="60">60 hari (2 bulan)</option>
+        <option value="90">90 hari (3 bulan)</option>
+        <option value="180">180 hari (6 bulan)</option>
+        <option value="365">365 hari (1 tahun)</option>
+      </select>
+      <button onclick="adminDoActivate()" class="px-4 py-2 text-white text-sm font-semibold rounded-lg hover:opacity-90 transition flex items-center justify-center gap-2"
+        style="background:linear-gradient(135deg,#7c3aed,#4f46e5)">
+        <i class="fas fa-bolt"></i> Aktifkan Lisensi
+      </button>
+    </div>
+    <p id="adminActivateMsg" class="text-xs mt-2 hidden"></p>
+  </div>
+
+  <!-- Daftar Lisensi -->
+  <div class="bg-white rounded-xl shadow p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-bold text-gray-800 flex items-center gap-2">
+        <i class="fas fa-users text-purple-500"></i> Daftar Pelanggan
+      </h3>
+      <button onclick="renderAdminPage()" class="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1">
+        <i class="fas fa-sync-alt"></i> Refresh
+      </button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b" style="color:var(--text-sub)">
+            <th class="text-left py-2 px-2 font-semibold">Email</th>
+            <th class="text-left py-2 px-2 font-semibold">Paket</th>
+            <th class="text-left py-2 px-2 font-semibold">Expired</th>
+            <th class="text-center py-2 px-2 font-semibold">Sisa</th>
+            <th class="text-center py-2 px-2 font-semibold">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="adminLicenseTable">
+          <tr><td colspan="5" class="text-center py-6 text-gray-400 text-sm">Memuat data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 </div><!-- end mainContainer -->
 </main>
 <script>
@@ -1902,6 +1985,7 @@ function switchPage(pageId) {
   if (pageId==='laporan') renderLaporan();
   if (pageId==='recurring') renderRecurringPage();
   if (pageId==='pengaturan') { renderPengaturan(); updatePeriodPreview(); }
+  if (pageId==='admin') renderAdminPage();
 }
 function closeMobileMenu() { document.getElementById('mobileMenu').classList.add('hidden'); }
 function toggleForm(id) { document.getElementById(id).classList.toggle('hidden'); }
@@ -5049,6 +5133,10 @@ function applyLicense(lic) {
   const subLbl  = document.getElementById('licenseSubLabel');
   if (!badge) return;
 
+  // Tampilkan Admin Nav hanya untuk owner (lifetime tier)
+  const adminNavEl = document.getElementById('adminNav');
+  if (adminNavEl) adminNavEl.classList.toggle('hidden', lic.tier !== 'lifetime');
+
   if (lic.tier === 'lifetime') {
     icon.textContent    = '⚡';
     tierLbl.textContent = 'Paket Pro';
@@ -5145,6 +5233,131 @@ function requireDompetQuota() {
 }
 
 // ============================================================
+// ============================================================
+// ADMIN PANEL
+// ============================================================
+function renderAdminPage() {
+  // Muat daftar lisensi dari backend
+  google.script.run
+    .withSuccessHandler(res => {
+      if (res.error) { showAlert('Akses ditolak: ' + res.error, 'error'); return; }
+      _renderAdminTable(res.list || []);
+    })
+    .withFailureHandler(err => showAlert('Gagal memuat data: ' + err.message, 'error'))
+    .adminGetLicenseList();
+}
+
+function _renderAdminTable(list) {
+  const tbody = document.getElementById('adminLicenseTable');
+  const now   = new Date();
+
+  // Update stats
+  const aktif = list.filter(l => !l.expired);
+  const warn  = aktif.filter(l => l.daysLeft <= 7 && l.tier !== 'lifetime');
+  const exp   = list.filter(l => l.expired);
+  document.getElementById('adminStatPro').textContent  = aktif.length;
+  document.getElementById('adminStatWarn').textContent = warn.length;
+  document.getElementById('adminStatExp').textContent  = exp.length;
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Belum ada lisensi terdaftar.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(l => {
+    const expDate  = new Date(l.expiresAt);
+    const isLifetime = l.tier === 'lifetime' || l.expiresAt === '9999-12-31';
+    const statusBadge = l.expired
+      ? '<span class="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-600 font-semibold">Expired</span>'
+      : l.daysLeft <= 7
+        ? `<span class="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-600 font-semibold">${l.daysLeft}h</span>`
+        : `<span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-600 font-semibold">${isLifetime ? '∞' : l.daysLeft + 'h'}</span>`;
+    const expStr = isLifetime ? '—' : expDate.toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'});
+
+    return `<tr class="border-b hover:bg-gray-50 transition" style="border-color:var(--border-color)">
+      <td class="py-3 px-2">
+        <div class="text-sm font-medium" style="color:var(--text-main)">${l.email}</div>
+        <div class="text-xs text-gray-400">Aktif: ${l.activatedAt}</div>
+      </td>
+      <td class="py-3 px-2">
+        <span class="px-2 py-0.5 text-xs rounded-full font-semibold" style="background:rgba(124,58,237,.1);color:#7c3aed">Pro</span>
+      </td>
+      <td class="py-3 px-2 text-sm" style="color:var(--text-sub)">${expStr}</td>
+      <td class="py-3 px-2 text-center">${statusBadge}</td>
+      <td class="py-3 px-2 text-center">
+        <div class="flex items-center justify-center gap-2">
+          <button onclick="adminDoExtend('${l.email}', 30)"
+            class="px-2 py-1 text-xs text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 transition">
+            +30h
+          </button>
+          <button onclick="adminDoExtend('${l.email}', 90)"
+            class="px-2 py-1 text-xs text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition">
+            +90h
+          </button>
+          ${!l.expired ? `<button onclick="adminDoRevoke('${l.email}')"
+            class="px-2 py-1 text-xs text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition">
+            Cabut
+          </button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function adminDoActivate() {
+  const email = document.getElementById('adminEmail').value.trim().toLowerCase();
+  const days  = parseInt(document.getElementById('adminDuration').value);
+  const msg   = document.getElementById('adminActivateMsg');
+
+  if (!email || !email.includes('@')) {
+    msg.textContent = '⚠️ Email tidak valid.';
+    msg.className = 'text-xs mt-2 text-amber-600';
+    msg.classList.remove('hidden');
+    return;
+  }
+  msg.textContent = '⏳ Mengaktifkan...';
+  msg.className = 'text-xs mt-2 text-gray-500';
+  msg.classList.remove('hidden');
+
+  google.script.run
+    .withSuccessHandler(res => {
+      if (res.error) { msg.textContent = '❌ ' + res.error; msg.className = 'text-xs mt-2 text-red-600'; return; }
+      msg.textContent = '✅ ' + res.message;
+      msg.className = 'text-xs mt-2 text-emerald-600';
+      document.getElementById('adminEmail').value = '';
+      renderAdminPage();
+    })
+    .withFailureHandler(err => {
+      msg.textContent = '❌ Gagal: ' + err.message;
+      msg.className = 'text-xs mt-2 text-red-600';
+    })
+    .adminActivateLicense(email, days);
+}
+
+function adminDoExtend(email, days) {
+  if (!confirm(`Perpanjang lisensi ${email} selama ${days} hari dari hari ini?`)) return;
+  google.script.run
+    .withSuccessHandler(res => {
+      if (res.error) { showAlert('Gagal: ' + res.error, 'error'); return; }
+      showAlert('✅ Lisensi ' + email + ' diperpanjang ' + days + ' hari', 'success');
+      renderAdminPage();
+    })
+    .withFailureHandler(err => showAlert('Gagal: ' + err.message, 'error'))
+    .adminActivateLicense(email, days);
+}
+
+function adminDoRevoke(email) {
+  if (!confirm(`Cabut lisensi ${email}? Pelanggan akan kembali ke paket Gratis.`)) return;
+  google.script.run
+    .withSuccessHandler(res => {
+      if (res.error) { showAlert('Gagal: ' + res.error, 'error'); return; }
+      showAlert('Lisensi ' + email + ' berhasil dicabut', 'success');
+      renderAdminPage();
+    })
+    .withFailureHandler(err => showAlert('Gagal: ' + err.message, 'error'))
+    .adminRevokeLicense(email);
+}
+
 // DEMO MODE
 // ============================================================
 function enterDemoMode() {

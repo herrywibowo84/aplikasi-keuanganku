@@ -4,7 +4,7 @@
  */
 
 const APP_NAME    = 'DB_KeuanganKu';
-const APP_VERSION = '3.78'; // AUTO-UPDATED by deploy.sh — jangan edit manual
+const APP_VERSION = '3.79'; // AUTO-UPDATED by deploy.sh — jangan edit manual
 
 // ── LISENSI ──────────────────────────────────────────────────
 // Email owner diambil dari ScriptProperties agar tidak hardcoded di source code
@@ -744,4 +744,53 @@ function migrateTransaksiSchema() {
   if (migratedRows.length > 0) {
     console.log('Sample row 1:', JSON.stringify(migratedRows[0]));
   }
+}
+
+// ==================== ADMIN PANEL (OWNER ONLY) ====================
+// Semua fungsi di bawah ini hanya bisa dijalankan oleh OWNER_EMAIL.
+// Dipanggil dari frontend via google.script.run.
+
+function _isOwner() {
+  if (!OWNER_EMAIL) return false;
+  return getUserEmail_().toLowerCase() === OWNER_EMAIL.toLowerCase();
+}
+
+/** Ambil semua data lisensi untuk tabel admin */
+function adminGetLicenseList() {
+  if (!_isOwner()) return { error: 'Unauthorized' };
+  const sp  = PropertiesService.getScriptProperties();
+  const all = sp.getProperties();
+  const now = new Date();
+  const list = [];
+  Object.entries(all)
+    .filter(([k]) => k.startsWith('LIC_'))
+    .forEach(([k, v]) => {
+      try {
+        const lic     = JSON.parse(v);
+        const email   = k.replace('LIC_', '');
+        const expDate = new Date(lic.expiresAt);
+        const expired = expDate < now;
+        const daysLeft = expired ? 0 : Math.ceil((expDate - now) / 86400000);
+        list.push({ email, tier: lic.tier, expiresAt: lic.expiresAt,
+                    activatedAt: lic.activatedAt || '-', expired, daysLeft });
+      } catch(e) {}
+    });
+  // Urutkan: yang akan expired dulu, lalu alfabet
+  list.sort((a, b) => new Date(a.expiresAt) - new Date(b.expiresAt));
+  return { success: true, list };
+}
+
+/** Aktifkan atau perpanjang lisensi Pro */
+function adminActivateLicense(email, days) {
+  if (!_isOwner()) return { error: 'Unauthorized' };
+  if (!email || !days) return { error: 'Email dan durasi wajib diisi' };
+  const result = activateLicense(email.trim().toLowerCase(), 'pro', parseInt(days));
+  return { success: true, message: result };
+}
+
+/** Cabut lisensi */
+function adminRevokeLicense(email) {
+  if (!_isOwner()) return { error: 'Unauthorized' };
+  revokeLicense(email.trim().toLowerCase());
+  return { success: true, message: 'Lisensi ' + email + ' berhasil dicabut' };
 }
