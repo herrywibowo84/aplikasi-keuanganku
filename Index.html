@@ -181,21 +181,13 @@
         <div class="flex items-center gap-2 text-sm"><span class="text-green-500 font-bold">✓</span><span style="color:var(--text-main)">Analisis keuangan lengkap</span></div>
       </div>
       <!-- Harga -->
-      <div class="grid grid-cols-2 gap-3 mb-5">
-        <div class="border-2 border-blue-500 rounded-xl p-3 text-center cursor-pointer hover:bg-blue-50 transition" onclick="selectPlan('pro-monthly')">
-          <p class="text-xs text-gray-500 mb-1">Bulanan</p>
-          <p class="text-xl font-black text-blue-600">29rb</p>
-          <p class="text-xs text-gray-400">/bulan</p>
-        </div>
-        <div class="border-2 border-indigo-500 rounded-xl p-3 text-center cursor-pointer hover:bg-indigo-50 transition relative" onclick="selectPlan('lifetime')">
-          <span class="absolute -top-2 left-1/2 -translate-x-1/2 bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full">Terbaik</span>
-          <p class="text-xs text-gray-500 mb-1">Seumur Hidup</p>
-          <p class="text-xl font-black text-indigo-600">249rb</p>
-          <p class="text-xs text-gray-400">bayar sekali</p>
-        </div>
+      <div class="border-2 border-blue-500 rounded-xl p-4 mb-5 text-center bg-blue-50" style="background:rgba(37,99,235,0.06)">
+        <p class="text-xs text-gray-500 mb-1">Paket Pro · Bulanan</p>
+        <p class="text-3xl font-black text-blue-600">Rp 29.000</p>
+        <p class="text-xs text-gray-400 mt-0.5">/bulan · bayar via transfer / GoPay / OVO</p>
       </div>
-      <a id="upgradeWABtn" href="#" target="_blank" class="block w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl text-center text-sm hover:opacity-90 transition">
-        <i class="fab fa-whatsapp mr-2"></i>Hubungi via WhatsApp
+      <a id="upgradeWABtn" href="https://wa.me/6287875000151?text=Halo%2C+saya+ingin+upgrade+ke+Pro+KeuanganKu+Rp29.000%2Fbulan" target="_blank" class="block w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl text-center text-sm hover:opacity-90 transition">
+        <i class="fab fa-whatsapp mr-2"></i>Upgrade ke Pro via WhatsApp
       </a>
       <button onclick="closeUpgradeModal()" class="w-full mt-2 py-2 text-xs text-gray-400 hover:text-gray-600">Tutup</button>
     </div>
@@ -313,7 +305,7 @@
       <a href="#" onclick="switchPage('riwayat')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-list w-5 mr-2"></i><span data-i18n="nav_riwayat">Riwayat</span></a>
       <a href="#" onclick="switchPage('dompet')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-wallet w-5 mr-2"></i><span data-i18n="nav_dompet">Dompet</span></a>
       <a href="#" onclick="switchPage('anggaran')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-bullseye w-5 mr-2"></i><span data-i18n="nav_anggaran">Anggaran</span></a>
-      <a href="#" onclick="switchPage('hutang')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-handshake w-5 mr-2"></i><span data-i18n="nav_hutang">Hutang & Piutang</span></a>
+      <a id="hutangNav" href="#" onclick="switchPage('hutang')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition flex items-center"><i class="fas fa-handshake w-5 mr-2"></i><span data-i18n="nav_hutang">Hutang & Piutang</span></a>
       <a id="investasiNav" href="#" onclick="switchPage('investasi')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition flex items-center"><i class="fas fa-chart-line w-5 mr-2"></i><span data-i18n="nav_investasi">Investasi</span></a>
       <a href="#" onclick="switchPage('laporan')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition"><i class="fas fa-file-invoice-dollar w-5 mr-2"></i><span data-i18n="nav_laporan">Laporan</span></a>
       <a id="recurringNav" href="#" onclick="switchPage('recurring')" class="nav-item block px-5 py-3 text-gray-600 hover:bg-blue-50 transition flex items-center"><i class="fas fa-redo w-5 mr-2"></i><span>Transaksi Berulang</span></a>
@@ -1905,7 +1897,7 @@ function switchPage(pageId) {
   if (pageId==='riwayat') renderRiwayatPage();
   if (pageId==='dompet') renderDompetPage();
   if (pageId==='anggaran') { renderAnggaranKategoriSelect(); renderAnggaranList(); }
-  if (pageId==='hutang') renderHutangPage();
+  if (pageId==='hutang') { if (requirePro('hutang')) { switchPage('dashboard'); return; } renderHutangPage(); }
   if (pageId==='investasi') updateLiveEmas();
   if (pageId==='laporan') renderLaporan();
   if (pageId==='recurring') renderRecurringPage();
@@ -2001,6 +1993,7 @@ function setCatatTab(tab) {
     document.getElementById('tabBatch').classList.add('tab-active');
     initBatchTable();
   } else if (tab==='import') {
+    if (requirePro('importCSV')) { setCatatTab('pengeluaran'); return; }
     document.getElementById('formImport').classList.remove('hidden');
     document.getElementById('tabImport').classList.add('tab-active');
   } else {
@@ -5040,9 +5033,9 @@ function triggerPWAInstall() {
 // SISTEM LISENSI
 // ============================================================
 const LICENSE_LIMITS = {
-  free:     { maxTrx: 50, maxDompet: 2, pdf: false, recurring: false, investasi: false },
-  pro:      { maxTrx: Infinity, maxDompet: Infinity, pdf: true, recurring: true, investasi: true },
-  lifetime: { maxTrx: Infinity, maxDompet: Infinity, pdf: true, recurring: true, investasi: true },
+  free:     { maxTrx: 50, maxDompet: 2, pdf: false, recurring: false, investasi: false, hutang: false, importCSV: false },
+  pro:      { maxTrx: Infinity, maxDompet: Infinity, pdf: true, recurring: true, investasi: true, hutang: true, importCSV: true },
+  lifetime: { maxTrx: Infinity, maxDompet: Infinity, pdf: true, recurring: true, investasi: true, hutang: true, importCSV: true },
 };
 const WHATSAPP_ADMIN = '6287875000151';
 
@@ -5057,9 +5050,9 @@ function applyLicense(lic) {
   if (!badge) return;
 
   if (lic.tier === 'lifetime') {
-    icon.textContent    = '♾️';
-    tierLbl.textContent = 'Paket Lifetime';
-    tierLbl.style.color = '#6366f1';
+    icon.textContent    = '⚡';
+    tierLbl.textContent = 'Paket Pro';
+    tierLbl.style.color = '#2563eb';
     subLbl.textContent  = 'Semua fitur aktif';
     badge.onclick       = null;
     badge.style.cursor  = 'default';
@@ -5076,12 +5069,14 @@ function applyLicense(lic) {
   }
 
   // Tampilkan/sembunyikan nav item yang dibatasi
-  ['investasiNav','recurringNav'].forEach(id => {
+  ['hutangNav','investasiNav','recurringNav'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.style.opacity = isPro ? '' : '0.45';
+      // Hapus lock lama jika sudah Pro
+      if (isPro) { el.querySelector('.lock-icon')?.remove(); return; }
       const lock = el.querySelector('.lock-icon');
-      if (!lock && !isPro) {
+      if (!lock) {
         const i = document.createElement('i');
         i.className = 'fas fa-lock text-xs ml-auto text-gray-400 lock-icon';
         el.appendChild(i);
@@ -5099,8 +5094,7 @@ function showUpgradeModal(featureName) {
       ? `Fitur "${featureName}" memerlukan Paket Pro.`
       : `Anda saat ini menggunakan Paket Gratis (${(appData.Transaksi||[]).length}/${LICENSE_LIMITS.free.maxTrx} transaksi).`;
   }
-  // Tombol WA default ke bulanan
-  selectPlan('pro-monthly');
+  selectPlan();
   document.getElementById('upgradeModal').classList.remove('hidden');
 }
 
@@ -5108,12 +5102,11 @@ function closeUpgradeModal() {
   document.getElementById('upgradeModal').classList.add('hidden');
 }
 
-function selectPlan(plan) {
-  const email   = document.getElementById('userEmail')?.textContent || '';
-  const isPlan  = plan === 'lifetime';
-  const prodStr = isPlan ? 'Lifetime (Rp249.000)' : 'Pro Bulanan (Rp29.000/bln)';
-  const msg     = encodeURIComponent(`Halo, saya ingin upgrade KeuanganKu ke *${prodStr}*.\nEmail saya: ${email}`);
-  const btn     = document.getElementById('upgradeWABtn');
+function selectPlan() {
+  // Hanya satu paket: Pro Bulanan
+  const email = document.getElementById('userEmail')?.textContent || '';
+  const msg   = encodeURIComponent(`Halo, saya ingin upgrade KeuanganKu ke *Pro Bulanan (Rp29.000/bln)*.\nEmail saya: ${email}`);
+  const btn   = document.getElementById('upgradeWABtn');
   if (btn) btn.href = `https://wa.me/${WHATSAPP_ADMIN}?text=${msg}`;
 }
 
@@ -5124,6 +5117,8 @@ function requirePro(featureName) {
   if (featureName === 'pdf'       && !limits.pdf)       { showUpgradeModal('Export PDF');            return true; }
   if (featureName === 'recurring' && !limits.recurring) { showUpgradeModal('Transaksi Berulang');    return true; }
   if (featureName === 'investasi' && !limits.investasi) { showUpgradeModal('Portofolio Investasi');  return true; }
+  if (featureName === 'hutang'    && !limits.hutang)    { showUpgradeModal('Hutang & Piutang');      return true; }
+  if (featureName === 'importCSV' && !limits.importCSV) { showUpgradeModal('Import CSV');            return true; }
   return false;
 }
 
