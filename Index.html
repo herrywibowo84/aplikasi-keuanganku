@@ -848,7 +848,12 @@
 
 <!-- 5. ANGGARAN -->
 <div id="anggaranPage" class="page-content hidden fade-in">
-  <h2 class="text-2xl font-bold text-gray-800 mb-5" data-i18n="pg_anggaran">Anggaran Bulanan</h2>
+  <div class="flex flex-wrap justify-between items-center mb-5 gap-2">
+    <h2 class="text-2xl font-bold text-gray-800" data-i18n="pg_anggaran">Anggaran Bulanan</h2>
+    <select id="anggaranBulanSelect" onchange="anggaranSelectBulan(this.value)"
+      class="text-sm font-semibold text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer">
+    </select>
+  </div>
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-1 bg-white rounded-xl shadow p-5 h-fit">
       <h3 class="text-base font-bold text-gray-800 mb-4 border-b pb-2" id="titleFormAnggaran">Tambah Anggaran</h3>
@@ -870,13 +875,8 @@
           <button type="submit" class="flex-1 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 text-sm"><i class="fas fa-save mr-1"></i>Simpan</button>
         </div>
       </form>
-      <div class="mt-4 pt-4 border-t">
-        <label class="block text-xs font-medium text-gray-700 mb-1">Tampilkan Bulan</label>
-        <div class="flex gap-2">
-          <input type="month" id="anggaranBulanFilter" class="flex-1 border rounded-lg p-2 text-sm">
-          <button onclick="renderAnggaranList()" class="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"><i class="fas fa-search"></i></button>
-        </div>
-      </div>
+      <!-- anggaranBulanFilter hidden, dikendalikan dari dropdown header -->
+      <input type="hidden" id="anggaranBulanFilter">
       <div class="mt-3 pt-3 border-t">
         <button onclick="copyAnggaranBulanLalu()" class="w-full py-2 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-medium hover:bg-indigo-100 transition">
           <i class="fas fa-copy mr-1"></i>Salin dari Bulan Lalu
@@ -1731,6 +1731,12 @@ function applyTheme(theme) {
 // PERIOD
 // ============================================================
 function getPeriodStart() { return parseInt(localStorage.getItem('periodStart') || '1'); }
+// Format tanggal lokal (hindari UTC offset bug pada toISOString di WIB/UTC+7)
+function localDateStr(d) {
+  return d.getFullYear() + '-' +
+    String(d.getMonth()+1).padStart(2,'0') + '-' +
+    String(d.getDate()).padStart(2,'0');
+}
 function getPeriodByOffset(offset) {
   const s   = getPeriodStart();
   const now = new Date();
@@ -1745,16 +1751,12 @@ function getPeriodByOffset(offset) {
   while (tM > 11) { tM -= 12; tY++; }
   const pS = new Date(tY, tM, s);
   const pE = new Date(tY, tM + 1, s - 1);
-  const isFullMonth = (s === 1); // Jika period mulai tgl 1, label cukup "Bulan Tahun"
+  const isFullMonth = (s === 1);
   const label = isFullMonth
     ? pS.toLocaleDateString('id-ID', {month:'long', year:'numeric'})
     : pS.toLocaleDateString('id-ID', {day:'numeric', month:'short'}) + ' – ' + pE.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'});
-  return {
-    start: pS.toISOString().split('T')[0],
-    end:   pE.toISOString().split('T')[0],
-    label,
-    ym: pS.toISOString().substring(0, 7)
-  };
+  const ym = `${tY}-${String(tM+1).padStart(2,'0')}`; // langsung dari tY/tM, bukan toISOString
+  return { start: localDateStr(pS), end: localDateStr(pE), label, ym };
 }
 function getCurrentPeriod()  { return getPeriodByOffset(0);  }
 function getPrevPeriod()     { return getPeriodByOffset(-1); }
@@ -2123,7 +2125,7 @@ function switchPage(pageId) {
   if (pageId==='catat') setCatatTab('pengeluaran');
   if (pageId==='riwayat') renderRiwayatPage();
   if (pageId==='dompet') renderDompetPage();
-  if (pageId==='anggaran') { renderAnggaranKategoriSelect(); renderAnggaranList(); }
+  if (pageId==='anggaran') { initAnggaranDropdown(); renderAnggaranKategoriSelect(); renderAnggaranList(); }
   if (pageId==='hutang') { if (requirePro('hutang')) { switchPage('dashboard'); return; } renderHutangPage(); }
   if (pageId==='investasi') updateLiveEmas();
   if (pageId==='laporan') renderLaporan();
@@ -3373,9 +3375,33 @@ function renderAnggaranKategoriSelect() {
     if (parents.length) sel.appendChild(optGroup);
   });
 }
+function anggaranSelectBulan(ym) {
+  document.getElementById('anggaranBulanFilter').value = ym;
+  renderAnggaranList();
+}
+function initAnggaranDropdown() {
+  const sel = document.getElementById('anggaranBulanSelect');
+  if (!sel || sel.options.length) return; // sudah dibangun
+  const now = new Date();
+  const thisYM = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  for (let i = 0; i <= 23; i++) {
+    let m = now.getMonth() - i;
+    let y = now.getFullYear();
+    while (m < 0) { m += 12; y--; }
+    const ym  = `${y}-${String(m+1).padStart(2,'0')}`;
+    const lbl = new Date(y, m, 1).toLocaleDateString('id-ID', {month:'long', year:'numeric'});
+    const opt = document.createElement('option');
+    opt.value = ym;
+    opt.textContent = i === 0 ? '📅 Bulan Ini — ' + lbl : lbl;
+    sel.appendChild(opt);
+  }
+  sel.value = thisYM;
+  document.getElementById('anggaranBulanFilter').value = thisYM;
+}
 function renderAnggaranList() {
-  const bulan = document.getElementById('anggaranBulanFilter').value ||
-    new Date().toISOString().slice(0,7);
+  const now    = new Date();
+  const thisYM = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const bulan  = document.getElementById('anggaranBulanFilter').value || thisYM;
   document.getElementById('anggaranBulanTitle').innerText = 'Anggaran ' + bulan;
   const list = appData.Anggaran.filter(a => a.BulanTahun === bulan);
   const div = document.getElementById('anggaranList');
@@ -3729,6 +3755,11 @@ function editAnggaran(id) {
   const data=appData.Anggaran.find(a=>a.ID===id); if (!data) return;
   document.getElementById('anggaranID').value=data.ID;
   document.getElementById('anggaranBulanForm').value=data.BulanTahun;
+  // Sync dropdown & filter ke bulan yang diedit
+  const sel = document.getElementById('anggaranBulanSelect');
+  if (sel) sel.value = data.BulanTahun;
+  document.getElementById('anggaranBulanFilter').value = data.BulanTahun;
+  renderAnggaranList();
   renderAnggaranKategoriSelect();
   document.getElementById('anggaranKategori').value=data.Kategori;
   document.getElementById('anggaranNominal').value=data.Nominal;
