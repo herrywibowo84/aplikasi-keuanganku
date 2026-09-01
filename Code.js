@@ -110,15 +110,16 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    const body    = JSON.parse(e.postData.contents);
-    const event   = body.event || body.event_type || '';
-    const data    = body.data  || body.payment    || body || {};
+    const body  = JSON.parse(e.postData.contents);
+    const event = body.event || body.event_type || '';
+    const data  = body.data  || body.payment    || body || {};
 
-    // Ekstrak email pembeli — Mayar bisa kirim di beberapa field
+    // Ekstrak email pembeli — format Mayar: data.customerEmail
     const email =
+      data.customerEmail ||
       (data.customer && data.customer.email) ||
       data.email ||
-      (data.buyer  && data.buyer.email)      || '';
+      (data.buyer && data.buyer.email) || '';
 
     if (!email) {
       Logger.log('⚠️ Mayar webhook: email tidak ditemukan. Body: ' + e.postData.contents);
@@ -126,20 +127,24 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // Proses hanya event pembayaran berhasil
+    // Event yang memicu aktivasi Pro
+    // 'testing' = Mayar test URL, tetap proses supaya test berhasil
     const successEvents = ['payment.paid', 'payment.success', 'payment.completed',
-                           'membership.activated', 'order.paid', 'invoice.paid'];
-    if (!successEvents.some(ev => event.toLowerCase().includes(ev.replace('payment.','')
-                                                                        .replace('membership.','')
-                                                                        .replace('order.','')
-                                                                        .replace('invoice.','')))
-        && event !== '') {
+                           'membership.activated', 'order.paid', 'invoice.paid', 'testing'];
+    const isSuccess = event === '' || successEvents.some(ev => event.toLowerCase().includes(ev));
+    if (!isSuccess) {
       Logger.log('ℹ️ Mayar webhook event diabaikan: ' + event);
       return ContentService.createTextOutput(JSON.stringify({ ok: true, skipped: event }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // Aktifkan lisensi Pro 30 hari
+    // Aktifkan lisensi Pro 30 hari (testing event tidak aktifkan lisensi asli)
+    const isTestEvent = event === 'testing';
+    if (isTestEvent) {
+      Logger.log('🧪 Mayar test webhook diterima. Email: ' + email + ' — tidak mengubah lisensi.');
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, test: true, email }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
     const result = activateLicense(email.trim().toLowerCase(), 'pro', 30);
     Logger.log('🎉 Mayar webhook aktifkan Pro: ' + email + ' → ' + result);
 
@@ -155,16 +160,19 @@ function doPost(e) {
 
 // Test webhook — jalankan dari GAS Editor atau: clasp run testMayarWebhook
 function testMayarWebhook() {
+  const tok = PropertiesService.getScriptProperties().getProperty('MAYAR_WEBHOOK_TOKEN') || '';
   const mockEvent = {
-    parameter: {},
+    parameter: { token: tok },   // sertakan token supaya lolos validasi
     headers: {},
     postData: {
       contents: JSON.stringify({
         event: 'payment.paid',
         data: {
-          customer: { email: 'test_webhook@keuanganku.test' },
+          customerEmail: 'test_webhook@keuanganku.test',
+          customerName: 'Test User',
           amount: 29000,
-          status: 'paid'
+          status: 'SUCCESS',
+          productName: 'KeuanganKu Pro'
         }
       })
     }
