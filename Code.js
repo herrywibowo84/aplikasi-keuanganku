@@ -153,6 +153,30 @@ function doPost(e) {
   }
 }
 
+// Test webhook — jalankan dari GAS Editor atau: clasp run testMayarWebhook
+function testMayarWebhook() {
+  const mockEvent = {
+    parameter: {},
+    headers: {},
+    postData: {
+      contents: JSON.stringify({
+        event: 'payment.paid',
+        data: {
+          customer: { email: 'test_webhook@keuanganku.test' },
+          amount: 29000,
+          status: 'paid'
+        }
+      })
+    }
+  };
+  const result = doPost(mockEvent);
+  Logger.log('Test result: ' + result.getContent());
+
+  // Bersihkan lisensi test setelah dicek
+  PropertiesService.getScriptProperties().deleteProperty('LIC_test_webhook@keuanganku.test');
+  Logger.log('✅ Test selesai — lisensi test sudah dihapus');
+}
+
 // ==================== USER ====================
 
 function getUserProfile() {
