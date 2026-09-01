@@ -396,9 +396,19 @@
 
 <!-- 1. DASHBOARD -->
 <div id="dashboardPage" class="page-content fade-in">
-  <div class="flex justify-between items-center mb-5">
+  <div class="flex flex-wrap justify-between items-center mb-5 gap-2">
     <h2 class="text-2xl font-bold text-gray-800" data-i18n="pg_dashboard">Ringkasan Keuangan</h2>
-    <p class="text-xs text-gray-400" id="periodeLabel"></p>
+    <!-- Navigator periode -->
+    <div class="flex items-center gap-1">
+      <button onclick="dashNavigate(-1)"
+        class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 text-lg leading-none transition">‹</button>
+      <span id="periodeLabel"
+        class="text-sm font-semibold text-gray-700 px-1 min-w-[130px] text-center select-none"></span>
+      <button id="dashNextBtn" onclick="dashNavigate(1)" disabled
+        class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 text-lg leading-none transition disabled:opacity-30 disabled:cursor-not-allowed">›</button>
+      <button id="dashTodayBtn" onclick="dashGoToday()"
+        class="hidden ml-1 px-2.5 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg font-semibold hover:bg-blue-200 transition">Bulan Ini</button>
+    </div>
   </div>
   
   <div class="bg-gradient-to-r from-blue-900 to-blue-800 rounded-xl shadow-lg p-5 mb-6 text-white relative overflow-hidden">
@@ -1729,35 +1739,43 @@ function applyTheme(theme) {
 // PERIOD
 // ============================================================
 function getPeriodStart() { return parseInt(localStorage.getItem('periodStart') || '1'); }
-function getCurrentPeriod() {
-  const s = getPeriodStart();
+function getPeriodByOffset(offset) {
+  const s   = getPeriodStart();
   const now = new Date();
-  let pS, pE;
-  if (now.getDate() >= s) {
-    pS = new Date(now.getFullYear(), now.getMonth(), s);
-    pE = new Date(now.getFullYear(), now.getMonth()+1, s-1);
-  } else {
-    pS = new Date(now.getFullYear(), now.getMonth()-1, s);
-    pE = new Date(now.getFullYear(), now.getMonth(), s-1);
-  }
+  // Tentukan bulan awal periode "current" (offset=0)
+  let baseYear  = now.getFullYear();
+  let baseMonth = now.getDate() >= s ? now.getMonth() : now.getMonth() - 1;
+  if (baseMonth < 0) { baseMonth = 11; baseYear--; }
+  // Terapkan offset
+  let tM = baseMonth + offset;
+  let tY = baseYear;
+  while (tM < 0)  { tM += 12; tY--; }
+  while (tM > 11) { tM -= 12; tY++; }
+  const pS = new Date(tY, tM, s);
+  const pE = new Date(tY, tM + 1, s - 1);
+  const isFullMonth = (s === 1); // Jika period mulai tgl 1, label cukup "Bulan Tahun"
+  const label = isFullMonth
+    ? pS.toLocaleDateString('id-ID', {month:'long', year:'numeric'})
+    : pS.toLocaleDateString('id-ID', {day:'numeric', month:'short'}) + ' – ' + pE.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'});
   return {
     start: pS.toISOString().split('T')[0],
-    end: pE.toISOString().split('T')[0],
-    label: pS.toLocaleDateString('id-ID',{day:'numeric',month:'short'}) + ' – ' + pE.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})
+    end:   pE.toISOString().split('T')[0],
+    label,
+    ym: pS.toISOString().substring(0, 7)
   };
 }
-function getPrevPeriod() {
-  const s = getPeriodStart();
-  const now = new Date();
-  let pS, pE;
-  if (now.getDate() >= s) {
-    pS = new Date(now.getFullYear(), now.getMonth()-1, s);
-    pE = new Date(now.getFullYear(), now.getMonth(), s-1);
-  } else {
-    pS = new Date(now.getFullYear(), now.getMonth()-2, s);
-    pE = new Date(now.getFullYear(), now.getMonth()-1, s-1);
-  }
-  return { start: pS.toISOString().split('T')[0], end: pE.toISOString().split('T')[0] };
+function getCurrentPeriod()  { return getPeriodByOffset(0);  }
+function getPrevPeriod()     { return getPeriodByOffset(-1); }
+
+function dashNavigate(delta) {
+  const newOffset = dashPeriodOffset + delta;
+  if (newOffset > 0) return; // tidak bisa ke masa depan
+  dashPeriodOffset = newOffset;
+  renderDashboard();
+}
+function dashGoToday() {
+  dashPeriodOffset = 0;
+  renderDashboard();
 }
 function savePeriodStart() {
   const v = parseInt(document.getElementById('periodStartInput').value);
@@ -1768,11 +1786,16 @@ function savePeriodStart() {
   renderDashboard();
 }
 function updatePeriodPreview() {
-  const p = getCurrentPeriod();
+  const p = getPeriodByOffset(dashPeriodOffset);
   const el = document.getElementById('periodPreview');
-  if (el) el.textContent = '→ ' + p.label;
-  const lbl = document.getElementById('periodeLabel');
-  if (lbl) lbl.textContent = p.label;
+  if (el) el.textContent = '→ ' + getCurrentPeriod().label;
+  // Navigator dashboard
+  const lbl     = document.getElementById('periodeLabel');
+  const nextBtn = document.getElementById('dashNextBtn');
+  const todayBtn= document.getElementById('dashTodayBtn');
+  if (lbl)      lbl.textContent = p.label;
+  if (nextBtn)  nextBtn.disabled = (dashPeriodOffset >= 0);
+  if (todayBtn) todayBtn.classList.toggle('hidden', dashPeriodOffset >= 0);
 }
 
 // ============================================================
@@ -1789,6 +1812,7 @@ let selectedDompet = null;
 let dbUrl = null;
 let deferredPrompt = null;
 let isDemoMode = false;
+let dashPeriodOffset = 0; // 0=bulan ini, -1=bulan lalu, dst
 let userLicense = { tier: 'free', expired: false, daysLeft: null };
 
 // ============================================================
@@ -2483,8 +2507,8 @@ function cancelEdit(tipe) {
 // DASHBOARD
 // ============================================================
 function renderDashboard() {
-  const period = getCurrentPeriod();
-  const prevPeriod = getPrevPeriod();
+  const period     = getPeriodByOffset(dashPeriodOffset);
+  const prevPeriod = getPeriodByOffset(dashPeriodOffset - 1);
   updatePeriodPreview();
   let totalSaldo=0, totalMasuk=0, totalKeluar=0;
   let prevMasuk=0, prevKeluar=0;
@@ -2513,11 +2537,12 @@ function renderDashboard() {
   document.getElementById('dashPengeluaran').innerText='Rp '+fmt(totalKeluar);
 
   // M-o-M Comparison
+  const vsLabel = 'vs periode sebelumnya';
   const calcDiff = (curr, prev) => {
-    if (prev === 0) return curr > 0 ? {txt:'+100% vs bulan lalu', color:'text-green-500'} : {txt:'—', color:'text-gray-400'};
+    if (prev === 0) return curr > 0 ? {txt:`+100% ${vsLabel}`, color:'text-green-500'} : {txt:'—', color:'text-gray-400'};
     const pct = ((curr - prev) / prev) * 100;
     const sign = pct > 0 ? '+' : '';
-    return { txt: `${sign}${pct.toFixed(1)}% vs bulan lalu`, color: pct > 0 ? 'text-green-500' : (pct < 0 ? 'text-red-500' : 'text-gray-400') };
+    return { txt: `${sign}${pct.toFixed(1)}% ${vsLabel}`, color: pct > 0 ? 'text-green-500' : (pct < 0 ? 'text-red-500' : 'text-gray-400') };
   };
   
   const inDiff = calcDiff(totalMasuk, prevMasuk);
@@ -2545,7 +2570,8 @@ function renderDashboard() {
   const combined = compileRiwayat();
   const tbody = document.getElementById('dashLatestTrx');
   tbody.innerHTML='';
-  combined.slice(0,5).forEach(t => {
+  const periodTrx = combined.filter(t => t.Tanggal >= period.start && t.Tanggal <= period.end);
+  periodTrx.slice(0,5).forEach(t => {
     const color=t.Jenis==='Pemasukan'?'text-green-600':(t.Jenis==='Transfer'?'text-blue-600':'text-red-600');
     const sign=t.Jenis==='Pemasukan'?'+':'-';
     const desc=t.Jenis==='Transfer'?`${t.DariDompet} → ${t.KeDompet}`:(t.Keterangan||t.Kategori||'—');
@@ -2555,9 +2581,9 @@ function renderDashboard() {
       <td class="py-2 text-right text-xs font-bold ${color}">${sign} Rp ${fmt(t.Nominal||t.Jumlah)}</td>
     </tr>`;
   });
-  if (!combined.length) tbody.innerHTML='<tr><td colspan="3" class="py-4 text-center text-gray-400 text-xs">Belum ada transaksi</td></tr>';
+  if (!periodTrx.length) tbody.innerHTML='<tr><td colspan="3" class="py-4 text-center text-gray-400 text-xs">Belum ada transaksi periode ini</td></tr>';
   const angDiv=document.getElementById('dashAnggaran');
-  const ym = new Date().toISOString().substring(0,7);
+  const ym = period.ym; // ikuti periode terpilih, bukan selalu bulan ini
   const angBulanIni = appData.Anggaran.filter(a=>a.BulanTahun===ym);
   angDiv.innerHTML='';
   if (!angBulanIni.length) { angDiv.innerHTML='<p class="text-gray-400 text-xs">Belum ada anggaran</p>'; }
@@ -2676,8 +2702,8 @@ function renderCashFlowChart() {
   const ctxCF=document.getElementById('cashflowChart');
   if (cfChartInstance) cfChartInstance.destroy();
 
-  // Hanya tampilkan bulan berjalan
-  const period = getCurrentPeriod();
+  // Ikuti periode yang dipilih di dashboard
+  const period = getPeriodByOffset(dashPeriodOffset);
   const map={};
   appData.Transaksi.forEach(t => {
     if (t.Tanggal < period.start || t.Tanggal > period.end) return;
