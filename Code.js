@@ -4,7 +4,7 @@
  */
 
 const APP_NAME    = 'DB_KeuanganKu';
-const APP_VERSION = '3.85'; // AUTO-UPDATED by deploy.sh — jangan edit manual
+const APP_VERSION = '3.86'; // AUTO-UPDATED by deploy.sh — jangan edit manual
 
 // ── LISENSI ──────────────────────────────────────────────────
 // Email owner diambil dari ScriptProperties agar tidak hardcoded di source code
@@ -77,7 +77,7 @@ const SCHEMAS = {
   'Anggaran':      ['ID', 'BulanTahun', 'Kategori', 'Nominal'],
   'Transaksi':     ['ID', 'Tanggal', 'Waktu', 'Jenis', 'Kategori', 'Nominal', 'Biaya', 'KategoriBiaya', 'Keterangan', 'DompetAsal'],
   'Transfer':      ['ID', 'Tanggal', 'DariDompet', 'KeDompet', 'Jumlah', 'Biaya', 'Catatan'],
-  'HutangPiutang':    ['ID', 'Jenis', 'Nama', 'Nominal', 'Tanggal', 'JatuhTempo', 'Status', 'Outstanding', 'Keterangan'],
+  'HutangPiutang':    ['ID', 'Jenis', 'Nama', 'Nominal', 'Tanggal', 'JatuhTempo', 'Status', 'Outstanding', 'Keterangan', 'TipeHutang', 'Tenor', 'TanggalMulai', 'CicilanPerBulan'],
   'PembayaranHutang': ['ID', 'HutangID', 'Tanggal', 'Jumlah', 'DompetNama', 'Catatan'],
   'Investasi':     ['ID', 'NamaInvestasi', 'JenisInvestasi', 'BeratGram', 'HargaBeliGram', 'TotalModal', 'NilaiSaatIni', 'ReturnRate', 'Tanggal'],
   'Recurring':     ['ID', 'Nama', 'Jenis', 'Kategori', 'Nominal', 'DompetAsal', 'Frekuensi', 'TanggalMulai', 'Aktif', 'TerakhirDijalankan']
@@ -213,6 +213,7 @@ function getAppData() {
   const ss = getDB();
   const empty = { Dompet: [], Kategori: [], Anggaran: [], Transaksi: [], Transfer: [], HutangPiutang: [], PembayaranHutang: [], Investasi: [], Recurring: [] };
   migrateHutangOutstanding_(); // pastikan kolom Outstanding ada di sheet lama
+  migrateHutangCicilan_();    // pastikan kolom TipeHutang, Tenor, TanggalMulai, CicilanPerBulan ada
   if (!ss) return empty;
 
   const result = {};
@@ -299,7 +300,7 @@ function saveRecord(tableName, recordObj) {
     updateWalletBalance_(ss, recordObj['DompetAsal'], parseFloat(recordObj['Nominal']) || 0, recordObj['Jenis']);
   }
 
-  // New HutangPiutang: Outstanding = Nominal (belum ada pembayaran)
+  // New HutangPiutang: Outstanding = Nominal + compute CicilanPerBulan
   if (tableName === 'HutangPiutang') {
     const allData2 = sheet.getDataRange().getValues();
     const hdr2 = allData2[0];
@@ -308,6 +309,15 @@ function saveRecord(tableName, recordObj) {
     if (outIdx2 >= 0) {
       const nom = parseFloat(recordObj['Nominal']) || 0;
       sheet.getRange(lastRow2, outIdx2 + 1).setValue(nom);
+    }
+    // Hitung CicilanPerBulan jika CicilanBank dan belum diset
+    const tipe   = String(recordObj['TipeHutang'] || '');
+    const tenor  = parseFloat(recordObj['Tenor']) || 0;
+    const cpbIdx = hdr2.indexOf('CicilanPerBulan');
+    if (tipe === 'CicilanBank' && tenor > 0 && cpbIdx >= 0) {
+      const nom2 = parseFloat(recordObj['Nominal']) || 0;
+      const cpb  = Math.round(nom2 / tenor);
+      sheet.getRange(lastRow2, cpbIdx + 1).setValue(cpb);
     }
   }
 
@@ -976,5 +986,37 @@ function migrateHutangOutstanding_() {
   } catch(e) {
     // Jangan crash jika migrasi gagal — app tetap bisa jalan
     Logger.log('migrateHutangOutstanding_ error: ' + e.message);
+  }
+}
+
+/**
+ * Migrasi: tambah kolom TipeHutang, Tenor, TanggalMulai, CicilanPerBulan
+ * ke sheet HutangPiutang jika belum ada. Idempoten.
+ */
+function migrateHutangCicilan_() {
+  try {
+    const ss = getDB();
+    if (!ss) return;
+    const sheet = ss.getSheetByName('HutangPiutang');
+    if (!sheet || sheet.getLastRow() < 1) return;
+
+    const headerRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const newCols = ['TipeHutang', 'Tenor', 'TanggalMulai', 'CicilanPerBulan'];
+
+    newCols.forEach(colName => {
+      if (headerRow.indexOf(colName) >= 0) return; // sudah ada
+      const newCol = sheet.getLastColumn() + 1;
+      const hdrCell = sheet.getRange(1, newCol);
+      hdrCell.setValue(colName);
+      hdrCell.setFontWeight('bold').setBackground('#1e40af').setFontColor('#ffffff');
+      // Isi default 'Informal' untuk TipeHutang, kosong untuk yang lain
+      if (colName === 'TipeHutang' && sheet.getLastRow() > 1) {
+        const lastRow = sheet.getLastRow();
+        const defaults = Array.from({length: lastRow - 1}, () => ['Informal']);
+        sheet.getRange(2, newCol, lastRow - 1, 1).setValues(defaults);
+      }
+    });
+  } catch(e) {
+    Logger.log('migrateHutangCicilan_ error: ' + e.message);
   }
 }

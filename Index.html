@@ -956,19 +956,53 @@
           <label class="flex items-center gap-2 text-sm mb-2"><input type="radio" name="hpJenis" value="Hutang" checked><span class="text-red-600 font-medium">Hutang (saya berhutang)</span></label>
           <label class="flex items-center gap-2 text-sm"><input type="radio" name="hpJenis" value="Piutang"><span class="text-green-600 font-medium">Piutang (orang berhutang ke saya)</span></label>
         </div>
-        <div><label class="block text-sm font-medium text-gray-700 mb-1">Nama Orang / Pihak</label>
-          <input type="text" id="hpNama" required class="w-full border rounded-lg p-2 text-sm" placeholder="Misal: Budi Santoso"></div>
-        <div><label class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
+        <!-- Tipe Hutang -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Tipe</label>
+          <div class="flex gap-1 p-1 bg-gray-100 rounded-lg">
+            <button type="button" id="hpTipeBtnInformal"    onclick="switchHpTipe('Informal')"    class="flex-1 py-1.5 text-xs font-semibold rounded-md transition bg-white shadow-sm text-blue-600">Informal</button>
+            <button type="button" id="hpTipeBtnCicilanBank" onclick="switchHpTipe('CicilanBank')" class="flex-1 py-1.5 text-xs font-semibold rounded-md transition text-gray-500">🏦 Cicilan Bank</button>
+            <button type="button" id="hpTipeBtnKartuKredit" onclick="switchHpTipe('KartuKredit')" class="flex-1 py-1.5 text-xs font-semibold rounded-md transition text-gray-500">💳 Kartu Kredit</button>
+          </div>
+          <input type="hidden" id="hpTipeHutang" value="Informal">
+        </div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1">Nama Orang / Pihak / Bank</label>
+          <input type="text" id="hpNama" required class="w-full border rounded-lg p-2 text-sm" placeholder="Misal: Budi / BRI / BCA"></div>
+        <div><label class="block text-sm font-medium text-gray-700 mb-1" id="hpNominalLabel">Nominal (Rp)</label>
           <input type="text" id="hpNominal" required inputmode="decimal"
             class="w-full border rounded-lg p-2 text-sm" placeholder="mis. 500000 atau 250000+150000"
-            oninput="calcNominalPreview(this,'calcPreviewHP')"
-            onblur="evalCalcNominal(this,'calcPreviewHP')"
-            onkeydown="if(event.key==='Enter'){evalCalcNominal(this,'calcPreviewHP');event.preventDefault();}">
+            oninput="calcNominalPreview(this,'calcPreviewHP');updateCicilanPreview()"
+            onblur="evalCalcNominal(this,'calcPreviewHP');updateCicilanPreview()"
+            onkeydown="if(event.key==='Enter'){evalCalcNominal(this,'calcPreviewHP');updateCicilanPreview();event.preventDefault();}">
           <span id="calcPreviewHP" class="hidden text-xs text-indigo-600 font-medium mt-0.5 block"></span></div>
-        <div class="grid grid-cols-2 gap-3">
+        <!-- Cicilan Bank fields (conditional) -->
+        <div id="hpCicilanFields" class="hidden space-y-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+          <p class="text-xs font-semibold text-blue-700"><i class="fas fa-info-circle mr-1"></i>Detail Cicilan Bank</p>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Tenor (bulan)</label>
+              <input type="number" id="hpTenor" min="1" max="360" class="w-full border rounded-lg p-2 text-sm" placeholder="mis. 12" oninput="updateCicilanPreview()">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Tgl Mulai Cicilan</label>
+              <input type="date" id="hpTanggalMulai" class="w-full border rounded-lg p-2 text-sm" oninput="updateCicilanPreview()">
+            </div>
+          </div>
+          <div id="cicilanPreviewWrap" class="hidden bg-white rounded-lg p-3 border border-blue-100">
+            <div class="flex justify-between text-xs">
+              <span class="text-gray-500">Cicilan / bulan</span>
+              <span class="font-bold text-blue-700" id="cicilanPreviewAmt">Rp 0</span>
+            </div>
+            <div class="flex justify-between text-xs mt-1">
+              <span class="text-gray-500">Jatuh tempo akhir</span>
+              <span class="font-medium text-gray-700" id="cicilanPreviewJT">-</span>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3" id="hpTanggalJTRow">
           <div><label class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
             <input type="date" id="hpTanggal" required class="w-full border rounded-lg p-2 text-sm"></div>
-          <div><label class="block text-sm font-medium text-gray-700 mb-1">Jatuh Tempo</label>
+          <div id="hpJatuhTempoWrap"><label class="block text-sm font-medium text-gray-700 mb-1">Jatuh Tempo</label>
             <input type="date" id="hpJatuhTempo" class="w-full border rounded-lg p-2 text-sm"></div>
         </div>
         <div><label class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
@@ -1003,8 +1037,19 @@
       <div class="bg-gray-50 rounded-xl p-3">
         <p class="text-sm font-bold text-gray-800" id="bayarHpNama">-</p>
         <div class="flex justify-between mt-1 text-xs text-gray-500">
-          <span>Sisa hutang:</span>
+          <span>Sisa outstanding:</span>
           <span class="font-bold text-red-600" id="bayarHpSisa">Rp 0</span>
+        </div>
+        <!-- Info cicilan (muncul hanya jika CicilanBank) -->
+        <div id="bayarCicilanInfo" class="hidden mt-2 pt-2 border-t border-gray-200 space-y-0.5">
+          <div class="flex justify-between text-xs">
+            <span class="text-gray-500">Cicilan / bulan</span>
+            <span class="font-semibold text-blue-700" id="bayarCicilanAmt">Rp 0</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-gray-500">Cicilan ke</span>
+            <span class="font-semibold text-blue-700" id="bayarCicilanKe">-</span>
+          </div>
         </div>
       </div>
       <input type="hidden" id="bayarHpId">
@@ -1820,8 +1865,9 @@ const DEMO_DATA = (function() {
       { ID:uid('a5'), BulanTahun:thisMonth, Kategori:'Hiburan',            Nominal:'400000'  },
     ],
     HutangPiutang: [
-      { ID:uid('hp1'), Jenis:'Piutang', Nama:'Budi Santoso',     Nominal:'500000',  Outstanding:'300000', Tanggal:d(-20), JatuhTempo:d(10),  Status:'Aktif', Keterangan:'Pinjaman uang makan'   },
-      { ID:uid('hp2'), Jenis:'Hutang',  Nama:'Kartu Kredit BCA', Nominal:'750000',  Outstanding:'750000', Tanggal:d(-15), JatuhTempo:d(15),  Status:'Aktif', Keterangan:'Tagihan belanja online' },
+      { ID:uid('hp1'), Jenis:'Piutang', Nama:'Budi Santoso',     Nominal:'500000',  Outstanding:'300000', Tanggal:d(-20), JatuhTempo:d(10),  Status:'Aktif', TipeHutang:'Informal',    Tenor:'', TanggalMulai:'', CicilanPerBulan:'', Keterangan:'Pinjaman uang makan'   },
+      { ID:uid('hp2'), Jenis:'Hutang',  Nama:'Kartu Kredit BCA', Nominal:'750000',  Outstanding:'750000', Tanggal:d(-15), JatuhTempo:d(15),  Status:'Aktif', TipeHutang:'KartuKredit', Tenor:'', TanggalMulai:'', CicilanPerBulan:'', Keterangan:'Tagihan belanja online' },
+      { ID:uid('hp3'), Jenis:'Hutang',  Nama:'KTA BRI',          Nominal:'24000000', Outstanding:'22000000', Tanggal:d(-60), JatuhTempo:d(660), Status:'Aktif', TipeHutang:'CicilanBank', Tenor:'24', TanggalMulai:d(-60), CicilanPerBulan:'1000000', Keterangan:'KTA renovasi dapur' },
     ],
     Investasi: [
       { ID:uid('i1'), NamaInvestasi:'Emas Antam', JenisInvestasi:'Emas', BeratGram:'5', HargaBeliGram:'1050000', TotalModal:'5250000', NilaiSaatIni:'5750000', ReturnRate:'9.52', Tanggal:d(-180) },
@@ -2268,15 +2314,65 @@ function submitAnggaran(e) {
     Nominal:parseRibuan(document.getElementById('anggaranNominal').value)||0
   }], () => { cancelEdit('Anggaran'); renderAnggaranList(); });
 }
+function switchHpTipe(tipe) {
+  document.getElementById('hpTipeHutang').value = tipe;
+  const BASE = 'flex-1 py-1.5 text-xs font-semibold rounded-md transition';
+  ['Informal','CicilanBank','KartuKredit'].forEach(t => {
+    const btn = document.getElementById('hpTipeBtn'+t);
+    if (!btn) return;
+    btn.className = t===tipe ? `${BASE} bg-white shadow-sm text-blue-600` : `${BASE} text-gray-500`;
+  });
+  const isCicilan = tipe==='CicilanBank';
+  document.getElementById('hpCicilanFields').classList.toggle('hidden', !isCicilan);
+  // Untuk CicilanBank sembunyikan JatuhTempo manual (dihitung otomatis)
+  document.getElementById('hpJatuhTempoWrap').classList.toggle('hidden', isCicilan);
+  // Update label Nominal
+  document.getElementById('hpNominalLabel').textContent = isCicilan ? 'Total Pinjaman (Rp)' : 'Nominal (Rp)';
+  updateCicilanPreview();
+}
+
+function updateCicilanPreview() {
+  const tipe   = document.getElementById('hpTipeHutang').value;
+  const wrap   = document.getElementById('cicilanPreviewWrap');
+  if (tipe !== 'CicilanBank') { wrap.classList.add('hidden'); return; }
+  const nominal = parseFloat(parseRibuan(document.getElementById('hpNominal').value)) || 0;
+  const tenor   = parseInt(document.getElementById('hpTenor').value) || 0;
+  const tglMulai = document.getElementById('hpTanggalMulai').value;
+  if (!nominal || !tenor) { wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  const cpb = Math.round(nominal / tenor);
+  document.getElementById('cicilanPreviewAmt').textContent = 'Rp ' + fmt(cpb);
+  if (tglMulai) {
+    const d = new Date(tglMulai);
+    d.setMonth(d.getMonth() + tenor);
+    document.getElementById('cicilanPreviewJT').textContent = d.toISOString().split('T')[0];
+  } else {
+    document.getElementById('cicilanPreviewJT').textContent = '-';
+  }
+}
+
 function submitHP(e) {
   e.preventDefault();
   if (demoGuard()) return;
-  const id = document.getElementById('hpID').value;
+  const id     = document.getElementById('hpID').value;
+  const tipe   = document.getElementById('hpTipeHutang').value;
+  const nominal = parseRibuan(document.getElementById('hpNominal').value)||0;
+  const tenor   = parseInt(document.getElementById('hpTenor').value)||0;
+  const tglMulai = document.getElementById('hpTanggalMulai').value;
+  // JatuhTempo: cicilan bank → auto dari TanggalMulai+Tenor; lainnya → manual
+  let jatuhTempo = document.getElementById('hpJatuhTempo').value;
+  if (tipe==='CicilanBank' && tglMulai && tenor) {
+    const d = new Date(tglMulai);
+    d.setMonth(d.getMonth() + tenor);
+    jatuhTempo = d.toISOString().split('T')[0];
+  }
+  const cpb = (tipe==='CicilanBank' && tenor>0) ? Math.round(nominal/tenor) : '';
   const obj = {
     ID:id||'', Jenis:document.querySelector('input[name="hpJenis"]:checked').value,
-    Nama:document.getElementById('hpNama').value, Nominal:parseRibuan(document.getElementById('hpNominal').value)||0,
-    Tanggal:document.getElementById('hpTanggal').value, JatuhTempo:document.getElementById('hpJatuhTempo').value,
-    Keterangan:document.getElementById('hpKeterangan').value
+    Nama:document.getElementById('hpNama').value, Nominal:nominal,
+    Tanggal:document.getElementById('hpTanggal').value, JatuhTempo:jatuhTempo,
+    Keterangan:document.getElementById('hpKeterangan').value,
+    TipeHutang:tipe, Tenor:tenor||'', TanggalMulai:tglMulai, CicilanPerBulan:cpb
   };
   if (!id) obj.Status='Aktif';
   gasRun('saveRecord',['HutangPiutang',obj], () => { cancelEdit('HutangPiutang'); renderHutangPage(); });
@@ -2344,6 +2440,7 @@ function cancelEdit(tipe) {
     document.getElementById('titleFormHP').innerText='Tambah Baru';
     document.querySelector('input[name="hpJenis"][value="Hutang"]').checked=true;
     document.getElementById('hpTanggal').value=today;
+    switchHpTipe('Informal');
   } else if (tipe==='Investasi') {
     document.getElementById('formInvestasi').reset();
     document.getElementById('invID').value='';
@@ -3643,6 +3740,27 @@ function filterHP(mode) {
     const isDekatJT    = h.JatuhTempo && !isJT && !isLunas &&
                          (new Date(h.JatuhTempo)-now)<7*864e5;
 
+    // Tipe & cicilan info
+    const tipeHutang = h.TipeHutang||'Informal';
+    const cpb        = parseFloat(h.CicilanPerBulan)||0;
+    const tenor      = parseInt(h.Tenor)||0;
+    const tipeBadge  = tipeHutang==='CicilanBank'
+      ? '<span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium">🏦 Cicilan Bank</span>'
+      : tipeHutang==='KartuKredit'
+        ? '<span class="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full font-medium">💳 Kartu Kredit</span>'
+        : '';
+    // Cicilan ke- info
+    let cicilanRowHtml = '';
+    if (tipeHutang==='CicilanBank' && cpb>0) {
+      const dibayar = Math.max(0, nominal-outstanding);
+      const keN     = Math.round(dibayar/cpb)+1;
+      const sisaN   = Math.ceil(outstanding/cpb);
+      cicilanRowHtml = `<div class="flex justify-between text-xs text-gray-400 mt-1">
+        <span>Cicilan ke-${isLunas?tenor:keN}${tenor?' dari '+tenor+' bulan':''}</span>
+        <span class="text-blue-600 font-medium">Rp ${fmt(cpb)}/bln</span>
+      </div>`;
+    }
+
     // Badges
     const jenisBadge = isHutang
       ? '<span class="px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full font-semibold">Hutang</span>'
@@ -3677,7 +3795,7 @@ function filterHP(mode) {
           <div class="flex-1 min-w-0">
             <div class="flex flex-wrap items-center gap-1.5 mb-0.5">
               <span class="font-bold text-gray-800 text-sm">${h.Nama}</span>
-              ${jenisBadge} ${statusBadge}
+              ${jenisBadge} ${tipeBadge} ${statusBadge}
             </div>
             ${h.Keterangan?`<p class="text-xs text-gray-400 mt-0.5">${h.Keterangan}</p>`:''}
           </div>
@@ -3698,6 +3816,7 @@ function filterHP(mode) {
           <div class="progress-bar">
             <div class="${barColor} progress-fill" style="width:${pct}%"></div>
           </div>
+          ${cicilanRowHtml}
         </div>
 
         <!-- Outstanding & Jatuh Tempo -->
@@ -3720,9 +3839,16 @@ function editHP(id) {
   document.getElementById('hpTanggal').value=data.Tanggal;
   document.getElementById('hpJatuhTempo').value=data.JatuhTempo||'';
   document.getElementById('hpKeterangan').value=data.Keterangan||'';
+  // Field cicilan
+  const tipe = data.TipeHutang||'Informal';
+  switchHpTipe(tipe);
+  if (tipe==='CicilanBank') {
+    document.getElementById('hpTenor').value=data.Tenor||'';
+    document.getElementById('hpTanggalMulai').value=data.TanggalMulai||'';
+    updateCicilanPreview();
+  }
   document.getElementById('btnCancelHP').classList.remove('hidden');
   document.getElementById('titleFormHP').innerText='Edit Data';
-  // Scroll ke form
   document.getElementById('formHP').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
@@ -3730,13 +3856,30 @@ function editHP(id) {
 function openBayarModal(id) {
   const h=appData.HutangPiutang.find(x=>x.ID===id); if (!h) return;
   const outstanding=parseFloat(h.Outstanding)||parseFloat(h.Nominal)||0;
+  const isCicilan = (h.TipeHutang||'Informal')==='CicilanBank';
+  const cpb = parseFloat(h.CicilanPerBulan)||0;
 
   document.getElementById('bayarHpId').value=id;
   document.getElementById('bayarHpNama').innerText=h.Nama+(h.Keterangan?' — '+h.Keterangan:'');
   document.getElementById('bayarHpSisa').innerText='Rp '+fmt(outstanding);
-  document.getElementById('bayarHpJumlah').value='';
-  document.getElementById('bayarHpCatatan').value='';
+  // Pre-fill jumlah: cicilan bank → cicilan per bulan, lainnya → kosong
+  document.getElementById('bayarHpJumlah').value=isCicilan&&cpb>0 ? cpb : '';
+  document.getElementById('bayarHpCatatan').value=isCicilan ? 'Cicilan bulanan' : '';
   document.getElementById('bayarHpTanggal').value=new Date().toISOString().split('T')[0];
+
+  // Info cicilan ke-
+  const cicilanInfoEl = document.getElementById('bayarCicilanInfo');
+  if (isCicilan && cpb>0) {
+    const nominal = parseFloat(h.Nominal)||0;
+    const dibayar = Math.max(0, nominal - outstanding);
+    const keN = Math.round(dibayar/cpb)+1;
+    const tenor = parseInt(h.Tenor)||0;
+    document.getElementById('bayarCicilanAmt').textContent = 'Rp '+fmt(cpb);
+    document.getElementById('bayarCicilanKe').textContent  = keN+(tenor>0?' dari '+tenor+' bulan':'');
+    cicilanInfoEl.classList.remove('hidden');
+  } else {
+    cicilanInfoEl.classList.add('hidden');
+  }
 
   // Isi dropdown dompet
   const sel=document.getElementById('bayarHpDompet');
