@@ -4,7 +4,7 @@
  */
 
 const APP_NAME    = 'DB_KeuanganKu';
-const APP_VERSION = '3.86'; // AUTO-UPDATED by deploy.sh — jangan edit manual
+const APP_VERSION = '3.87'; // AUTO-UPDATED by deploy.sh — jangan edit manual
 
 // ── LISENSI ──────────────────────────────────────────────────
 // Email owner diambil dari ScriptProperties agar tidak hardcoded di source code
@@ -90,6 +90,67 @@ function doGet(e) {
     .evaluate()
     .setTitle('Aplikasi Keuanganku')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+// ==================== MAYAR WEBHOOK ====================
+// Setup: tambahkan MAYAR_WEBHOOK_TOKEN di ScriptProperties (bebas isi, harus sama dgn yg di Mayar)
+// URL webhook = URL deploy GAS ini (sama dgn URL app)
+// Di Mayar: Dashboard → Integrasi → Webhook → tambah URL → pilih event payment.paid
+
+function doPost(e) {
+  try {
+    const sp  = PropertiesService.getScriptProperties();
+    const tok = sp.getProperty('MAYAR_WEBHOOK_TOKEN') || '';
+
+    // Validasi token (Mayar kirim via query param ?token=xxx atau header X-Mayar-Token)
+    const paramToken  = (e.parameter && e.parameter.token)  || '';
+    const headerToken = (e.headers  && e.headers['X-Mayar-Token']) || '';
+    if (tok && paramToken !== tok && headerToken !== tok) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Unauthorized' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const body    = JSON.parse(e.postData.contents);
+    const event   = body.event || body.event_type || '';
+    const data    = body.data  || body.payment    || body || {};
+
+    // Ekstrak email pembeli — Mayar bisa kirim di beberapa field
+    const email =
+      (data.customer && data.customer.email) ||
+      data.email ||
+      (data.buyer  && data.buyer.email)      || '';
+
+    if (!email) {
+      Logger.log('⚠️ Mayar webhook: email tidak ditemukan. Body: ' + e.postData.contents);
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'email_not_found' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Proses hanya event pembayaran berhasil
+    const successEvents = ['payment.paid', 'payment.success', 'payment.completed',
+                           'membership.activated', 'order.paid', 'invoice.paid'];
+    if (!successEvents.some(ev => event.toLowerCase().includes(ev.replace('payment.','')
+                                                                        .replace('membership.','')
+                                                                        .replace('order.','')
+                                                                        .replace('invoice.','')))
+        && event !== '') {
+      Logger.log('ℹ️ Mayar webhook event diabaikan: ' + event);
+      return ContentService.createTextOutput(JSON.stringify({ ok: true, skipped: event }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Aktifkan lisensi Pro 30 hari
+    const result = activateLicense(email.trim().toLowerCase(), 'pro', 30);
+    Logger.log('🎉 Mayar webhook aktifkan Pro: ' + email + ' → ' + result);
+
+    return ContentService.createTextOutput(JSON.stringify({ ok: true, result }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    Logger.log('❌ Mayar webhook error: ' + err.message);
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 // ==================== USER ====================
@@ -300,24 +361,18 @@ function saveRecord(tableName, recordObj) {
     updateWalletBalance_(ss, recordObj['DompetAsal'], parseFloat(recordObj['Nominal']) || 0, recordObj['Jenis']);
   }
 
-  // New HutangPiutang: Outstanding = Nominal + compute CicilanPerBulan
+  // New HutangPiutang: Outstanding = nilai dari form jika ada, fallback ke Nominal
   if (tableName === 'HutangPiutang') {
     const allData2 = sheet.getDataRange().getValues();
-    const hdr2 = allData2[0];
+    const hdr2     = allData2[0];
     const lastRow2 = allData2.length;
-    const outIdx2 = hdr2.indexOf('Outstanding');
+    const outIdx2  = hdr2.indexOf('Outstanding');
     if (outIdx2 >= 0) {
-      const nom = parseFloat(recordObj['Nominal']) || 0;
-      sheet.getRange(lastRow2, outIdx2 + 1).setValue(nom);
-    }
-    // Hitung CicilanPerBulan jika CicilanBank dan belum diset
-    const tipe   = String(recordObj['TipeHutang'] || '');
-    const tenor  = parseFloat(recordObj['Tenor']) || 0;
-    const cpbIdx = hdr2.indexOf('CicilanPerBulan');
-    if (tipe === 'CicilanBank' && tenor > 0 && cpbIdx >= 0) {
-      const nom2 = parseFloat(recordObj['Nominal']) || 0;
-      const cpb  = Math.round(nom2 / tenor);
-      sheet.getRange(lastRow2, cpbIdx + 1).setValue(cpb);
+      const providedOut = parseFloat(recordObj['Outstanding']);
+      const nom         = parseFloat(recordObj['Nominal']) || 0;
+      // Gunakan Outstanding dari form jika diisi (>= 0); jika tidak, default ke Nominal
+      const finalOut = (!isNaN(providedOut) && providedOut >= 0) ? providedOut : nom;
+      sheet.getRange(lastRow2, outIdx2 + 1).setValue(finalOut);
     }
   }
 
