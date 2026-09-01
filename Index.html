@@ -398,17 +398,9 @@
 <div id="dashboardPage" class="page-content fade-in">
   <div class="flex flex-wrap justify-between items-center mb-5 gap-2">
     <h2 class="text-2xl font-bold text-gray-800" data-i18n="pg_dashboard">Ringkasan Keuangan</h2>
-    <!-- Navigator periode -->
-    <div class="flex items-center gap-1">
-      <button onclick="dashNavigate(-1)"
-        class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 text-lg leading-none transition">‹</button>
-      <span id="periodeLabel"
-        class="text-sm font-semibold text-gray-700 px-1 min-w-[130px] text-center select-none"></span>
-      <button id="dashNextBtn" onclick="dashNavigate(1)" disabled
-        class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 text-lg leading-none transition disabled:opacity-30 disabled:cursor-not-allowed">›</button>
-      <button id="dashTodayBtn" onclick="dashGoToday()"
-        class="hidden ml-1 px-2.5 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg font-semibold hover:bg-blue-200 transition">Bulan Ini</button>
-    </div>
+    <select id="dashPeriodSelect" onchange="dashSelectPeriod(this.value)"
+      class="text-sm font-semibold text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 cursor-pointer">
+    </select>
   </div>
   
   <div class="bg-gradient-to-r from-blue-900 to-blue-800 rounded-xl shadow-lg p-5 mb-6 text-white relative overflow-hidden">
@@ -1767,16 +1759,12 @@ function getPeriodByOffset(offset) {
 function getCurrentPeriod()  { return getPeriodByOffset(0);  }
 function getPrevPeriod()     { return getPeriodByOffset(-1); }
 
-function dashNavigate(delta) {
-  const newOffset = dashPeriodOffset + delta;
-  if (newOffset > 0) return; // tidak bisa ke masa depan
-  dashPeriodOffset = newOffset;
+function dashSelectPeriod(val) {
+  dashPeriodOffset = parseInt(val) || 0;
   renderDashboard();
 }
-function dashGoToday() {
-  dashPeriodOffset = 0;
-  renderDashboard();
-}
+function dashNavigate(delta) { /* kept for compat */ }
+function dashGoToday()       { dashSelectPeriod(0); }
 function savePeriodStart() {
   const v = parseInt(document.getElementById('periodStartInput').value);
   if (v < 1 || v > 28) { showAlert('Tanggal harus antara 1-28','error'); return; }
@@ -1786,16 +1774,21 @@ function savePeriodStart() {
   renderDashboard();
 }
 function updatePeriodPreview() {
-  const p = getPeriodByOffset(dashPeriodOffset);
   const el = document.getElementById('periodPreview');
   if (el) el.textContent = '→ ' + getCurrentPeriod().label;
-  // Navigator dashboard
-  const lbl     = document.getElementById('periodeLabel');
-  const nextBtn = document.getElementById('dashNextBtn');
-  const todayBtn= document.getElementById('dashTodayBtn');
-  if (lbl)      lbl.textContent = p.label;
-  if (nextBtn)  nextBtn.disabled = (dashPeriodOffset >= 0);
-  if (todayBtn) todayBtn.classList.toggle('hidden', dashPeriodOffset >= 0);
+  // Isi dropdown 24 bulan terakhir
+  const sel = document.getElementById('dashPeriodSelect');
+  if (!sel) return;
+  if (!sel.options.length) { // build sekali saja, lalu cukup set value
+    for (let i = 0; i >= -23; i--) {
+      const p = getPeriodByOffset(i);
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = i === 0 ? '📅 Bulan Ini — ' + p.label : p.label;
+      sel.appendChild(opt);
+    }
+  }
+  sel.value = dashPeriodOffset;
 }
 
 // ============================================================
