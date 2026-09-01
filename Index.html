@@ -975,23 +975,23 @@
             onblur="evalCalcNominal(this,'calcPreviewHP');updateCicilanPreview()"
             onkeydown="if(event.key==='Enter'){evalCalcNominal(this,'calcPreviewHP');updateCicilanPreview();event.preventDefault();}">
           <span id="calcPreviewHP" class="hidden text-xs text-indigo-600 font-medium mt-0.5 block"></span></div>
-        <!-- Cicilan Bank fields (conditional) -->
+        <!-- Cicilan Bank / Kartu Kredit fields (conditional) -->
         <div id="hpCicilanFields" class="hidden space-y-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
-          <p class="text-xs font-semibold text-blue-700"><i class="fas fa-university mr-1"></i>Detail Cicilan Bank</p>
+          <p class="text-xs font-semibold text-blue-700" id="hpCicilanFieldsTitle"><i id="hpCicilanFieldsIcon" class="fas fa-university mr-1"></i><span id="hpCicilanFieldsTitleText">Detail Cicilan Bank</span></p>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-medium text-gray-700 mb-1">Tgl Mulai Cicilan</label>
+              <label class="block text-xs font-medium text-gray-700 mb-1" id="hpTanggalMulaiLabel">Tgl Mulai Cicilan</label>
               <input type="date" id="hpTanggalMulai" class="w-full border rounded-lg p-2 text-sm" oninput="updateCicilanPreview()">
             </div>
             <div>
-              <label class="block text-xs font-medium text-gray-700 mb-1">Angsuran/Bulan (Rp)</label>
+              <label class="block text-xs font-medium text-gray-700 mb-1" id="hpCicilanPerBulanLabel">Angsuran/Bulan (Rp)</label>
               <input type="number" id="hpCicilanPerBulan" min="1" class="w-full border rounded-lg p-2 text-sm" placeholder="mis. 1000000" oninput="updateCicilanPreview()">
             </div>
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">Sisa Pinjaman / Outstanding (Rp)</label>
-            <input type="number" id="hpOutstanding" min="0" class="w-full border rounded-lg p-2 text-sm" placeholder="Kosongkan jika sama dengan Total Pinjaman">
-            <p class="text-xs text-gray-400 mt-0.5">Isi jika ada sisa yang berbeda, mis. pinjaman sudah berjalan</p>
+            <label class="block text-xs font-medium text-gray-700 mb-1" id="hpOutstandingLabel">Sisa Pinjaman / Outstanding (Rp)</label>
+            <input type="number" id="hpOutstanding" min="0" class="w-full border rounded-lg p-2 text-sm" placeholder="Kosongkan jika sama dengan total">
+            <p class="text-xs text-gray-400 mt-0.5" id="hpOutstandingDesc">Isi jika ada sisa yang berbeda, mis. pinjaman sudah berjalan</p>
           </div>
           <div id="cicilanPreviewWrap" class="hidden bg-blue-100 rounded-lg px-3 py-2">
             <div class="flex justify-between text-xs">
@@ -1041,14 +1041,14 @@
           <span>Sisa outstanding:</span>
           <span class="font-bold text-red-600" id="bayarHpSisa">Rp 0</span>
         </div>
-        <!-- Info cicilan (muncul hanya jika CicilanBank) -->
+        <!-- Info cicilan / kartu kredit (muncul hanya jika ada cpb) -->
         <div id="bayarCicilanInfo" class="hidden mt-2 pt-2 border-t border-gray-200 space-y-0.5">
           <div class="flex justify-between text-xs">
-            <span class="text-gray-500">Cicilan / bulan</span>
+            <span class="text-gray-500" id="bayarCicilanAmtLabel">Cicilan / bulan</span>
             <span class="font-semibold text-blue-700" id="bayarCicilanAmt">Rp 0</span>
           </div>
           <div class="flex justify-between text-xs">
-            <span class="text-gray-500">Cicilan ke</span>
+            <span class="text-gray-500" id="bayarCicilanKeLabel">Cicilan ke-</span>
             <span class="font-semibold text-blue-700" id="bayarCicilanKe">-</span>
           </div>
         </div>
@@ -1867,7 +1867,7 @@ const DEMO_DATA = (function() {
     ],
     HutangPiutang: [
       { ID:uid('hp1'), Jenis:'Piutang', Nama:'Budi Santoso',     Nominal:'500000',  Outstanding:'300000', Tanggal:d(-20), JatuhTempo:d(10),  Status:'Aktif', TipeHutang:'Informal',    Tenor:'', TanggalMulai:'', CicilanPerBulan:'', Keterangan:'Pinjaman uang makan'   },
-      { ID:uid('hp2'), Jenis:'Hutang',  Nama:'Kartu Kredit BCA', Nominal:'750000',  Outstanding:'750000', Tanggal:d(-15), JatuhTempo:d(15),  Status:'Aktif', TipeHutang:'KartuKredit', Tenor:'', TanggalMulai:'', CicilanPerBulan:'', Keterangan:'Tagihan belanja online' },
+      { ID:uid('hp2'), Jenis:'Hutang',  Nama:'Kartu Kredit BCA', Nominal:'750000',  Outstanding:'750000', Tanggal:d(-15), JatuhTempo:d(15),  Status:'Aktif', TipeHutang:'KartuKredit', Tenor:'', TanggalMulai:d(-15), CicilanPerBulan:'150000', Keterangan:'Tagihan belanja online' },
       { ID:uid('hp3'), Jenis:'Hutang',  Nama:'KTA BRI',          Nominal:'24000000', Outstanding:'22000000', Tanggal:d(-60), JatuhTempo:d(660), Status:'Aktif', TipeHutang:'CicilanBank', Tenor:'24', TanggalMulai:d(-60), CicilanPerBulan:'1000000', Keterangan:'KTA renovasi dapur 24 bulan' },
     ],
     Investasi: [
@@ -2324,17 +2324,43 @@ function switchHpTipe(tipe) {
     btn.className = t===tipe ? `${BASE} bg-white shadow-sm text-blue-600` : `${BASE} text-gray-500`;
   });
   const isCicilan = tipe==='CicilanBank';
-  document.getElementById('hpCicilanFields').classList.toggle('hidden', !isCicilan);
-  document.getElementById('hpJatuhTempoWrap').classList.remove('hidden'); // selalu tampil
-  // Update label Nominal & JatuhTempo
-  document.getElementById('hpNominalLabel').textContent = isCicilan ? 'Total Pinjaman (Rp)' : 'Nominal (Rp)';
-  document.getElementById('hpJatuhTempoLabel').textContent = isCicilan ? 'Tgl Lunas / Akhir Pinjaman' : 'Jatuh Tempo';
+  const isKK      = tipe==='KartuKredit';
+  const showExtra = isCicilan || isKK;
+
+  document.getElementById('hpCicilanFields').classList.toggle('hidden', !showExtra);
+  document.getElementById('hpJatuhTempoWrap').classList.remove('hidden');
+
+  if (isCicilan) {
+    document.getElementById('hpNominalLabel').textContent       = 'Total Pinjaman (Rp)';
+    document.getElementById('hpJatuhTempoLabel').textContent    = 'Tgl Lunas / Akhir Pinjaman';
+    document.getElementById('hpCicilanFieldsIcon').className    = 'fas fa-university mr-1';
+    document.getElementById('hpCicilanFieldsTitleText').textContent = 'Detail Cicilan Bank';
+    document.getElementById('hpTanggalMulaiLabel').textContent  = 'Tgl Mulai Cicilan';
+    document.getElementById('hpCicilanPerBulanLabel').textContent = 'Angsuran/Bulan (Rp)';
+    document.getElementById('hpOutstandingLabel').textContent   = 'Sisa Pinjaman / Outstanding (Rp)';
+    document.getElementById('hpOutstandingDesc').textContent    = 'Isi jika pinjaman sudah berjalan & outstanding beda dari total';
+    document.getElementById('hpCicilanPerBulan').placeholder   = 'mis. 1000000';
+  } else if (isKK) {
+    document.getElementById('hpNominalLabel').textContent       = 'Total Tagihan Bulan Ini (Rp)';
+    document.getElementById('hpJatuhTempoLabel').textContent    = 'Jatuh Tempo Pembayaran';
+    document.getElementById('hpCicilanFieldsIcon').className    = 'fas fa-credit-card mr-1';
+    document.getElementById('hpCicilanFieldsTitleText').textContent = 'Detail Kartu Kredit';
+    document.getElementById('hpTanggalMulaiLabel').textContent  = 'Tgl Statement / Tagihan';
+    document.getElementById('hpCicilanPerBulanLabel').textContent = 'Minimum Payment (Rp)';
+    document.getElementById('hpOutstandingLabel').textContent   = 'Sisa Tagihan (Rp)';
+    document.getElementById('hpOutstandingDesc').textContent    = 'Isi jika tagihan sudah ada pembayaran sebelumnya';
+    document.getElementById('hpCicilanPerBulan').placeholder   = 'mis. 150000';
+  } else {
+    document.getElementById('hpNominalLabel').textContent       = 'Nominal (Rp)';
+    document.getElementById('hpJatuhTempoLabel').textContent    = 'Jatuh Tempo';
+  }
   updateCicilanPreview();
 }
 
 function updateCicilanPreview() {
-  const tipe  = document.getElementById('hpTipeHutang').value;
-  const wrap  = document.getElementById('cicilanPreviewWrap');
+  const tipe = document.getElementById('hpTipeHutang').value;
+  const wrap = document.getElementById('cicilanPreviewWrap');
+  // Hanya CicilanBank yang perlu preview tenor; KartuKredit tidak
   if (tipe !== 'CicilanBank') { wrap.classList.add('hidden'); return; }
   const nominal = parseFloat(parseRibuan(document.getElementById('hpNominal').value)) || 0;
   const cpb     = parseFloat(document.getElementById('hpCicilanPerBulan').value) || 0;
@@ -2353,15 +2379,17 @@ function submitHP(e) {
   const jatuhTempo = document.getElementById('hpJatuhTempo').value;
 
   let tglMulai='', cpb='', tenor='';
-  if (tipe==='CicilanBank') {
+  const hasExtra = tipe==='CicilanBank' || tipe==='KartuKredit';
+  if (hasExtra) {
     tglMulai = document.getElementById('hpTanggalMulai').value;
     cpb      = parseFloat(document.getElementById('hpCicilanPerBulan').value)||0;
-    tenor    = cpb>0 ? Math.round(nominal/cpb) : '';
+    // Tenor hanya relevan untuk CicilanBank
+    tenor    = (tipe==='CicilanBank' && cpb>0) ? Math.round(nominal/cpb) : '';
   }
 
-  // Outstanding: CicilanBank → ambil dari input jika diisi; selain itu kosong (backend default ke Nominal)
+  // Outstanding: CicilanBank & KartuKredit → ambil dari input jika diisi; backend default ke Nominal
   let outstandingVal = '';
-  if (tipe==='CicilanBank') {
+  if (hasExtra) {
     const ov = parseFloat(document.getElementById('hpOutstanding').value);
     if (!isNaN(ov) && ov >= 0) outstandingVal = ov;
   }
@@ -3749,15 +3777,19 @@ function filterHP(mode) {
       : tipeHutang==='KartuKredit'
         ? '<span class="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full font-medium">💳 Kartu Kredit</span>'
         : '';
-    // Cicilan ke- info
+    // Cicilan ke- / Min. payment info
     let cicilanRowHtml = '';
     if (tipeHutang==='CicilanBank' && cpb>0) {
       const dibayar = Math.max(0, nominal-outstanding);
       const keN     = Math.round(dibayar/cpb)+1;
-      const sisaN   = Math.ceil(outstanding/cpb);
       cicilanRowHtml = `<div class="flex justify-between text-xs text-gray-400 mt-1">
         <span>Cicilan ke-${isLunas?tenor:keN}${tenor?' dari '+tenor+' bulan':''}</span>
         <span class="text-blue-600 font-medium">Rp ${fmt(cpb)}/bln</span>
+      </div>`;
+    } else if (tipeHutang==='KartuKredit' && cpb>0) {
+      cicilanRowHtml = `<div class="flex justify-between text-xs text-gray-400 mt-1">
+        <span>Min. payment</span>
+        <span class="text-purple-600 font-medium">Rp ${fmt(cpb)}</span>
       </div>`;
     }
 
@@ -3839,10 +3871,10 @@ function editHP(id) {
   document.getElementById('hpTanggal').value=data.Tanggal;
   document.getElementById('hpJatuhTempo').value=data.JatuhTempo||'';
   document.getElementById('hpKeterangan').value=data.Keterangan||'';
-  // Field cicilan
+  // Field cicilan / kartu kredit
   const tipe = data.TipeHutang||'Informal';
   switchHpTipe(tipe);
-  if (tipe==='CicilanBank') {
+  if (tipe==='CicilanBank' || tipe==='KartuKredit') {
     document.getElementById('hpTanggalMulai').value=data.TanggalMulai||'';
     document.getElementById('hpCicilanPerBulan').value=data.CicilanPerBulan||'';
     document.getElementById('hpOutstanding').value=data.Outstanding||'';
@@ -3856,27 +3888,37 @@ function editHP(id) {
 // ── Modal: Bayar Hutang ──────────────────────────────────────
 function openBayarModal(id) {
   const h=appData.HutangPiutang.find(x=>x.ID===id); if (!h) return;
-  const outstanding=parseFloat(h.Outstanding)||parseFloat(h.Nominal)||0;
-  const isCicilan = (h.TipeHutang||'Informal')==='CicilanBank';
-  const cpb = parseFloat(h.CicilanPerBulan)||0;
+  const outstanding = parseFloat(h.Outstanding)||parseFloat(h.Nominal)||0;
+  const tipeH       = h.TipeHutang||'Informal';
+  const isCicilan   = tipeH==='CicilanBank';
+  const isKK        = tipeH==='KartuKredit';
+  const cpb         = parseFloat(h.CicilanPerBulan)||0;
 
   document.getElementById('bayarHpId').value=id;
   document.getElementById('bayarHpNama').innerText=h.Nama+(h.Keterangan?' — '+h.Keterangan:'');
   document.getElementById('bayarHpSisa').innerText='Rp '+fmt(outstanding);
-  // Pre-fill jumlah: cicilan bank → cicilan per bulan, lainnya → kosong
-  document.getElementById('bayarHpJumlah').value=isCicilan&&cpb>0 ? cpb : '';
-  document.getElementById('bayarHpCatatan').value=isCicilan ? 'Cicilan bulanan' : '';
-  document.getElementById('bayarHpTanggal').value=new Date().toISOString().split('T')[0];
+  // Pre-fill jumlah
+  document.getElementById('bayarHpJumlah').value = (isCicilan||isKK)&&cpb>0 ? cpb : '';
+  document.getElementById('bayarHpCatatan').value = isCicilan ? 'Cicilan bulanan' : isKK ? 'Pembayaran tagihan kartu kredit' : '';
+  document.getElementById('bayarHpTanggal').value = new Date().toISOString().split('T')[0];
 
-  // Info cicilan ke-
+  // Info cicilan ke- / min. payment
   const cicilanInfoEl = document.getElementById('bayarCicilanInfo');
   if (isCicilan && cpb>0) {
     const nominal = parseFloat(h.Nominal)||0;
     const dibayar = Math.max(0, nominal - outstanding);
-    const keN = Math.round(dibayar/cpb)+1;
+    const keN   = Math.round(dibayar/cpb)+1;
     const tenor = parseInt(h.Tenor)||0;
     document.getElementById('bayarCicilanAmt').textContent = 'Rp '+fmt(cpb);
     document.getElementById('bayarCicilanKe').textContent  = keN+(tenor>0?' dari '+tenor+' bulan':'');
+    document.getElementById('bayarCicilanAmtLabel').textContent = 'Cicilan / bulan';
+    document.getElementById('bayarCicilanKeLabel').textContent  = 'Cicilan ke-';
+    cicilanInfoEl.classList.remove('hidden');
+  } else if (isKK && cpb>0) {
+    document.getElementById('bayarCicilanAmt').textContent = 'Rp '+fmt(cpb);
+    document.getElementById('bayarCicilanKe').textContent  = 'Rp '+fmt(outstanding)+' (lunas)';
+    document.getElementById('bayarCicilanAmtLabel').textContent = 'Minimum payment';
+    document.getElementById('bayarCicilanKeLabel').textContent  = 'Bayar penuh';
     cicilanInfoEl.classList.remove('hidden');
   } else {
     cicilanInfoEl.classList.add('hidden');
