@@ -1820,7 +1820,7 @@ const DEMO_DATA = (function() {
     return dt.toISOString().split('T')[0];
   };
   const uid = (n) => 'demo-'+n;
-  const thisMonth = today.toISOString().substring(0,7);
+  const thisMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
   return {
     _version: 'DEMO',
     Dompet: [
@@ -4416,7 +4416,7 @@ function saveQuickSub(parentId, jenis) {
   const nama = document.getElementById(`katAddInput_${parentId}`)?.value.trim();
   if (!nama) { showAlert('Nama tidak boleh kosong.','error'); return; }
   const anggaranVal = parseRibuan(document.getElementById(`katAddAnggaran_${parentId}`)?.value) || 0;
-  const bulanIni = new Date().toISOString().slice(0,7);
+  const _n = new Date(); const bulanIni = `${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}`;
   showLoading('Menyimpan...');
   google.script.run
     .withSuccessHandler(res => {
@@ -4458,7 +4458,7 @@ function saveQuickParent(jenis) {
   const nama = document.getElementById(`katAddParentInput_${jenis}`)?.value.trim();
   if (!nama) { showAlert('Nama tidak boleh kosong.','error'); return; }
   const anggaranVal = parseRibuan(document.getElementById(`katAddParentAnggaran_${jenis}`)?.value) || 0;
-  const bulanIni = new Date().toISOString().slice(0,7);
+  const _n = new Date(); const bulanIni = `${_n.getFullYear()}-${String(_n.getMonth()+1).padStart(2,'0')}`;
   showLoading('Menyimpan...');
   google.script.run
     .withSuccessHandler(res => {
@@ -4951,10 +4951,14 @@ async function submitBatch() {
 // ANGGARAN — SALIN DARI BULAN LALU
 // ============================================================
 function copyAnggaranBulanLalu() {
-  const targetBulan = document.getElementById('anggaranBulanFilter').value || new Date().toISOString().substring(0,7);
+  const now = new Date();
+  const thisYM = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const targetBulan = document.getElementById('anggaranBulanFilter').value || thisYM;
   const [ty,tm] = targetBulan.split('-').map(Number);
-  const prevDate = new Date(ty, tm-2, 1);
-  const prevBulan = prevDate.toISOString().substring(0,7);
+  // Hitung bulan sebelumnya secara langsung (hindari toISOString UTC bug)
+  let prevY = ty, prevM = tm - 1;
+  if (prevM === 0) { prevM = 12; prevY--; }
+  const prevBulan = `${prevY}-${String(prevM).padStart(2,'0')}`;
   const prevData = appData.Anggaran.filter(a=>a.BulanTahun===prevBulan);
   if (!prevData.length) { showAlert(`Tidak ada anggaran di bulan ${prevBulan}.`,'error'); return; }
   const existingCats = new Set(appData.Anggaran.filter(a=>a.BulanTahun===targetBulan).map(a=>a.Kategori));
